@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?><bm_lib_func><id>4772384</id><name><![CDATA[eval]]></name><variable_name><![CDATA[eval]]></variable_name><description><![CDATA[OLD - DO NOT USE - Evaluates {expression} based on the dictionary passed {attrs} for truthiness]]></description><return_type>1</return_type><func_type>1</func_type><function_id>4772383</function_id><date_modified>1508547399000</date_modified><guid><![CDATA[bm_lib_func_util_eval]]></guid><folder_id>4133367</folder_id><namespace></namespace><func_override_id>-1</func_override_id><namespace_permissions>0</namespace_permissions><std_sys_obj>0</std_sys_obj><std_function>0</std_function><main_script_text></main_script_text><_children><bm_function><id>4772383</id><ref_type>16</ref_type><java_class_name><![CDATA[com.bm.xchange.bmscript.bmllib.util.LibFunction_eval_1]]></java_class_name><child_class_names></child_class_names><date_modified>1594435903000</date_modified><guid><![CDATA[LEGACY_4772383]]></guid><script_size>2970</script_size><std_sys_obj>0</std_sys_obj><script_text><![CDATA[debug = false;
+wildcard = "NA";
+null = "";
+quote = "\"";
+delim = "|^|";
+returnVal = -1;
+ORop = " || ";
+ANDop = " && ";
+plusOp = "+";
+multOp = "*";
+gtOp = ">";
+ltOp = "<";
+gteOp = ">=";
+lteOp = "<=";
+eqOp = "=";
+neOp = "<>";
+tilOp = "~";
+findOp = "(contains)";
+emptyStr = "''";
+boolOps = String[]{gteOp,lteOp,neOp,gtOp,ltOp,eqOp,findOp};
+
+if(expression == null) {
+  return expression;
+}
+if (substring(expression,0,1) == quote and substring(expression,-1) == quote) {
+  return substring(expression,1,-1);
+}
+
+clauses = split(expression,ANDop);
+
+clauseVals = String[];
+
+i = 0;
+for clause in clauses {
+  if(debug){print("AND-CLAUSE:" + clause);}
+  clauseTrue = false;
+  if(substring(clause,0,1) == quote and substring(clause,-1) == quote) {
+    clauseTrue = true;
+    clauseVals[i] = substring(clause,1,-1);
+    i = i+1;
+    continue;
+  }
+  subClauses = split(clause,ORop);
+  subClauseVals = String[];
+  j = 0;
+  for subClause in subClauses {
+    if(debug){print("   OR-CLAUSE: " + subClause);}
+    if(substring(subclause,0,1) == quote and substring(subclause,-1) == quote) {
+      j=j+1;
+      continue;
+    }
+    comps = String[]{subClause};
+    thisOp = null;
+    for op in boolOps {
+      if(find(subClause,op)>0) {
+        thisOp = op;
+        comps = split(subClause,op);
+        break;
+      }
+    }
+    k = 0;
+    for comp in comps {
+      if(debug){print("      Comp:"+comp);}
+      valNum = 0;
+      valStr = null;
+      if(substring(comp,0,1) == quote and substring(comp,-1) == quote) {
+        valStr = substring(comp,1,-1);
+      } else {
+        summands = split(comp,plusOp);
+        if(debug){print "            SUMMANDS:" + join(summands,", ");}
+
+        for summand in summands {
+          if(summand == null) {
+            continue;
+          }
+          if(isnumber(summand)) {
+            valNum = valNum + atof(summand);
+            continue;
+          }
+          mults = split(summand,multOp);
+          mtotal = 1;
+          if(debug){print "              MULTS:" + join(mults,",");}
+          for mult in mults {
+            mNum = 1;
+            if(isnumber(mult)) {
+              mtotal = mtotal * atof(mult);
+              continue;
+            }
+            isVariable = containskey(attrs,mult);
+            if(isVariable) {
+              varVal = get(attrs,mult);
+              if(isnumber(varVal)) {
+                mNum = atof(varVal);
+              }
+              else {
+                valStr = varVal;
+				//mNum = 0;
+              }
+            }
+            if(not(isVariable)) { 
+              valStr = comp;
+              break;
+            }
+            mtotal = mtotal * mNum;
+          }
+          valNum = valNum + mtotal;
+        }
+      }
+
+      if(valStr == null ) {
+        valStr = string(valNum);
+      }
+	  elif( valStr == emptyStr ){
+		valStr = "1";
+	}
+      if(debug){print("                VAL: " + valStr);}
+      comps[k] = valStr;
+      k = k+1;
+    }
+    leftSide = 0;
+    numbers = false;
+    rightSide = 0;
+    //rightSideNum = false;
+    if(thisOp == null) {
+      // no comparator, return value of expression
+      clauseTrue = true;
+      return comps[0];
+    }
+    if(isnumber(comps[0])) {
+      leftSide = atof(comps[0]);
+      numbers = true;
+    }
+    if(numbers) {
+      if(not(isnumber(comps[1]))) {	
+
+
+
+        numbers = false;
+      } else {
+        rightSide = atof(comps[1]);
+      }
+    }
+    //if(debug){print(comps[0] + thisOp + comps[1] + "?");}
+    //clauseTrue = false;
+    if(thisOp == gtOp) {
+      if(numbers and leftSide > rightSide or
+          (not(numbers) and comps[0] > comps[1])) {
+        clauseTrue = true;
+        break;
+      }
+      
+    } elif (thisOp == ltOp) {
+      //if(debug){print("ltOp");}
+      if(numbers and leftSide < rightSide or
+          (not(numbers) and comps[0] < comps[1])) {
+        
+        clauseTrue = true;
+        break;
+      }
+      
+    } elif (thisOp == lteOp) {
+      if(numbers and leftSide <= rightSide or
+          (not(numbers) and comps[0] <= comps[1])) {
+        clauseTrue = true;
+        break;
+      }
+      
+    } elif (thisOp == gteOp) {
+      if(numbers and leftSide >= rightSide or
+          (not(numbers) and comps[0] >= comps[1])) {
+        clauseTrue = true;
+        break;
+      }
+      
+    } elif (thisOp == eqOp) {
+      //if(debug){print(comps[0] + thisOp + comps[1]);}
+      if(numbers and leftSide == rightSide or
+          (not(numbers) and comps[0] == comps[1])) {
+        clauseTrue = true;
+        break;
+      }
+      
+    } elif (thisOp == neOp) {
+      if(numbers and leftSide <> rightSide or
+          (not(numbers) and comps[0] <> comps[1])) {
+        clauseTrue = true;
+        break;
+      }
+      
+    }
+    elif (thisOp == findOp) {
+    	compsSplitArray = split(comps[0],tilOp);
+    	if(findinarray(compsSplitArray, comps[1])>=0)
+    	{
+    		clauseTrue = true;
+       		print clauseTrue;
+       		break;
+    	}
+      /*if(find(comps[0], comps[1])>=0){
+       	clauseTrue = true;
+       	print clauseTrue;
+       	break;
+      }*/
+    }
+    j = j+1;
+  }
+  if(not(clauseTrue)) {
+    return "FALSE";
+  }
+}
+return "TRUE";]]></script_text><_children></_children></bm_function><bm_lib_func_param><id>4772385</id><bm_lib_func_id>4772384</bm_lib_func_id><param_name><![CDATA[expression]]></param_name><ref_id>-1</ref_id><param_location>0</param_location><param_type>-1</param_type><datatype>2</datatype><date_modified>1508547401000</date_modified><order_no>1</order_no><guid><![CDATA[bm_lib_func_util_eval.bm_lib_func_param_expression_2]]></guid><std_sys_obj>0</std_sys_obj></bm_lib_func_param><bm_lib_func_param><id>4772386</id><bm_lib_func_id>4772384</bm_lib_func_id><param_name><![CDATA[attrs]]></param_name><ref_id>-1</ref_id><param_location>0</param_location><param_type>-1</param_type><datatype>13</datatype><date_modified>1508547401000</date_modified><order_no>2</order_no><guid><![CDATA[bm_lib_func_util_eval.bm_lib_func_param_attrs_13]]></guid><std_sys_obj>0</std_sys_obj></bm_lib_func_param></_children></bm_lib_func>

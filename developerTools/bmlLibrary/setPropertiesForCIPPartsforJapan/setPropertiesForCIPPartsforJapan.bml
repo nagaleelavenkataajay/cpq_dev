@@ -1,0 +1,84 @@
+//CSYS-96006
+cipPiDict = dict("string");
+TILDE_DELIMITER = "~";
+
+//CSYS-100546 (OK. 3-3-2021) Adding logic for CIP Travel Authorized products and removing partnerSpecialty from the below conditions
+partnerTypeCIP = get(attributesDict, "accountServicePartnerTypeCIP_quote", "string");
+partnerAuthrznsArr = split(partnerAuthrzns, ";");
+cipTravelAuthorized = "";
+coreValueArray = String[];
+firstCipCore = "";
+walkMeAuthorized = ""; //CSYS-104401 (OK. 10-11-2021)
+cIPForWalkMeONLY = get(attributesDict, "cIPForWalkMeONLY_quote", "boolean"); //IESCNQRCPQ-430 (OK. 3-20-2023)
+
+//IESCNQRCPQ-430 (OK. 3-20-2023) Add new if condition to support the WalkMe SKU CIP. When cIPForWalkMeONLY_quote = true only walkMe SKU will be considered as CIP. cIPForWalkMeONLY_quote <> true means normal query will be used
+cipRez = recordset();
+if (cIPForWalkMeONLY == true) {
+	cipRez = BMQL("SELECT partNumber, coreService, ServPartnerSpecialty, ServPartnerAuthrzns FROM cipSetupFees WHERE partNumber IN $partNumArr AND JapanCIPSpecificSKU = 'YES'");
+}
+else {
+	cipRez = BMQL("SELECT partNumber, coreService, ServPartnerSpecialty, ServPartnerAuthrzns FROM cipSetupFees WHERE partNumber IN $partNumArr AND IncludeJapan = 'YES'");
+}
+
+for entry in cipRez {
+	cipPi = get(entry, "partNumber");
+	cipCore = get(entry, "coreService");
+	servicePartnerSpecialty = get(entry, "ServPartnerSpecialty");
+	servPartnerAuthrzns = get(entry, "ServPartnerAuthrzns");
+	
+	//CSYS-100546 (OK. 3-3-2021) check is that cip Travel Authorized or not
+	if (partnerTypeCIP == "true" AND (findinarray(partnerAuthrznsArr, "Travel Professional") <> -1 OR findinarray(partnerAuthrznsArr, "Travel Standard") <> -1)) {		
+		cipTravelAuthorized = "true";
+	}
+	
+	//CSYS-104401 (OK. 10-11-2021) check is that cip WalkMe Authorized or not
+	if (partnerTypeCIP == "true" AND (findinarray(partnerAuthrznsArr, "User Assistant by WalkMe") <> -1)) {		
+		walkMeAuthorized = "true";
+	}
+	
+	//if (servicePartnerSpecialty == "" AND servPartnerAuthrzns == ""){ //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from cip logic
+	if (servPartnerAuthrzns == ""){
+		put(cipPiDict, cipPi, "true");
+		put(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore", cipCore);
+	}
+	else{
+		//CSYS-96006
+		//if ( find(partnerSpecialty, servicePartnerSpecialty) <> -1 OR find(partnerAuthrzns, servPartnerAuthrzns) <> -1 ){ //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from cip logic
+		//CSYS-104401 (OK. 10-11-2021) Add WalkMe logic in below condition
+		if (find(partnerAuthrzns, servPartnerAuthrzns) <> -1 OR (cipTravelAuthorized == "true" AND (find(servPartnerAuthrzns, "~Travel Professional~") <> -1 OR find(servPartnerAuthrzns, "~Travel Standard~") <> -1)) OR (walkMeAuthorized == "true" AND (find(servPartnerAuthrzns, "~User Assistant by WalkMe~") <> -1))){
+			//CSYS-96739 If there dictionary key is not yet populated, continue
+			if(NOT(containskey(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore"))){
+				put(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore", cipCore);
+			}
+			//CSYS-96739 If there is already a key in the dictionary, update the key to include Invoice
+			else {
+			
+				if (cipCore == "~Invoice Processing~") { //CSYS-100546 (OK. 3-3-2021) Adding condition for invoice core because we need else condition to support the other core values
+					invoiceCore = split(cipCore, TILDE_DELIMITER);
+					firstCipCore = get(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore");
+					firstCipCore = firstCipCore + invoiceCore[1];
+				}
+				else { //CSYS-100546 (OK. 3-3-2021)
+					coreArr = split(cipCore, TILDE_DELIMITER);
+					firstCipCore = get(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore");
+					arraySize = sizeofarray(coreArr);
+					if (arraySize > 0) {
+						for rec in coreArr{
+							index = findinarray(coreArr, rec);
+							if (coreArr[index] <> coreArr[0] AND coreArr[index] <> coreArr[arraySize - 1]) {
+								append (coreValueArray, rec);
+							}														
+						}
+						cipCoreString = join(coreValueArray, "~");
+						firstCipCore = firstCipCore + cipCoreString;					
+					}
+				}
+
+				put(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore", firstCipCore + TILDE_DELIMITER);
+			}
+
+			put(cipPiDict, cipPi, "true");
+		}
+	}
+}
+return cipPiDict;

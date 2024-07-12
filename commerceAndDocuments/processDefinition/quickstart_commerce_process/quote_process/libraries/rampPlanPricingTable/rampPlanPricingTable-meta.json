@@ -1,0 +1,11 @@
+{
+  "name" : "Ramp Plan Pricing Table",
+  "variableName" : "rampPlanPricingTable",
+  "description" : "CSYS-100165 (OK. 9-9-2020) To preview the Ramp Plan Pricing Details.",
+  "libraryFunctions" : [ "util.customAtof", "util.customAtoi", "util.getAttributesDictValue", "util.getCurrencyData", "util.getFloatAttribute", "util.getStringAttribute", "util.getXMLNodeValues", "util.putFloatAttribute", "util.putStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_part_number", "_parent_doc_number", "piItemType_line", "_sequence_number", "_document_number", "lineDescription_line", "netPriceEach_line", "assetAction_line", "_part_custom_field1", "rampPlanDetails_line", "listPrice_line", "poCategory_line", "outputPOCategory_line", "overrideDefaultRampPlan_line", "numCommittedTransaction_line", "rampFlag_line" ],
+  "mainDocAttributes" : [ "quoteCurrency_quote", "billingCycle_quote", "numCommittedTransaction_quote", "rampPlanDetails_quote" ],
+  "systemAttributes" : [ ]
+}

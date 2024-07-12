@@ -1,0 +1,42 @@
+{
+  "name" : "Get Ramp XML String Array Dict",
+  "variableName" : "getRampXMLStringArrayDict",
+  "description" : "Builds out the XML string for each ramp.",
+  "libraryFunctions" : [ "util.getFloatAttribute" ],
+  "returnType" : "String[] Dictionary",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "parentDocNum",
+    "type" : "String"
+  }, {
+    "name" : "howManyRamps",
+    "type" : "Integer"
+  }, {
+    "name" : "isGrouped",
+    "type" : "String"
+  }, {
+    "name" : "billingCycleNumber",
+    "type" : "String"
+  }, {
+    "name" : "CURRENCY_SYMBOL",
+    "type" : "String"
+  }, {
+    "name" : "incToBaseDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "travelAndExpenseWithTriplinkProductArr",
+    "type" : "String[]"
+  } ],
+  "attributes" : [ ]
+}

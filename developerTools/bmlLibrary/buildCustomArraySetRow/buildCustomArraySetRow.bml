@@ -1,0 +1,29 @@
+/* util -> buildCustomArraySetRow
+
+from - String
+to - String
+transactions - String
+undeletable - String
+*/
+result = "<div class='arraySetRow ";
+if (undeletable) {
+	result = result + " undeletable";
+}
+result = result + "'><div>";
+result = result + "<input type='text' name='from' class='from' ";
+if (isnumber(from) and atof(from) > 0.0) {
+	result = result + "value='" + from + "'";
+}
+result = result + "/></div><div>";
+result = result + "<input type='text' name='to' class='to' ";
+if (isnumber(to) and atof(to) > 0.0) {
+	result = result + "value='" + to + "'";
+}
+result = result + "/></div><div>";
+result = result + "<input type='text' name='transactions' class='transactions'";
+if (isnumber(transactions) and atof(transactions) > 0.0) {
+	result = result + "value='" + transactions + "'";
+}
+result = result + "/></div></div>";
+
+return result;

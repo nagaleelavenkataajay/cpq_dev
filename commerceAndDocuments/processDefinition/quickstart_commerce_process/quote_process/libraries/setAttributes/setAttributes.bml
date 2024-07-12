@@ -1,0 +1,38 @@
+// setAttribute - Generates return strings for pricing script
+//
+/*
+ param:
+ attributesDict - Return dict/ Contains all results to be outputted by setAttribute commerce library
+
+ description:
+ setattribute is the only library to output any res strings. All commerce libraries related to pricing script and approvals script feed information into the attributesDict.
+ setAttribute library takes the attributesDict and outputs all the data in the dict using value(), afterwards it loops through the values and adds them into a res string to return.
+
+ Example attributesDict:
+ {test1=1~test1_quote~10, test4=1~test3_quote~WORLD, test2=1~test1_quote~100, test3=2~test1_quote~HELLO}
+ is converted to 
+ "1~test1_quote~10|1~test1_quote~WORLD|1~test1_quote~100|1~test1_quote~HELLO|" 
+ 
+ */
+
+/*
+ #############################################################################
+ Constants / Initialize
+ #############################################################################
+*/
+resultArray = values(attributesDict);
+resultArray = sort(resultArray, "asc");
+res = "";
+
+/*
+ #############################################################################
+ Build res string
+ #############################################################################
+*/
+for eachRow in resultArray
+{
+	res = res + eachRow;
+}
+
+
+return res;

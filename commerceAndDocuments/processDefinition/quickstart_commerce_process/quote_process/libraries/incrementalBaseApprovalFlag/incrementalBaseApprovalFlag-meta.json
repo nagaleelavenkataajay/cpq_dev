@@ -1,0 +1,23 @@
+{
+  "name" : "Incremental Base Approval Flag",
+  "variableName" : "incrementalBaseApprovalFlag",
+  "description" : "Approval logic for base and incremental line items to set a flag if the corresponding inc line is less than the base.",
+  "libraryFunctions" : [ "util.formAttrValueStr", "util.getFloatAttribute", "util.getStringAttribute", "util.putStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_part_custom_field23", "_part_number", "piItemType_line", "_part_custom_field1", "discount_line", "rollUp_line", "isPartOfPackage_line" ],
+  "mainDocAttributes" : [ "quoteType_quote", "ownerBU_quote" ],
+  "systemAttributes" : [ ]
+}

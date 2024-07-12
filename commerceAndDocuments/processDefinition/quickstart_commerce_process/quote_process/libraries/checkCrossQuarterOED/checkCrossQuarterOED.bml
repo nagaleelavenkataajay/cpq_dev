@@ -1,0 +1,63 @@
+//IESCNQRCPQ-416 (OK. 2-20-2023) Check If the OED is in cross quarter or not
+
+PREVIOUS_OED = previousOrderEffectiveDate_quote;
+CURRENT_OED = orderEffectiveDate_quote;
+isCrossQuarterDate = "";
+CURRENT_DATE = datetostr(getdate());
+result = "";
+CURRENT_OED_MONTH = "";
+CURRENT_OED_YEAR = "";
+PREVIOUS_OED_MONTH = "";
+PREVIOUS_OED_YEAR = "";
+CURRENT_DATE_MONTH = "";
+CURRENT_DATE_YEAR = "";
+
+Q1_MONTHS_ARR = string[]{"01", "02", "03", "1", "2", "3"};
+Q2_MONTHS_ARR = string[]{"04", "05", "06", "4", "5", "6"};
+Q3_MONTHS_ARR = string[]{"07", "08", "09", "7", "8", "9"};
+Q4_MONTHS_ARR = string[]{"10", "11", "12"};
+	
+if(PREVIOUS_OED <> "" AND CURRENT_OED <> ""){
+
+	if(find(CURRENT_OED, "/") <> -1) {
+		CURRENT_OED_MONTH = substring(CURRENT_OED, 0, 2);	
+		CURRENT_OED_YEAR = substring(CURRENT_OED, 6, 10);
+	}
+	else{
+		CURRENT_OED_MONTH = substring(CURRENT_OED, 5, 7);	
+		CURRENT_OED_YEAR = substring(CURRENT_OED, 0, 4);
+	}
+
+	if(find(PREVIOUS_OED, "/") <> -1) {	
+		PREVIOUS_OED_MONTH = substring(PREVIOUS_OED, 0, 2);
+		PREVIOUS_OED_YEAR = substring(PREVIOUS_OED, 6, 10);
+	}
+	else{
+		PREVIOUS_OED_MONTH = substring(PREVIOUS_OED, 5, 7);
+		PREVIOUS_OED_YEAR = substring(PREVIOUS_OED, 0, 4);
+	}
+	
+	if(find(CURRENT_DATE, "/") <> -1) {
+		CURRENT_DATE_MONTH = substring(CURRENT_DATE, 0, 2);	
+		CURRENT_DATE_YEAR = substring(CURRENT_DATE, 6, 10);
+	}
+	else{
+		CURRENT_DATE_MONTH = substring(CURRENT_DATE, 5, 7);	
+		CURRENT_DATE_YEAR = substring(CURRENT_DATE, 0, 4);
+	}
+	
+	if( ((findinarray(Q1_MONTHS_ARR, PREVIOUS_OED_MONTH) <> -1 AND findinarray(Q1_MONTHS_ARR, CURRENT_OED_MONTH) == -1) OR
+		   (findinarray(Q2_MONTHS_ARR, PREVIOUS_OED_MONTH) <> -1 AND findinarray(Q2_MONTHS_ARR, CURRENT_OED_MONTH) == -1) OR
+		   (findinarray(Q3_MONTHS_ARR, PREVIOUS_OED_MONTH) <> -1 AND findinarray(Q3_MONTHS_ARR, CURRENT_OED_MONTH) == -1) OR 
+		   (findinarray(Q4_MONTHS_ARR, PREVIOUS_OED_MONTH) <> -1 AND findinarray(Q4_MONTHS_ARR, CURRENT_OED_MONTH) == -1)
+		) OR CURRENT_OED_YEAR <> PREVIOUS_OED_YEAR) {
+		
+		isCrossQuarterDate = "true";
+	}
+	
+	if (isCrossQuarterDate <> "true" AND (CURRENT_OED_MONTH == CURRENT_DATE_MONTH AND CURRENT_OED_YEAR == CURRENT_DATE_YEAR)) {
+		result = "true";
+	}
+}
+
+return result;

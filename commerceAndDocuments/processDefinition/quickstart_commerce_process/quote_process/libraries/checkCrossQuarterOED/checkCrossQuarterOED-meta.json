@@ -1,0 +1,11 @@
+{
+  "name" : "Check Cross Quarter OED",
+  "variableName" : "checkCrossQuarterOED",
+  "description" : "IESCNQRCPQ-416 (OK. 2-20-2023)",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "previousOrderEffectiveDate_quote", "orderEffectiveDate_quote" ],
+  "systemAttributes" : [ ]
+}

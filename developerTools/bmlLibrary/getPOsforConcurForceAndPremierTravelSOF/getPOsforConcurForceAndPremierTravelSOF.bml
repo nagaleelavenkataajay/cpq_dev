@@ -1,0 +1,102 @@
+/*Util Library. getPOsforConcurForceAndPremierTravelSOF. Returns POs for concurforce and Premier Travel */
+/*The calling function will always look for ~POID~*/
+retstrDict = dict("string");
+results = bmql("select POID,ConcurforceTempReq,PremierTravelTempReq, ClientWebServiceReq, IntelligenceRptReq, MeetingMgtReq, MultiCountryExpReq, SingleCountryExpReq, ConsultingSessionReq, SiteReviewReq, SiteReviewEliteReq  from POBasedSOFTemplates");
+for result in results {
+	po = get(result, "POID");
+	concurForcetmpReq= get(result, "ConcurforceTempReq");
+	premTraveltmpReq= get(result, "PremierTravelTempReq");	
+	clientWebServiceReq= get(result, "ClientWebServiceReq");
+	intelRptReq= get(result, "IntelligenceRptReq");
+	meetMgtReq= get(result, "MeetingMgtReq");
+	multiCountryExpReq = get(result, "MultiCountryExpReq");
+	singleCountryExpReq = get(result, "SingleCountryExpReq");
+	consultingSessionReq = get(result, "ConsultingSessionReq");
+	siteReviewReq = get(result, "SiteReviewReq");
+	siteReviewEliteReq = get(result, "SiteReviewEliteReq");
+	
+	if(upper(concurForcetmpReq) == "Y") {
+		if (not containskey(retstrDict,"Concurforce")) {
+			put(retstrDict,"Concurforce","~"+po+"~");
+		} else {
+			put(retstrDict,"Concurforce",get(retstrDict,"Concurforce")+po+"~");
+		}
+	}
+	if(upper(premTraveltmpReq) == "Y") {
+		if (not containskey(retstrDict,"PremierTravel")) {
+			put(retstrDict,"PremierTravel","~"+po+"~");
+		} else {
+			put(retstrDict,"PremierTravel",get(retstrDict,"PremierTravel")+po+"~");
+		}
+		
+	}	
+	if(upper(clientWebServiceReq) == "Y") {
+		if (not containskey(retstrDict,"ClientWebService")) {
+			put(retstrDict,"ClientWebService","~"+po+"~");
+		} else {
+			put(retstrDict,"ClientWebService",get(retstrDict,"ClientWebService")+po+"~");
+		}
+		
+	}
+	if(upper(intelRptReq) == "Y") {
+		if (not containskey(retstrDict,"IntelRpt")) {
+			put(retstrDict,"IntelRpt","~"+po+"~");
+		} else {
+			put(retstrDict,"IntelRpt",get(retstrDict,"IntelRpt")+po+"~");
+		}
+		
+	}
+	if(upper(meetMgtReq) == "Y") {
+		if (not containskey(retstrDict,"meetingMgt")) {
+			put(retstrDict,"meetingMgt","~"+po+"~");
+		} else {
+			put(retstrDict,"meetingMgt",get(retstrDict,"meetingMgt")+po+"~");
+		}
+		
+	}
+	
+	if(upper(singleCountryExpReq) == "Y") {
+		if (not containskey(retstrDict,"singleCountryExpReq")) {
+			put(retstrDict,"singleCountryExpReq","~"+po+"~");
+		} else {
+			put(retstrDict,"singleCountryExpReq",get(retstrDict,"singleCountryExpReq")+po+"~");
+		}
+		
+	}
+	
+	if(upper(multiCountryExpReq) == "Y") {
+		if (not containskey(retstrDict,"multiCountryExpReq")) {
+			put(retstrDict,"multiCountryExpReq","~"+po+"~");
+		} else {
+			put(retstrDict,"multiCountryExpReq",get(retstrDict,"multiCountryExpReq")+po+"~");
+		}
+		
+	}
+	
+	if(upper(consultingSessionReq) == "Y") {
+		if (not containskey(retstrDict,"consultingSessionReq")) {
+			put(retstrDict,"consultingSessionReq","~"+po+"~");
+		} else {
+			put(retstrDict,"consultingSessionReq",get(retstrDict,"consultingSessionReq")+po+"~");
+		}
+		
+	}
+	
+	if(upper(siteReviewReq) == "Y") {
+		if (not containskey(retstrDict,"siteReviewReq")) {
+			put(retstrDict,"siteReviewReq","~"+po+"~");
+		} else {
+			put(retstrDict,"siteReviewReq",get(retstrDict,"siteReviewReq")+po+"~");
+		}
+		
+	}
+	if(upper(siteReviewEliteReq) == "Y") {
+		if (not containskey(retstrDict,"siteReviewEliteReq")) {
+			put(retstrDict,"siteReviewEliteReq","~"+po+"~");
+		} else {
+			put(retstrDict,"siteReviewEliteReq",get(retstrDict,"siteReviewEliteReq")+po+"~");
+		}
+		
+	}
+}
+return retstrDict;

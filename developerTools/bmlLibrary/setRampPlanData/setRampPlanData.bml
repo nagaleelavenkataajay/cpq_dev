@@ -1,0 +1,561 @@
+/* util.evaluateActionsAnd
+
+This util is an export from the pricing script used to save space.
+It sets up the ramp plans by creating pseudo line items, which just exist in the dictionaries.
+
+10-20-2016: CSYS-70683 changes (KA):
+>set howManyRamps for grouped Bases to that of the first core Base ramp plan
+>set trxns for grouped Base ramp plans to that of the first core Base ramp plan
+>> with the exception of products whose trxns do not have to match the core
+>Made UNIT based extended service ramps behave like grouped extended service ramps
+
+docNumlist = string[]
+stringsDict
+integersDict
+floatsDict
+*/
+DELIMITER = "@.@";
+TILDE_DELIMITER = "~";
+PART_NUM = "_part_number";
+SEQ_NUM = "_sequence_number";
+PARENT_DOC_NUM = "_parent_doc_number";
+IMPLEMENTATION_METHOD = "implementationMethod_line";
+CORE_OFFERING = "coreOffering_line";
+EDITION_LINE = "edition_line";
+ADV_LEARNING_SERVICES_REQUIRED = "advLearningSvcsReqd_line";
+
+QTY = "_price_quantity";
+TRANSACTIONS = "numCommittedTransaction_line";
+TRANSACTION_BY_BC = "transactionsBC";
+PREV_TRANSACTIONS = "prevNumCommittedTransaction_line";
+PREV_DISCOUNT = "prevDiscount_line";
+IS_TRANS_OVERRIDDEN = "numTransOverride_line";
+IS_GROUPED = "isPartOfPackage_line"; //This form field is checked if the user wishes to DYNAMICALLY GROUP this line item
+IS_UNITBASED = "unitBasedTransaction";
+IS_PRODUCTBASED = "productBasedTransaction_line";//CSYS-94381
+PARENT_PRODUCT_POID_INDEX = "parentProductPOIDIndex";//CSYS-94381
+PARENT_INDEX_DOC_NUM = "parentIndexDocNum";//CSYS-94381
+TRANS_VALIDATION_APPLIES = "transValidationApplies"; //CSYS-70683
+DISCOUNT = "discount_line";
+DISCOUNT_TYPE = "discountType_line";
+CORE_SERVICE = "Core Service";
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";
+
+//Ramp plan attribute variable names
+RAMP_PLAN_OVERRIDE = "overrideDefaultRampPlan_line";
+RAMP_PLAN_DETAIL = "rampPlanDetails_line";
+RAMP_PLAN_DETAIL_SAVE_XML = "rampPlanDetailXMLSave_line";
+RAMP_DELIMITER = "-_**_-";
+PO_RAMP_OVERRIDE = "poRampOverride";
+PRIMARY_BASE_FEE = "primaryBaseFee";
+ROLLUP_DOC_NUM = "rollupDocNum";
+TRANS_STRING = "transString";
+FROM = "from";
+TO = "to";
+RAMP_PLAN_MESSAGE = "rampPlanMessageText_line";
+UNIT_BASED_CAN_HAVE_INDEPENDENT_RAMP_PLAN = "unitBasedCanHaveIndependentRampPlan";//CSYS-95500
+
+// Used for Base Fee that are not rampable to unify
+NUMBER_RAMP_ENTRIES = "numRampEntries";
+TRANSACTION_RATIO = "transactionRatio";
+PO_ID = "poId_line";
+PI_ITEM_TYPE = "piItemType_line"; 
+RAMP_FLAG = "rampFlag_line";
+ROLL_UP = "rollUp_line";
+PO_CATEGORY = "poCategory_line";
+TRUE_STR = "true";
+FALSE_STR = "false";
+IS_RAMPABLE = "isRampable";
+INCREMENTAL_FEE_FOR_PO = "incrementalFeeForPO";
+INCREMENTAL_PI = "incrementalPi";
+CONFIG_IMPLEMENTATION_METHODS = "implementationMethods_concur";
+
+// Set all ramp plan information to be used later in the script.
+// This includes transactions and prices
+newDocNumList = String[];
+
+for docNum in docNumList {
+	append( newDocNumList, docNum );
+	itemType = get( stringsDict, docNum + DELIMITER + PI_ITEM_TYPE );
+	// Convert the number of transactions into index form
+	isRampable = FALSE_STR;
+	howManyRamps = 0; //renamed from howManyTransactions to howManyRamps for CSYS-70683
+	poID = "";
+	parentDocNum = "";
+	poRampOverride = "";
+	rollupDocNum = "";
+	primaryBaseDocNum = "";
+	isGrouped = "";
+	unitBased = ""; //CSYS-70683
+	transValidation = ""; //CSYS-70683
+	poCat = ""; //CSYS_70683
+	rampFlag = "";
+	lineTransactions = 0;
+	isProductBased = "";
+	pi = "";
+	transString = "";
+	unitBasedCanHaveIndependentRamps = "";
+	overrideRampPrice = "";
+	childTransString = "";  //CSYS-105113 (OK. 12-28-2021)
+	
+	if ( containskey( stringsDict, docNum + DELIMITER + PO_ID ) ){
+		poID = get( stringsDict, docNum + DELIMITER + PO_ID );
+	}
+
+	if( containskey(stringsDict,docNum + DELIMITER + PART_NUM )){ //CSYS-70683
+		pi = get( stringsDict, docNum + DELIMITER + PART_NUM );
+	}
+
+	if(containskey( stringsDict, docNum + DELIMITER + PARENT_DOC_NUM )){
+		parentDocNum = get( stringsDict, docNum + DELIMITER + PARENT_DOC_NUM );
+	}
+
+	if(containskey( stringsDict, parentDocNum + RAMP_DELIMITER  + poID + DELIMITER + PO_RAMP_OVERRIDE )){
+		poRampOverride = get( stringsDict, parentDocNum + RAMP_DELIMITER + poID + DELIMITER + PO_RAMP_OVERRIDE );
+	}
+
+	if(containskey( stringsDict, parentDocNum + RAMP_DELIMITER + poID + DELIMITER + ROLLUP_DOC_NUM )){
+		rollupDocNum = get( stringsDict, parentDocNum + RAMP_DELIMITER + poID + DELIMITER + ROLLUP_DOC_NUM );
+	}
+
+	if(containskey( stringsDict, parentdocNum + DELIMITER + PRIMARY_BASE_FEE )){
+		primaryBaseDocNum = get( stringsDict, parentdocNum + DELIMITER + PRIMARY_BASE_FEE );
+	}
+
+	if(containskey( stringsDict, docNum + DELIMITER + IS_GROUPED )){
+		isGrouped = get( stringsDict, docNum + DELIMITER + IS_GROUPED );
+	}
+
+	if(containskey( stringsDict, docNum + DELIMITER + IS_UNITBASED )){ //CSYS-70683
+		unitBased = get( stringsDict, docNum + DELIMITER + IS_UNITBASED );
+	}
+
+	if(poID <> "" AND containskey( stringsDict, poID + DELIMITER + TRANS_VALIDATION_APPLIES )){ //CSYS-70683
+		transValidation = get( stringsDict, poID + DELIMITER + TRANS_VALIDATION_APPLIES );
+	}
+
+	if(containskey( stringsDict, docNum + DELIMITER + PO_CATEGORY )){ //CSYS-70683
+		poCat = get( stringsDict, docNum + DELIMITER + PO_CATEGORY );
+	}
+
+	if(containskey( stringsDict, docNum + DELIMITER + RAMP_FLAG )){
+		rampFlag = get( stringsDict, docNum + DELIMITER + RAMP_FLAG );
+	}
+
+	if(containskey( integersDict, docNum + DELIMITER + TRANSACTIONS ))	{
+		lineTransactions = get( integersDict, docNum + DELIMITER + TRANSACTIONS );
+	}
+
+	if(containskey( stringsDict, docNum + DELIMITER + IS_PRODUCTBASED ))	{//CSYS-94381 (LN. 1-9-2019) Determined in Pricing
+		isProductBased = get( stringsDict, docNum + DELIMITER + IS_PRODUCTBASED );
+	}
+
+	//CSYS-95500 (LN. 4-24-2019) Determined in Pricing
+	if(containskey( stringsDict, docNum + DELIMITER + UNIT_BASED_CAN_HAVE_INDEPENDENT_RAMP_PLAN )){
+		unitBasedCanHaveIndependentRamps = get( stringsDict, docNum + DELIMITER + UNIT_BASED_CAN_HAVE_INDEPENDENT_RAMP_PLAN );
+	}
+
+	//CSYS-95500 (LN. 4-24-2019) Determined in Pricing
+	if(containskey( stringsDict, docNum + DELIMITER + "overrideRampPrice" )){
+		overrideRampPrice = get( stringsDict, docNum + DELIMITER + "overrideRampPrice" );
+	}
+	
+	//CSYS-95500 (LN. 4-24-2019) Allowing CREATE Unit Based Products to have independent ramps in a given scenario
+	if ( ((transValidation == TRUE_STR OR poCat == CORE_SERVICE) AND (isGrouped == TRUE_STR OR (unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps <> TRUE_STR))) OR (poCat <> CORE_SERVICE AND transValidation <> TRUE_STR AND isGrouped == TRUE_STR) /*added the transValidation, poCategory, and unitBased checks for CSYS-70683*/
+		OR (poCat <> CORE_SERVICE AND transValidation <> TRUE_STR AND unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps <> TRUE_STR)){ //CSYS-101182 (TT. 03/12/2020)
+
+		poRampOverride = "";
+		rollupDocNum = primaryBaseDocNum;
+		
+		if(containskey(stringsDict, rollupDocNum + DELIMITER + RAMP_PLAN_OVERRIDE)) {
+			poRampOverride = get(stringsDict, rollupDocNum + DELIMITER + RAMP_PLAN_OVERRIDE);
+		}
+		
+		// Move the XML from the Core Base Fee to this documents Ramp XML
+		if ( itemType == BASE_FEE ){
+
+			rampXML = "";
+			fromValue = "";
+			toValue = "";
+
+			if ( containskey( stringsDict, rollupDocNum + DELIMITER + RAMP_PLAN_DETAIL )){
+				rampXML = get( stringsDict, rollupDocNum + DELIMITER + RAMP_PLAN_DETAIL );
+			}
+
+			if ( containskey( stringsDict, rollupDocNum + DELIMITER + FROM )){
+				fromValue = get( stringsDict, rollupDocNum + DELIMITER + FROM );
+			}
+
+			if( containskey( stringsDict, rollupDocNum + DELIMITER + TO )){
+				toValue = get( stringsDict, rollupDocNum + DELIMITER + TO );
+			}
+
+			//At some point, we may consider parsing ramp transactions here, to prevent the rare mismatch
+			//even though the rare mismatch is corrected upon Save/Submit
+
+			put( stringsDict, docNum + DELIMITER + RAMP_PLAN_DETAIL, rampXML );
+			put( stringsDict, docNum + DELIMITER + FROM, fromValue );
+			put( stringsDict, docNum + DELIMITER + TO, toValue );
+		}
+	}
+
+	if ( rollupDocNum == "" ){
+		rollupDocNum = docNum;
+	}
+
+	if ( containskey( stringsDict, docNum + DELIMITER + TRANS_STRING  )){
+
+		//CSYS-94381 (LN. 1-9-2019) Grab the transaction string from the Parent Base Fee and assign it to it's cooresponding Child Base Fee
+		if(containskey(stringsDict, poID + DELIMITER + PARENT_INDEX_DOC_NUM) AND itemType == BASE_FEE){
+			parentDocNumRamp = get(stringsDict, poID + DELIMITER + PARENT_INDEX_DOC_NUM);
+			transString = get( stringsDict, parentDocNumRamp + DELIMITER + TRANS_STRING );
+			childTransString = transString;  //CSYS-105113 (OK. 12-28-2021)
+		}
+		else {//otherwise business as usual
+
+			/*
+				CSYS-95500 (LN. 4-24-2019)
+				If the Core service only has one Ramp, allow CREATE Unit Based Products to add more than one ramp, where each ramp's TRXN count will always match the
+				final ramp.
+					Example:
+						Ramp 1: 1-2, 250 Trxns
+						Ramp 2: 3-4, 250 Trxns
+						Ramp 3: 4 and beyond, 250 Trxns
+			*/
+			if(unitBased == TRUE_STR AND itemType == BASE_FEE){
+				transArray = split(get( stringsDict, docNum + DELIMITER + TRANS_STRING ), DELIMITER);
+
+				if(unitBasedCanHaveIndependentRamps == TRUE_STR){
+					if(sizeofarray(transArray) > 1){
+						finalRampTrxnIndex = sizeofarray(transArray) -1;
+						trans = transArray[finalRampTrxnIndex];
+						newTransArray = String[];
+
+						for eachIndex in transArray {
+							append(newTransArray, trans);
+						}
+
+						transString = join(newTransArray, DELIMITER);
+						put(stringsDict, docNum + DELIMITER + TRANS_STRING, transString);
+					}
+					else {
+						//If there is only one ramp, set Overrirde Default Famp to FALSE
+						poRampOverride = "";
+					}
+				}
+				
+				//Set Override Default Ramp to TRUE when Override Ramp Price is TRUE
+				if(overrideRampPrice == TRUE_STR){
+					poRampOverride = TRUE_STR;
+				}
+				
+			}
+			
+			transString = get( stringsDict, docNum + DELIMITER + TRANS_STRING );
+				
+		}
+		
+	}
+
+	transArr = split( transString, DELIMITER );
+	
+	// If we are rampable
+	finalTransactionRatio = 1;
+
+	if ( itemType == BASE_FEE AND rampFlag == "Y"){ 
+
+		isRampable = TRUE_STR;
+		
+		/* 
+		We are setting all grouped line item ramp plans to have the same ratio as the Primary Core Ramp plan.  We do not 
+		want to force change if we do not need to.  If we do, we want to break down the transactions, find the ratio, and
+		apply it to the current transactions 
+		
+		CSYS-70683 - added the transValidation, poCategory, and unitBased checks
+		CSYS-94381 - (LN. 1-9-2019) added the isProductBased check
+		CSYS-95500 (LN. 4-24-2019) Allowing CREATE Unit Based Products to have independent ramps in a given scenario
+		*/
+		if ( rollupDocNum <> docNum AND 
+			((transValidation == TRUE_STR OR poCat == CORE_SERVICE) AND (isGrouped == TRUE_STR OR (unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps <> TRUE_STR) )) OR
+			(poCat <> CORE_SERVICE AND transValidation <> TRUE_STR AND (isGrouped == TRUE_STR OR (unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps <> TRUE_STR))) OR isProductBased == TRUE_STR ){//CSYS-101182 TT (03/12/2020)
+			
+			//CSYS-94381 - (LN. 1-9-2019) Dynamically set the Ramp Plan Message via the messageTable based on this Child's Base PI number
+			if(containskey(stringsDict, poID + DELIMITER + PARENT_INDEX_DOC_NUM)){
+				tableRes = BMQL("SELECT messageCode FROM messageTable WHERE basePi = $pi");
+
+				dynamicMessage = "";
+
+				for entry in tableRes {
+					dynamicMessage = get(entry, "messageCode");
+				}
+
+				put( stringsDict, docNum + DELIMITER + RAMP_PLAN_MESSAGE, dynamicMessage );
+			}
+			else {//business as usual, display the UNIT/Bundled language 
+				put( stringsDict, docNum + DELIMITER + RAMP_PLAN_MESSAGE, "RAMP_PLAN_GROUPED_READ_ONLY" );
+			}
+			
+			
+			newTransRatios = Float[];
+			newTransArr = String[];
+			coretransString = "";
+			
+			//CSYS-101182 (TT. 12/07/2020)
+			//Ramp's tranx count
+			if ( containskey( stringsDict, rollupDocNum + DELIMITER + TRANS_STRING  )){
+				coretransString = get( stringsDict, rollupDocNum + DELIMITER + TRANS_STRING );
+			}
+			coreTransArr = split( coretransString, DELIMITER );
+			
+			//CSYS-105113 (OK. 12-28-2021) Audit SLA product is considered as child product. so it should have the same ramp transaction count of parent product. example: Policy Audit or Receipt Audit
+			if (childTransString <> "") {
+				coreTransArr = split( childTransString, DELIMITER );
+			}
+			
+			//Core's committed tranx
+			coreTransactions = get( integersDict, rollupDocNum + DELIMITER + TRANSACTIONS );
+
+			for transaction in coreTransArr{
+
+				if ( lineTransactions <> 0 ){
+
+					customAtoiNumber = 0;
+
+					if ( isnumber( transaction )){
+						customAtoiNumber = integer(atof(transaction));
+					}
+					//LIN: Updated the condition for divide by 0 error for INC0396866
+					if ( coreTransactions <> 0 ){
+						transRatio = (customAtoiNumber*1.0) / (coreTransactions*1.0);
+					}
+					// End
+				}
+				else{
+
+					transRatio = 1.0;
+				}
+
+				append( newTransRatios, transRatio );
+			}
+
+			if ( coreTransactions <> 0 ){
+				finalTransactionRatio = (lineTransactions*1.0)/ (coreTransactions*1.0 );
+			}
+
+			for newRatio in newTransRatios{
+
+				newRampTransaction = round(newRatio * lineTransactions, 0 );
+				append( newTransArr, String(newRampTransaction) );
+			}
+
+			transArr = newTransArr;
+		}
+
+		//CSYS-95500 (LN 4-24-2019) Display an alternative message for those CREATE Unit Based Products that can have independent ramps
+		if(unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps == TRUE_STR){
+			put( stringsDict, docNum + DELIMITER + RAMP_PLAN_MESSAGE, "RAMP_PLAN_UNIT_BASED_INDEPENDENT_RAMPS_TRANS_COUNT" );
+		}
+
+		howManyRamps = sizeofarray( transArr );
+	}
+
+	put( stringsDict, docNum + DELIMITER + IS_RAMPABLE, isRampable );
+
+	if ( isRampable == TRUE_STR ){
+
+		/*
+		CSYS-70683 - added the transValidation, poCategory, and unitBased checks
+		CSYS-94381 - (LN. 1-9-2019) added the isProductBased check
+		CSYS-95500 (LN. 4-24-2019) Allowing CREATE Unit Based Products to have independent ramps in a given scenario
+		*/
+		
+		if ( rollupDocNum <> docNum AND 
+			((transValidation == TRUE_STR OR poCat == CORE_SERVICE) AND (isGrouped == TRUE_STR OR (unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps <> TRUE_STR) )) OR
+			(poCat <> CORE_SERVICE AND transValidation <> TRUE_STR AND (isGrouped == TRUE_STR OR (unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps <> TRUE_STR))) ){ //CSYS-101182 (TT 03/12/2020)
+
+			//CSYS-70683: set the howManyRamps value to that of the core, for grouped docNums that aren't the rollupDocNum
+			//this fixes the parsing error when removing a ramp from a core when an extended service is grouped with the core:
+			if(containskey(integersDict, rollupDocNum + DELIMITER + NUMBER_RAMP_ENTRIES) AND isProductBased <> TRUE_STR){
+				howManyRamps = get(integersDict, rollupDocNum + DELIMITER + NUMBER_RAMP_ENTRIES);
+			}
+		}
+
+		put(integersDict, docNum + DELIMITER + NUMBER_RAMP_ENTRIES, howManyRamps );
+		
+		// Collect the data used to match the ramp plans to the master ramp plan for the PO
+		lineRampXML = "";
+
+		if ( containskey( stringsDict, rollupdocNum + DELIMITER + RAMP_PLAN_DETAIL )){
+
+			if(isProductBased <> TRUE_STR){
+				lineRampXML = get( stringsDict, rollupdocNum + DELIMITER + RAMP_PLAN_DETAIL );
+				
+			}
+			else {
+				//CSYS-94381 - (LN. 1-9-2019) Grab the Parent's Base Fee lineRampXML and assign to the Child's Base Fee
+				if(containskey(stringsDict, poID + DELIMITER + PARENT_INDEX_DOC_NUM) AND itemType == BASE_FEE){
+					parentDocNumRamp = get(stringsDict, poID + DELIMITER + PARENT_INDEX_DOC_NUM);
+					lineRampXML = get( stringsDict, parentDocNumRamp + DELIMITER + RAMP_PLAN_DETAIL );
+				}
+			}	
+		}
+
+		put( stringsDict, docNum + DELIMITER + RAMP_PLAN_DETAIL, lineRampXML );
+		put( stringsDict, docNum + DELIMITER + RAMP_PLAN_OVERRIDE, poRampOverride );
+		//isTransOverridden = poRampOverride;
+		//put( stringsDict, docNum+DELIMITER+ RAMP_PLAN_OVERRIDE, isTransOverridden );
+		
+		
+		/*	***************************	Ramp Pricing ************************* */
+		/* First, we're creating a simulated line item for each ramp pricing */
+		/* Append all line data except number of transactions to the dictionary, using the format 
+		docNum + RAMP_DELIMITER + transaction index + DELIMITER + value */
+		transIndex = 0;
+		quantity = 0;
+		implementationMethod = "";
+		coreOffering = "";
+		editionVal = "";
+		advLearningServicesRequired = "";
+		rampPlanOverride = "";
+		seqNum = 0;
+		disc = 0.0;
+		discountType = "";
+		rollup = "";
+		incDocNum = "";
+		incPi = "";
+		
+		//isTransoverridden = get( stringsDict, docNum+DELIMITER+ IS_TRANS_OVERRIDDEN );
+		quantity = get( integersDict, docNum + DELIMITER + QTY );
+		implementationMethod = get( stringsDict, docNum + DELIMITER + IMPLEMENTATION_METHOD );
+		coreOffering = get( stringsDict, docNum + DELIMITER + CORE_OFFERING );
+		editionVal = get( stringsDict, docNum + DELIMITER + EDITION_LINE );
+		advLearningServicesRequired = get( stringsDict, docNum + DELIMITER + ADV_LEARNING_SERVICES_REQUIRED );
+
+		if( containskey(stringsDict, docNum + DELIMITER + RAMP_PLAN_OVERRIDE )) {
+			rampPlanOverride = get( stringsDict, docNum + DELIMITER + RAMP_PLAN_OVERRIDE );
+		}
+
+		if( containskey(integersDict,docNum + DELIMITER + SEQ_NUM  )){
+			seqNum = get( integersDict, docNum + DELIMITER + SEQ_NUM );
+		}
+
+		if( containskey(stringsDict,docNum + DELIMITER + DISCOUNT  )){
+			disc = get( floatsDict, docNum + DELIMITER + DISCOUNT );
+		}
+
+		if( containskey(stringsDict, docNum + DELIMITER + DISCOUNT_TYPE )){
+			discountType = get( stringsDict, docNum + DELIMITER + DISCOUNT_TYPE );
+		}
+
+		if( containskey(stringsDict, docNum + DELIMITER + ROLL_UP)){
+			rollup = get( stringsDict, docNum + DELIMITER + ROLL_UP );
+		}
+		
+		// Values for associated incremental fee
+		//CSYS-95701 SN. Remove temp fix and check in new variable
+        	if(findinarray(travelAndExpenseWithTriplinkProductArr, pi) <> -1){
+            		rollup = "No";
+        	}
+
+		incKey = parentDocNum + RAMP_DELIMITER + poID + RAMP_DELIMITER + rollup;
+
+		if ( containskey( stringsDict, incKey + DELIMITER + INCREMENTAL_FEE_FOR_PO )){
+			incDocNum = get(stringsDict, incKey + DELIMITER + INCREMENTAL_FEE_FOR_PO ); 
+		}
+
+		if ( containskey( stringsDict, incdocNum + DELIMITER + PART_NUM )){
+			incPi = get( stringsDict, incdocNum + DELIMITER + PART_NUM );
+		}
+
+
+		for transaction in transArr{
+
+			customAtoiNumber = 0;
+
+			if ( isnumber( transaction )){
+				customAtoiNumber = integer(atof(transaction));
+			}
+
+			trxns = customAtoiNumber;
+			rampkey = docNum + RAMP_DELIMITER + string(transIndex);
+			rollupRampKey = rollupDocNum + RAMP_DELIMITER + string(transIndex);
+
+			if ( transIndex == howManyRamps - 1 ){
+				append(overWriteTransactionArr, rampkey );
+			}
+
+			put(integersDict, rampkey + DELIMITER + QTY, quantity);
+			//put(stringsDict, rampkey+DELIMITER+ IS_TRANS_OVERRIDDEN, isTransOverridden);
+			// Do not group ramps
+			put( stringsDict, rampkey + DELIMITER + IS_GROUPED, "false" );
+			put( stringsDict, rampkey + DELIMITER + IMPLEMENTATION_METHOD, implementationMethod );
+			put( stringsDict, rampkey + DELIMITER + CORE_OFFERING, coreOffering );
+			put( stringsDict, rampkey + DELIMITER + EDITION_LINE, editionVal );
+			put( stringsDict, rampkey + DELIMITER + ADV_LEARNING_SERVICES_REQUIRED, advLearningServicesRequired );
+			put( stringsDict, rampkey + DELIMITER + RAMP_PLAN_OVERRIDE, rampPlanOverride );
+			put( stringsDict, rampkey + DELIMITER + IS_TRANS_OVERRIDDEN, TRUE_STR );
+			//put(stringsDict, rampkey+DELIMITER+ RAMP_PLAN_DETAIL, lineItemRampPlan);
+			
+
+			//CSYS-70683: set the trxns nodes to that of the core, for grouped/unit based docNums that aren't the rollupDocNum.
+			//Regarding roducts whose transactions don't have to match the core: the ramp transactions don't have to match,
+			//so exclude those trxns from getting updated
+			//CSYS-95500 (LN. 4-24-2019) Allowing CREATE Unit Based Products to have independent ramps in a given scenario
+			if ( rollupDocNum <> docNum AND 
+				((transValidation == TRUE_STR OR poCat == CORE_SERVICE) AND (isGrouped == TRUE_STR OR (unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps <> TRUE_STR) ))  /*added the transValidation, poCategory, and unitBased checks for CSYS-70683*/
+				OR (poCat <> CORE_SERVICE AND transValidation <> TRUE_STR AND unitBased == TRUE_STR AND unitBasedCanHaveIndependentRamps <> TRUE_STR) ) {//CSYS-101182 (TT 3/12/2020)
+ 				if(containskey(integersDict, rollupRampKey + DELIMITER + TRANSACTIONS)){
+					trxns = get(integersDict, rollupRampKey + DELIMITER + TRANSACTIONS);
+				}
+			}
+
+			put( integersDict, rampkey + DELIMITER + TRANSACTIONS, trxns );
+				
+			put( integersDict, rampkey + DELIMITER + SEQ_NUM, seqNum );
+			put( floatsDict, rampkey + DELIMITER + DISCOUNT, disc );
+			put( floatsDict, rampKey + DELIMITER + TRANSACTION_RATIO, finalTransactionRatio );// Transaction Ratio for Grouped Ramp plan incremental fees
+			put( stringsDict, rampkey + DELIMITER + PART_NUM, pi );
+			put( stringsDict, rampkey + DELIMITER + DISCOUNT_TYPE, discountType );
+			put( stringsDict, rampkey + DELIMITER + PARENT_DOC_NUM, parentDocNum );
+			put( stringsDict, rampkey + DELIMITER + ROLL_UP, rollup );
+			put( stringsDict, rampkey + DELIMITER + INCREMENTAL_PI, incPi );
+			put( stringsDict, rampkey + DELIMITER + PO_ID, poID );
+			put( stringsDict, rampkey + DELIMITER + PARENT_DOC_NUM, parentDocNum );
+			put( piDict, rampKey, pi );
+
+			append(newDocNumList, rampkey);
+		
+			//Populate the modelToLineDocNumsDict
+			lineDocNums = string[];
+
+			if (containskey(modelToLineDocNumsDict, parentDocNum)) {
+				lineDocNums = get(modelToLineDocNumsDict, parentDocNum);
+			}
+
+			append(lineDocNums, rampkey);
+			put( modelToLineDocNumsDict, parentDocNum, lineDocNums );
+			
+			//Populate the modelToLinePartNumsDict
+			linePartNums = string[];
+
+			if (containskey(modelToLinePartNumsDict, parentDocNum)) {
+				linePartNums = get(modelToLinePartNumsDict, parentDocNum);
+			} 
+
+			append(linePartNums, rampkey);
+			put( modelToLinePartNumsDict, parentDocNum, linePartNums );
+			
+			//Populate the implementationMethod
+			modelImplementationMethod = get(stringsDict, parentdocNum + DELIMITER + CONFIG_IMPLEMENTATION_METHODS);
+			// Required for Promotion
+			append(implementationMethodArr, modelImplementationMethod);
+			//append(partNumArr, pi);
+			put( stringsDict, rampkey + DELIMITER + IMPLEMENTATION_METHOD, modelImplementationMethod );
+
+			transIndex = transIndex + 1;
+		}
+	}
+}
+
+return newDocNumList;

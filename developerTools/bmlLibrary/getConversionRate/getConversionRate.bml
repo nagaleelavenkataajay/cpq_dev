@@ -1,0 +1,13 @@
+conversionRate = 0.0;
+
+conversionRateRecords = bmql("select conversionRate from currencyData where currencyCode = $currencyCode");
+
+for conversionRateRecord in conversionRateRecords {
+	rate = get(conversionRateRecord, "conversionRate");
+	if (isnumber(rate)) {
+		conversionRate = atof(rate);
+		break;
+	}
+}
+
+return conversionRate;

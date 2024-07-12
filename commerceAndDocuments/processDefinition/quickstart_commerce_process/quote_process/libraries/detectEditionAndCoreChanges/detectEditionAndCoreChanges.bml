@@ -1,0 +1,76 @@
+//########## Detect Core and Edition Changes ##########//
+//Moved from Pricing 4-9-15 (KA)
+
+CONFIG_CORE_OFFERING = "coreOfferings_concur";
+CONFIG_IMPLEMENTATION_METHODS = "implementationMethods_concur";
+DOCNUM_DELIM = "$*$"; 
+INTERNAL_DELIMITER = "$$";
+ASSET_DELIMITER = "@@";
+ASSET_EDITION = 3;
+
+configCoreOfferingDict = dict("string"); 
+configEditionDict = dict("string");
+
+//Core/Edition detection loop 1: map each core offering and edition to model document number keys
+for line in line_process {
+	docnum = line._document_number;
+	pi = line._part_number;
+	configCoreOffering = util.getConfigValue( line._config_attr_info, CONFIG_CORE_OFFERING);
+	configEdition = util.getConfigValue(line._config_attr_info, CONFIG_IMPLEMENTATION_METHODS); 
+	if (pi == "") { //If it IS a model, since model lines are the only ones that store the name of the core offering
+		if (NOT (containskey(configCoreOfferingDict, docNum))/* AND get(configCoreOfferingDict, docNum) <> ""*/){ //if the dict location doesn't already have a value
+			put(configCoreOfferingDict, docNum, configCoreOffering);
+		}
+		if (NOT (containskey(configEditionDict, docNum))){
+			put(configEditionDict, docNum, configEdition);
+		}
+	}
+}
+
+//Core/Edition detection loop 2: designate which cores have a core/edition change
+for line in line_process {
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	pi = line._part_number;
+	poCategory = line._part_custom_field20;
+	
+	if (pi <> "") {
+		comment = split(line._line_item_comment,ASSET_DELIMITER);
+		assetString = "";
+		currentAssetString = string[];
+		if(sizeofarray(comment)>1){ //If an existing asset
+			assetString = comment[2];
+			if(assetString<>""){	
+				currentAssetString = split(assetString,INTERNAL_DELIMITER);
+				originalEdition = currentAssetString[ASSET_EDITION]; //pull the account edition from the asset string
+				configEdition = get(configEditionDict, parentDocNum);
+				
+				//CSYS-107108 (OK. 9-23-2022) Added below "if" condition to check the null values to avoid setting the isEditionChanged flag incorrectly
+				if (configEdition <> "" AND originalEdition <> "") {
+					if (configEdition <> originalEdition) { //if the edition selected in config does not match the account edition
+						put(isEditionChangedDict, parentDocNum, "true"); //true means the edition has been changed
+					}
+					else{
+						put(isEditionChangedDict, parentDocNum, "false"); //false means the edition hasn't changed from what it is on the account
+					}
+				}
+				
+				if (poCategory == "Core Service"){
+					originalCorePI = currentAssetString[0]; //PI of the core on the assets string
+					configCoreOffering = get(configCoreOfferingDict, parentDocNum);
+					originalCoreNameSet = bmql("SELECT CoreOffering FROM PiToCoreOfferingMap WHERE PI = $originalCorePI");
+					for entry in originalCoreNameSet {
+						coreName = get(entry,"CoreOffering");
+						if (configCoreOffering <> coreName){
+							put(isCoreChangedDict, parentDocNum, "true"); //true means the core has been changed
+						}
+						else{put(isCoreChangedDict, parentDocNum, "false"); //false means the core hasn't changed from what it is on the account
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+return "";

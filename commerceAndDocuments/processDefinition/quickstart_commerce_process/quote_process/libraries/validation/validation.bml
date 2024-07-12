@@ -1,0 +1,682 @@
+/*
+	Commerce BML Library
+	validation
+	------------------------------------
+	Params:
+		String actionName
+	Returns:
+		String validationMessage
+*/
+debug = false;
+debugStr = "";
+
+if (debugStr == "true") {
+	debug = true;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 							CONSTANTS & VARIABLES							*/
+/* ------------------------------------------------------------------------ */
+//Return variables
+validationMessage = "";
+
+//Constants for part custom fields
+BUNDLE_FLAG = "custom_field19";
+
+//Constants for part custom field values
+BUNDLE_FLAG_TRUE = "Y";
+BUNDLE_FLAG_FALSE = "N";
+
+//Containers for line item attributes
+piList = string[];
+docNumList = string[];
+travelTermOfCommitmentValidation = false;
+
+poIdDict = dict("string");  //Added by Omar
+piDict = dict("string");
+piBundleDict = dict("string");
+seqNumDict = dict("integer");
+parentDict = dict("string");
+descriptionDict = dict("string");
+poCategoryDict = dict("string");
+isPartOfPackageDict = dict("boolean");
+discountTypeDict = dict("string");
+modelNameDict = dict("string");
+modelHasGroupingDict = dict("string");
+discountdict = dict("float");
+addlDiscountDisallowedDict = dict("string");
+commentDict = dict("string");
+rampPlanDetailsDict = dict("string");
+transactionDict = dict("integer");
+rampOverrideDict = dict("string");
+customField10Dict = dict("string");
+noOfCommitedTransDict = dict("integer");
+piItemTypeDict = dict("string");
+coreBundledDict = dict("boolean"); //dict of whether a configuration's core services needs to be bundled.
+assetActionDict = dict("string");
+
+attrNameArr = String[];
+attrNameToValueDict = dict("string");
+attrNameToLabelDict = dict("string");
+//Constants for attribute values
+AMOUNT_DISCOUNT = "Amt";
+PERCENT_DISCOUNT = "%";
+
+// Constants for dynamic variables in messages
+DYNAMIC_LINE_VALUE = "$lineNum$";
+CANNOT_DISC_LINE = "CANNOT_DISC_LINE";
+LINE_CANNOT_GROUP = "LINE_CANNOT_GROUP";
+INVALID_MODEL_DISC_TYPE = "INVALID_MODEL_DISC_TYPE";
+LINE_ABBR = "LINE";
+ATTRIBUTE_IS_REQUIRED = "ATTRIBUTE_IS_REQUIRED";
+CANNOT_SUBMIT_QUOTE_BEFORE_CUSTOM_PRICE = "CANNOT_SUBMIT_QUOTE_BEFORE_CUSTOM_PRICE";
+ATTRIBUTE_DYNAMIC_VALUE = "$attrList$";
+QUOTE_RAMP_TRANSACTION_OVER = "QUOTE_RAMP_TRANSACTION_OVER";
+LINE_RAMP_TRANSACTION_OVER = "LINE_RAMP_TRANSACTION_OVER";
+FINAL_LINE_RAMP_NOT_EQUAL = "FINAL_LINE_RAMP_NOT_EQUAL";
+FINAL_QUOTE_RAMP_NOT_EQUAL = "FINAL_QUOTE_RAMP_NOT_EQUAL";
+TRUE_STR = "true";
+TERM_OF_COMMITMENT = "TERM_OF_COMMITMENT";
+CANT_SUBMIT_ORDER = "CANT_SUBMIT_ORDER";
+MIN_COMMITTED_TRANS = "MIN_COMMITTED_TRANS";
+MIN_RAMP_TRANS = "MIN_RAMP_TRANS";
+POLICY_AUDIT_TRANSACTION_MATCH = "POLICY_AUDIT_TRANSACTION_MATCH";
+//added new line for Inv Cap and Inv Line Item Cap trxn match CSYS-12349 03.31.14 Kevin Z.
+INVOICE_CAPTURE_TRANSACTION_MATCH = "INVOICE_CAPTURE_TRANSACTION_MATCH";
+
+//Containers for object relationships
+//partNumToBundleFlagDict = dict("string");
+language = "en";
+
+//CSYS-102156 TJG 06142021
+//minTrans = 10;
+if(purchasedFromPartnerSFDC_quote <> "" AND purchasedFromPartnerCategorySFDC_quote == "BPO"){
+	minTrans = 5; }
+else 	{ minTrans = 10; }
+//CSYS-102156 end
+
+//CSYS-104115 TJG
+minimum10TransactionsExclusions = String[];
+exclusions = bmql("SELECT poID FROM minimum10TrxnExclude");
+for entry in exclusions {
+poid = get(entry, "poID");
+append(minimum10TransactionsExclusions, poid);
+}
+//CSYS-104115 TJG
+
+
+minimumNoOfCommittedTrans_flag_line = false;
+
+//@DS: Set variables for policy/elite transaction validation
+policyAuditCount = 0;
+eliteAuditCount = 0;
+// Constants for attr array for validating blank attributes
+ATTR_VALUE_INDEX = 0;
+ATTR_NAME_INDEX = 1;
+//added new variables for Inv Cap and Inv Line Item Cap trxn match CSYS-12349 03.31.14 Kevin Z.
+invoiceCaptureCount = 0;
+invoiceLineItemCaptureCount = 0;
+/* ------------------------------------------------------------------------ */
+/* 					Populate Error messages									*/
+/* ------------------------------------------------------------------------ */
+errorDict = dict("string");
+errorMsgs = bmql("SELECT messageCode, message FROM messageTable WHERE language = $language" );
+for error in errorMsgs{
+	put( errorDict, get( error, "messageCode" ), get( error, "message" ) );
+}
+
+/* ------------------------------------------------------------------------ */
+/* 							Parse the assets string							*/
+/* ------------------------------------------------------------------------ */
+
+ASSET_DELIMITER = "@@";
+INTERNAL_DELIMITER = "$$";
+
+assetsArry = split(assetsString_quote,ASSET_DELIMITER);//split the entire assets delimited string
+size = range(sizeofarray(assetsArry));
+//Commenting as part of CSYS-80012 
+/*
+poArray = string[];
+
+for i in size {
+	assetDetail = split(assetsArry[i],INTERNAL_DELIMITER);//split each asset
+
+	if(isnumber(assetDetail[7]) AND assetDetail[4] <> "Incremental"){		
+		assetTrans = atof(assetDetail[7]);
+		if(assetTrans < 10.0){ //less than 10 transactions on account for this asset
+			if(assetDetail[1] == "471" OR assetDetail[1] == "1035" OR assetDetail[1] == "461" OR assetDetail[1] == "1268803") { //KA Per CSYS-45762 6.25.2015 check if Expense Pay is on asset string. Including Expense Pay Japan
+				append(poArray, assetDetail[1]);
+			}
+		}
+	}
+}
+*/
+
+/* ------------------------------------------------------------------------ */
+/* 					Obtain line item information							*/
+/* ------------------------------------------------------------------------ */
+
+for line in line_process {
+	docNum = line._document_number;
+	pi = line._part_number;
+	poID = line.poId_line;  //Added by Omar
+	discountType = line.discountType_line;
+	parentDocNum = line._parent_doc_number;
+	seqNum = line._sequence_number;
+	description = line._part_desc;
+	isPartOfPackage = line.isPartOfPackage_line;
+	modelName = line._model_name;
+	modelHasGrouping = "";
+	discount = line.discount_line;
+	addlDiscountDisallowed = string(line.addlDiscDisallowed_line);
+	comment = line._line_item_comment;
+	lineRampPlan = line.rampPlanDetails_line;
+	lineTransaction = line.numCommittedTransaction_line;
+	rampPlanOverride = line.overrideDefaultRampPlan_line;
+	customField10 = line._part_custom_field10;
+	numOfCommittedTrans = line.numCommittedTransaction_line;
+	piItemType = line.piItemType_line;
+	assetAction = line.assetAction_line;
+	isBundled = line.bundleFlag_line;
+	if ( pi == "" ){
+		modelHasGrouping = line.modelHasGrouping_line;
+	}
+	if(isPartOfPackage){
+		put(coreBundledDict, parentDocNum, true);
+	}
+	
+	put (poIDDict, docNum, poID);  //Added by Omar
+	put ( discountDict, docNum, discount );
+	append(docNumList, docNum);
+	put(parentDict, docNum, parentDocNum);
+	put(discountTypeDict, docNum, discountType);
+	put(seqNumDict, docNum, seqNum);
+	append(piList, pi);
+	put(piDict, docNum, pi);
+	put(descriptionDict, docNum, description);
+	put(isPartOfPackageDict, docNum, isPartOfPackage);
+	put(modelNameDict, docNum, modelName);
+	put(modelHasGroupingDict, docNum, modelHasGrouping );
+	put( addlDiscountDisallowedDict, docNum, addlDiscountDisallowed );
+	put( commentDict, docNum, comment );
+	put( rampPlanDetailsDict, docNum, lineRampPlan );
+	put( transactionDict, docNum, lineTransaction );
+	put( rampOverrideDict, docNum, rampPlanOverride );
+	put( customField10Dict, docNum, customField10 );
+	put(poCategoryDict, docNum, line._part_custom_field20);
+	put(noOfCommitedTransDict, docNum , numOfCommittedTrans );
+	put(piItemTypeDict, docNum , piItemType );
+	put (assetActionDict, docNum, assetAction);
+	put(piBundleDict, docNum, isBundled);
+	//@DS: Validation to ensure policy audit matches elite audit
+	if(assetAction <> "TERMINATE"){ //KA polishing up DS's code to ignore TERMINATE action codes CSYS-53155. 10-15-2015.
+		if (line._part_number == "651") {
+			policyAuditCount = policyAuditCount + line.numCommittedTransaction_line;
+		}
+		
+		if (line._part_number == "34955") {
+			eliteAuditCount = eliteAuditCount + line.numCommittedTransaction_line;
+		}
+	}
+	//validation to ensure Inv Line Item Cap matches Invoice Cap CSYS-12349 03.31.14 Kevin Z.
+	if(assetAction <> "TERMINATE"){ //KA polishing up KZ's code to ignore TERMINATE action codes CSYS-53155. 10-15-2015.
+		if (line._part_number == "561") {
+			invoiceCaptureCount = invoiceCaptureCount + line.numCommittedTransaction_line;
+		}	
+		
+		if (line._part_number == "6446") {
+			invoiceLineItemCaptureCount = invoiceLineItemCaptureCount + line.numCommittedTransaction_line;
+		}	
+	}
+}
+
+//CSYS-80246: Commenting the lines below; using line level bundle flag instead
+/* ------------------------------------------------------------------------ */
+/* 					Obtain part custom field records						*/
+/* ------------------------------------------------------------------------ */
+
+/*
+bundleFlagRecords = bmql("select part_number, custom_field19 from _parts where part_number in $piList");
+
+for bundleFlagRecord in bundleFlagRecords {
+	put(partNumToBundleFlagDict, get(bundleFlagRecord, "part_number"), get(bundleFlagRecord, BUNDLE_FLAG));
+}
+
+*/
+/* ======================================================================== */
+/* 					Run validations											*/
+/* ======================================================================== */
+// If the action is submit, we also need to run the pricing validation in addition to the submit validation
+//CSYS-87130
+stateAndLocalCustomer = false;
+if (quoteType_quote == "New Business" AND businessUnit_quote == "Enterprise BU" AND market_quote == "United States" AND accountVertical_quote == "State and Local Government"){
+	stateAndLocalCustomer = true;	
+}
+
+if ( actionName == "pricing" OR actionName == "submit" OR actionName == "submitForCustom"){
+	/* Quote Level Ramp Plan Validation */
+	
+	if ( rampPlanDetails_quote <> "" AND stateAndLocalCustomer == false){
+		quoteLevelTrans = util.getXMLNodeValues(rampPlanDetails_quote, "transactions");
+		tovalues = util.getXMLNodeValues(rampPlanDetails_quote, "to");
+		tovalueflag = true;
+		if(findinarray(tovalues, "and beyond")<>-1 and sizeofarray(tovalues)==1){
+			tovalueflag = false;
+		}
+		finalRampTrans = numCommittedTransaction_quote;
+		for trans in quoteLevelTrans{
+			numTrans = util.customAtoi( trans, 0 );
+			// Validate Minimum number of Ramp Plan transactions per month is 10 By Surya@Pramati 13thAugust2012
+			if(tovalueflag){
+				if( numTrans < minTrans){
+					validation = get( errorDict, MIN_RAMP_TRANS ) +"  " + string(minTrans) +"\n";			
+					validationMessage = validationMessage + validation;
+				}			
+			}
+
+			if(numTrans <> 0){
+				finalRampTrans = numTrans;
+			}
+			/*if ( numTrans > numCommittedTransaction_quote ){	
+				validation = get( errorDict, QUOTE_RAMP_TRANSACTION_OVER ) +"\n";
+				validationMessage = validationMessage + validation;
+				break;
+			}*/
+		}
+
+		//CSYS-99878, BS. 09/17/2020, Added below check to not run validation for final ramp # of transactions if "Terminate Professional Services" action is clicked in commerce
+		if(isProfessionalServicesImport_quote <> true){
+			if(finalRampTrans <> numCommittedTransaction_quote AND finalRampTrans <> -1){
+				validation = get(errorDict, FINAL_QUOTE_RAMP_NOT_EQUAL) +"\n";
+				validationMessage = validationMessage + validation;
+			}
+		}
+	}
+	
+	if ( rampValidationMessage_quote <> "" ){
+		validationMessage = validationMessage + rampValidationMessage_quote + "\n";
+	}
+	
+	for docNum in docNumList {
+		poID = get(poIDDict, docNum);// Added by Omar
+		pi = get(piDict, docNum);
+		parentDocNum = get(parentDict, docNum);
+		isPartOfPackage = get(isPartOfPackageDict, docNum);
+		//CSYS-80246
+		//bundleFlag = get(partNumToBundleFlagDict, pi);
+		seqNumStr = string(get(seqNumDict, docNum));
+		description = get(descriptionDict, docNum);
+		modelHasGrouping = get( modelHasGroupingDict, docNum );
+		discount = get( discountDict, docNum );
+		addlDiscountDisallowed = get( addlDiscountDisallowedDict, docNum );
+		comment = get( commentDict, docNum );
+		lineRamp = get( rampPlanDetailsDict, docNum );
+		lineTransactions = get( transactionDict, docNum );
+		rampOverride = get( rampOverrideDict, docNum );
+		customField10 = get( customField10Dict, docNum );
+		poCategory = get(poCategoryDict, docNum);
+		noOfCommitedTrans = get( noOfCommitedTransDict, docNum );
+		piItemType = get( piItemTypeDict, docNum );
+		assetAction = get( assetActionDict, docNum );
+		isPiGroupable = get( piBundleDict, docNum );
+		coreBundled = false;
+		if(containskey(coreBundledDict, parentDocNum)){
+			coreBundled = get(coreBundledDict, parentDocNum);
+		}
+		/* -------------------------------------------------------------------- */
+		/* 					Validate Model discount line						*/
+		/* -------------------------------------------------------------------- */
+		if (pi == "") {
+			modelName = get(modelNameDict, docNum);
+			discountType = get(discountTypeDict, docNum);
+			if (discountType <> PERCENT_DISCOUNT AND modelHasGrouping == "true") {
+			validation = get( errorDict, LINE_ABBR ) + ": " + get( errorDict, INVALID_MODEL_DISC_TYPE ) + "\n";
+			validation = replace( validation, DYNAMIC_LINE_VALUE, seqNumStr );
+			//	validationMessage = validationMessage + "Models can only be discounted by Percent (%). [Line #: " + seqNumStr + ", Model Name: " + modelName + ", Description: " + description + "]\n"; 
+			validationMessage = validationMessage + validation;
+			}
+		/* -------------------------------------------------------------------- */
+		/* 					Validate bundled line items							*/
+		/* -------------------------------------------------------------------- */
+		} else { //non model lines
+			if (isPartOfPackage and isPiGroupable == BUNDLE_FLAG_FALSE AND NOT (coreBundled AND poCategory == "Core Service")) { //Nick removed: AND comment == ""
+				//Commenting lines below; CSYS-80246
+				/*
+				validation = get( errorDict, LINE_ABBR ) + ": " + get( errorDict, LINE_CANNOT_GROUP ) + "\n";
+				validation = replace( validation, DYNAMIC_LINE_VALUE, seqNumStr );
+				*/
+			//	validationMessage = validationMessage + "Attempt to group a product that cannot be bundled. [Line #:" + seqNumStr + ", Product Name: " + description + ", PI #: " + pi + ", Bundle Flag: " + bundleFlag + "]\n";
+				//validationMessage = validationMessage + validation;
+				print "do nothing";
+			}
+			/* -------------------------------------------------------------------- */
+			/* 					Validate individual line discount					*/
+			/* -------------------------------------------------------------------- */
+			elif( addlDiscountDisallowed == "true" AND discount > 0 ){
+				validation = get( errorDict, LINE_ABBR ) + ": " + get( errorDict, CANNOT_DISC_LINE ) + "\n";
+				validation = replace( validation, DYNAMIC_LINE_VALUE, seqNumStr );
+				validationMessage = validationMessage + validation;
+			}
+			/* -------------------------------------------------------------------- */
+			/* 					Validate ramp Transactions							*/
+			/* -------------------------------------------------------------------- */
+			finalRampTrans = lineTransactions; //@RC added logic to validate that final line must equal number of transactions.
+			
+				lineRampTrans = util.getXMLNodeValues(lineRamp, "transactions");
+				
+				for ramp in lineRampTrans{
+					numTrans = util.customAtoi( ramp, 0 );
+					if(numTrans <> 0){
+						finalRampTrans = numTrans;
+					}
+					/* 
+					if ( numTrans > lineTransactions ){
+						validation = get( errorDict, LINE_ABBR ) + ": " + get( errorDict, LINE_RAMP_TRANSACTION_OVER ) +"\n";
+						validation = replace( validation, DYNAMIC_LINE_VALUE, seqNumStr );
+						validationMessage = validationMessage + validation;
+						break;
+					}*/
+				}
+				
+				//CSYS-70683: add the actionName checks to the condition below. KA. 10-20-2016
+				//CSYS-87128: Add the stateAndLocal_quote check to bypass this rule if it's true, set to true via a defualt function on the attribute (LN. 1/22/18)
+				if((actionName == "submit" OR actionName == "request approval" OR actionName == "submitForCustom") AND
+				pi <> "36999" AND pi <> "437668" AND (stateAndLocal_quote <> true)){ //exlude the ramp transaction validation for Invoice Check Payments and Invoice Check Payments - Canada per CSYS-51118. KA. 9-22-15.
+					if(finalRampTrans <> lineTransactions AND finalRampTrans <> 0 AND piItemType == "Base" AND assetAction <> "TERMINATE"){ //Added the Terminate check on 12-13-2016
+						validation = get( errorDict, LINE_ABBR ) + ": " + get(errorDict, FINAL_LINE_RAMP_NOT_EQUAL) +"\n";
+						validation = replace( validation, DYNAMIC_LINE_VALUE, seqNumStr );
+						validationMessage = validationMessage + validation;
+						
+					}
+				}
+			/* -------------------------------------------------------------------- */
+			/* 					Validate part custom field 10						*/
+			/* -------------------------------------------------------------------- */ 
+			if ( customField10 == BUNDLE_FLAG_TRUE ){
+				travelTermOfCommitmentValidation = true;
+			}
+			
+			
+			//Commenting as part of CSYS-80012 	
+			/* Validate Minimum Number Of Committed Transactions per line. */
+			/*
+			//KA Per CSYS-45762 6.25.2015. Also moved the subsequent 20 lines into the actual loop above so that poID can be evaluated correctly
+			allowLessThanTen = false;
+			if((poID == "1268803" AND findinarray(poArray, "1268803") <> -1) //if the line is expense pay and it's on the asset string, and it already has less than 10 transactions on the account 
+				OR (poID == "461" AND findinarray(poArray, "461") <> -1) //same as the above line
+				OR (poID == "471" AND findinarray(poArray, "471") <> -1) //same as the above line
+				OR (poID == "1035" AND findinarray(poArray, "1035") <> -1) //same as the above line
+				OR (poID == "566") //Invoice Check Payments per CSYS-51118. KA. 9-22-15.
+				OR (poID == "416635") //Invoice Check Payments - Canada per CSYS-51118. KA. 9-22-15.
+				OR (poID == "249")){ //Vat Config
+					allowLessThanTen = true; //allow less than 10 transactions
+			}
+
+			//Added by Omar, updated to add Corp Sub. Billing for CSYS-15473 05.09.13. -kz  Added Expense Pay PO's per CSYS-18353 06.20.13 -kz
+			if(poID <> "657" AND 
+				poID <> "279" AND 
+				poID <> "307" AND 
+				poID <> "203734" AND 
+				poID <> "203657"){
+				if( NOT allowLessThanTen AND noOfCommitedTrans < 10 AND piItemType <> "Incremental" AND assetAction <> "TERMINATE" ){
+					minimumNoOfCommittedTrans_flag_line = true;
+				}
+			}	
+			// Validate Min. Committed Transaction Per Month Quote Attribute/Line Attribute By Sai Krishna@Pramati 06thAugust2012
+			//To be commented out later
+			*/
+			// Added by Omar to account for Professional Author Roles, Business Author Roles and Consumer Roles allowing less than 10 trxns: 02.08.13 -  Added Corp Subsid. Billing PO's for CSYS-15473 05.09.13 -kz Added Expense Pay PO's per CSYS-18353 06.19.13 -kz
+			//Commenting as part of CSYS-80012 
+			
+			//if(poID <> "657" AND poID <> "279" AND poID <> "307" AND poID <> "203734" AND poID <> "203657" /*AND poID <> "461" AND poID <> "471" AND poID <> "1035"*/){ 
+			/*	if(sizeofarray(piList) > 0 AND (numCommittedTransaction_quote < minTrans OR minimumNoOfCommittedTrans_flag_line == true)){
+					validation = get( errorDict, MIN_COMMITTED_TRANS ) +"  " + string(minTrans) +"\n";		
+					if(find(validationMessage, validation) == -1){ //prevent duplicate messages from displaying
+						validationMessage = validationMessage + validation;
+					}
+				}
+			}
+			*/
+			//CSYS-80012
+			//CSYS-102454, BS. 03/22/2020, Added below check to not run validation for quote # of transactions if "Terminate Professional Services" action is clicked in commerce
+			//CSYS-104115 TJG
+			/*CSYS-106559 (OK. 8-24-2022) Start - Comment out the below code. Constrain and Validation rules will check the trans count
+			if(isProfessionalServicesImport_quote <> true AND findinarray(minimum10TransactionsExclusions, poID) == -1){
+				if(sizeofarray(piList) > 0 AND (numCommittedTransaction_quote < minTrans)){
+					validation = get( errorDict, MIN_COMMITTED_TRANS ) +"  " + string(minTrans) +"\n";		
+					if(find(validationMessage, validation) == -1){ //prevent duplicate messages from displaying
+						validationMessage = validationMessage + validation;
+					}
+				}
+			}*/   
+			
+		} //end else
+	} //end loop
+	
+} 
+//Comment out Term of Commitment validation per CSYS-93718 PH 10.24.19
+/*
+if ( travelTermOfCommitmentValidation == true AND contractLength_quote == ""){
+	validation = get( errorDict, TERM_OF_COMMITMENT );
+	validationMessage = validationMessage + validation;
+}*/
+
+if ( actionName == "submit"){
+	// Validation for submitting the quote for custom pricing before actual Submit
+	//CSYS-83096 (LN. 8/4/2017)
+	if(advantageServicesFlag_quote == "Pending" OR learningServicesFlag_quote == "Pending") { // OR partnerServicesFlag_quote == "Pending") {
+		validation = get(errorDict, CANNOT_SUBMIT_QUOTE_BEFORE_CUSTOM_PRICE) + "\n";
+		validationMessage = validationMessage + validation;
+	}
+	
+	//@RC - Validation added so that users cannot submit orders with expired promos.
+	if(_system_current_step_var == "pending_process") {
+	
+		DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd"; 
+		DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+		endDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+		promosSelected = split(externalPromotion_quote, "~");
+		
+		datesList = bmql("SELECT DISTINCT endDate, promotionCode, businessUnit, ownerMarket FROM PromoCodeDetails WHERE promotionCode IN $promosSelected");
+	
+		for promo in datesList{
+			BU = get(promo, "businessUnit");
+			market = get(promo, "ownerMarket");
+			//CSYS-101902 (TT. 02/05/2021): Update the rule to support start/end date by BU and Market
+			if((BU <> "" and ownerBU_quote == BU) OR BU == ""){
+				if((market <> "" and ownerMarket_quote == market) OR market == ""){
+					endDateStr = get(promo, "endDate");
+					if(endDateStr <> ""){
+						if(find(endDateStr, "/") <> -1) {
+							endDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+						} else {
+							endDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+						}
+					}
+					endDate = strtojavadate(endDateStr, endDateFormat);
+					if(comparedates(getdate(false), endDate) > 0){ //if current date is after end date
+						validationMessage = validationMessage + "The Promo " + get(promo,"promotionCode") + " is expired. Please remove it from the Promotions tab.\n";
+					}
+				}
+			}
+		}
+	}
+}
+/* Generate an array of attribute names to check for.
+For each attribute, we are going to search for its value in the dictionary and verify that
+it is not an empty string.
+*/
+
+//if ( actionName == "submitForCustom" OR actionName == "submit"){
+	
+	/* ******** Attribute Array containing the variable names of all the attributes being validated ***** */
+	/* Left Side - The value of the attribute.
+		Right Side - The name of the attribute to display to the user */
+	// requiredAttributeArr = String[][]{
+	//	{ orderEffectiveDate_quote, "Order Effective Date" },					// KA: Commented out and added to the 'Require Fields' Validation Rule
+	//	{ _quote_process_billing_first_name, "Billing - First Name" },
+	//	{ _quote_process_billing_last_name, "Billing - Last Name" },
+	//	{ _quote_process_billing_address, "Billing - Address" },
+	//	{ _quote_process_billing_city, "Billing - City" },
+	//	{ _quote_process_billing_state, "Billing - State" },
+	//	{ _quote_process_billing_zip, "Billing - Zip" },						// OC:  Commented out and upgraded to newer Validation Rules
+	//	{ _quote_process_billing_country, "Billing - Country" },
+	//	{ billToCounty_quote, "Billing - County" },
+	//	{ _quote_process_serviceAddress_first_name, "Service - First Name" },
+	//	{ _quote_process_serviceAddress_last_name, "Service - Last Name" },
+	//	{ _quote_process_serviceAddress_address, "Service - Address" },
+	//	{ _quote_process_serviceAddress_city, "Service - City" },
+	//	{ _quote_process_serviceAddress_state, "Service - State" },
+	//	{ _quote_process_serviceAddress_zip, "Service - Zip" },					// OC:  Commented out and upgraded to newer Validation Rules
+	//	{ _quote_process_serviceAddress_country, "Service - Country" },
+	//	{ service_county_quote, "Service - County" },
+	//	{ _quote_process_noticeAddress_first_name, "Notice - First Name" },
+	//	{ _quote_process_noticeAddress_last_name, "Notice - Last Name" },
+	//	{ _quote_process_noticeAddress_address, "Notice - Address" },
+	//	{ _quote_process_noticeAddress_city, "Notice - City" },
+	//	{ _quote_process_noticeAddress_state, "Notice - State" },
+	//	{ _quote_process_noticeAddress_zip, "Notice - Zip" },					// OC:  Commented out and upgraded to newer Validation Rules
+	//	{ _quote_process_noticeAddress_country, "Notice - Country" },
+	//	{ notice_county_quote, "Notice - County"},
+	//	{ billingCycle_quote, "Billing Cycle" }									// KA: Commented out and added to the 'Require Fields' Validation Rule
+	//};
+	
+	/*
+	append( attrNameArr,"preparedByName_quote" );
+	append( attrNameArr,"preparedByTitle_quote" );
+	append( attrNameArr,"preparedByPhone_quote" );
+	append( attrNameArr,"preparedByCell_quote" );
+	append( attrNameArr,"preparedByEmail_quote" );
+	append( attrNameArr,"bsaRegion_quote" );
+	append( attrNameArr,"customerRegion_quote" );
+	append( attrNameArr,"" );
+	append( attrNameArr,"" );
+	append( attrNameArr,"" );
+	append( attrNameArr,"_quote_process_billing_address_2" );
+	append( attrNameArr,"" );
+	append( attrNameArr,"" );
+	append( attrNameArr,"" );
+	append( attrNameArr,"" );
+	append( attrNameArr,"" );
+	append( attrNameArr,"_quote_process_serviceAddress_first_name" );
+	append( attrNameArr,"_quote_process_serviceAddress_last_name" );
+	append( attrNameArr,"_quote_process_serviceAddress_address" );
+	append( attrNameArr,"_quote_process_serviceAddress_address_2" );
+	append( attrNameArr,"_quote_process_serviceAddress_city" );
+	append( attrNameArr,"_quote_process_serviceAddress_state" );
+	append( attrNameArr,"_quote_process_serviceAddress_zip" );
+	append( attrNameArr, "service_county_quote" );
+	append( attrNameArr,"_quote_process_serviceAddress_fax" );
+	append( attrNameArr,"terms_quote" );
+	append( attrNameArr,"billingCycle_quote" );
+	append( attrNameArr,"paymentMethod_quote" );
+	append( attrNameArr,"contractSource_quote" );
+	append( attrNameArr,"contractType_quote" );
+	append( attrNameArr,"invoiceLanguage_quote" );
+	append( attrNameArr,"bsaType_quote" );
+
+	/* ****** Dictionary containing the names of the attribute variables as well as the value of the attribute variables *** */
+	/*
+	put( attrNameToValueDict, "preparedByName_quote", preparedByName_quote );
+	put( attrNameToValueDict, "preparedByTitle_quote", preparedByTitle_quote );
+	put( attrNameToValueDict, "preparedByPhone_quote", preparedByPhone_quote );
+	put( attrNameToValueDict, "preparedByCell_quote",  preparedByCell_quote);
+	put( attrNameToValueDict, "preparedByEmail_quote", preparedByEmail_quote );
+	put( attrNameToValueDict, "bsaRegion_quote", bsaRegion_quote );
+	put( attrNameToValueDict, "customerRegion_quote",customerRegion_quote  );
+	put( attrNameToValueDict, "_quote_process_billing_first_name",_quote_process_billing_first_name  );
+	put( attrNameToValueDict, "_quote_process_billing_last_name", _quote_process_billing_last_name );
+	put( attrNameToValueDict, "_quote_process_billing_address", _quote_process_billing_address );
+	put( attrNameToValueDict, "_quote_process_billing_address_2",_quote_process_billing_address_2  );
+	put( attrNameToValueDict, "_quote_process_billing_city", _quote_process_billing_city );
+	put( attrNameToValueDict, "_quote_process_billing_state",_quote_process_billing_state  );
+	put( attrNameToValueDict, "_quote_process_billing_zip", _quote_process_billing_zip );
+	put( attrNameToValueDict, "billToCounty_quote", billToCounty_quote );
+	put( attrNameToValueDict, "_quote_process_billing_country", _quote_process_billing_country );
+	put( attrNameToValueDict, "_quote_process_serviceAddress_first_name", _quote_process_serviceAddress_first_name );
+	put( attrNameToValueDict, "_quote_process_serviceAddress_last_name", _quote_process_serviceAddress_last_name );
+	put( attrNameToValueDict, "_quote_process_serviceAddress_address_1", _quote_process_serviceAddress_address );
+	put( attrNameToValueDict, "_quote_process_serviceAddress_address_2",_quote_process_serviceAddress_address_2  );
+	put( attrNameToValueDict, "_quote_process_serviceAddress_city", _quote_process_serviceAddress_city );
+	put( attrNameToValueDict, "_quote_process_serviceAddress_state", _quote_process_serviceAddress_state );
+	put( attrNameToValueDict, "_quote_process_serviceAddress_zip", _quote_process_serviceAddress_zip );
+	put( attrNameToValueDict, "service_county_quote", service_county_quote );
+	put( attrNameToValueDict, "_quote_process_serviceAddress_fax", _quote_process_serviceAddress_fax );
+	put( attrNameToValueDict, "terms_quote", terms_quote );
+	put( attrNameToValueDict, "billingCycle_quote", billingCycle_quote );
+	put( attrNameToValueDict, "paymentMethod_quote", paymentMethod_quote );
+	put( attrNameToValueDict, "contractSource_quote", contractSource_quote );
+	put( attrNameToValueDict, "contractType_quote", contractType_quote );
+	put( attrNameToValueDict, "invoiceLanguage_quote", invoiceLanguage_quote );
+	put( attrNameToValueDict, "bsaType_quote", bsaType_quote );
+
+	/* ********* Dictionary containing the name of the attribute variable, and the Label of the attribute */
+	/*
+	put( attrNameToLabelDict, "preparedByName_quote", "Name" );
+	put( attrNameToLabelDict, "preparedByTitle_quote", "Title" );
+	put( attrNameToLabelDict, "preparedByPhone_quote", "Phone" );
+	put( attrNameToLabelDict, "preparedByCell_quote",  "Cell");
+	put( attrNameToLabelDict, "preparedByEmail_quote", "Email" );
+	put( attrNameToLabelDict, "bsaRegion_quote", "BSA Region" );
+	put( attrNameToLabelDict, "customerRegion_quote","Customer Region"  );
+	put( attrNameToLabelDict, "_quote_process_billing_first_name","Billing First Name"  );
+	put( attrNameToLabelDict, "_quote_process_billing_last_name", "Billing Last Name" );
+	put( attrNameToLabelDict, "_quote_process_billing_address", "Billing Address" );
+	put( attrNameToLabelDict, "_quote_process_billing_address_2", "Billing Address 2"  );
+	put( attrNameToLabelDict, "_quote_process_billing_city", "Billing City" );
+	put( attrNameToLabelDict, "_quote_process_billing_state","Billing State"  );
+	put( attrNameToLabelDict, "_quote_process_billing_zip", "Billing Zip" );
+	put( attrNameToLabelDict, "billToCounty_quote", "Billing County" );
+	put( attrNameToLabelDict, "_quote_process_billing_country", "Billing Country" );
+	put( attrNameToLabelDict, "_quote_process_serviceAddress_first_name", "Service First Name" );
+	put( attrNameToLabelDict, "_quote_process_serviceAddress_last_name", "Service Last Name" );
+	put( attrNameToLabelDict, "_quote_process_serviceAddress_address_1", "Service Address 1" );
+	put( attrNameToLabelDict, "_quote_process_serviceAddress_address_2","Service Address 2"  );
+	put( attrNameToLabelDict, "_quote_process_serviceAddress_city", "Service City" );
+	put( attrNameToLabelDict, "_quote_process_serviceAddress_state", "Service State" );
+	put( attrNameToLabelDict, "_quote_process_serviceAddress_zip", "Service Zip" );
+	put( attrNameToLabelDict, "service_county_quote", "Service County" );
+	put( attrNameToLabelDict, "_quote_process_serviceAddress_fax", "Service Fax" );
+	put( attrNameToLabelDict, "terms_quote", "Payment Terms" );
+	put( attrNameToLabelDict, "billingCycle_quote", "Billing Cycle" );
+	put( attrNameToLabelDict, "paymentMethod_quote", "Payment Method" );
+	put( attrNameToLabelDict, "contractSource_quote", "Contract Source" );
+	put( attrNameToLabelDict, "contractType_quote", "Contract Type" );
+	put( attrNameToLabelDict, "invoiceLanguage_quote", "Invoice Language" );
+	put( attrNameToLabelDict, "bsaType_quote", "BSA Type" );
+*/
+	// Loop through each attribute and make sure it is not empty string
+	/*for attr in requiredAttributeArr{
+		if ( attr[ATTR_VALUE_INDEX] == "" ){
+			attrName = attr[ATTR_NAME_INDEX];
+			validation = get( errorDict, ATTRIBUTE_IS_REQUIRED ) + "\n";
+			validation = replace( validation, ATTRIBUTE_DYNAMIC_VALUE, attrName );
+			validationMessage = validationMessage + validation;
+		}
+	}*/
+//}
+
+// On submitting an order
+//Case#112627
+/*if ( actionName == "resubmitOrder" ){
+	if ( _system_current_step_var == "submitted_process" AND status_quote == "Order Accepted" ){
+		validation = get( errorDict, CANT_SUBMIT_ORDER ) + "\n";
+		validationMessage = validationMessage + validation;
+	}
+}*/
+
+//@DS: Validate elite/policy audit and display error message if there is a mismatch in transactions
+//updated to add 'if' statement for Inv Cap and Inv Line Item Cap validation CSYS-12349 03.31.14 Kevin Z.
+if ( actionName == "submit" OR actionName == "pricing" ){
+	if ((eliteAuditCount <> policyAuditCount) AND eliteAuditCount > 0 AND policyAuditCount > 0){
+		validation = get( errorDict, POLICY_AUDIT_TRANSACTION_MATCH ) + "\n";
+		validationMessage = validationMessage + validation;
+	}
+	
+	if ((invoiceCaptureCount <> invoiceLineItemCaptureCount) AND invoiceCaptureCount > 0 AND invoiceLineItemCaptureCount > 0){
+		validation = get( errorDict, INVOICE_CAPTURE_TRANSACTION_MATCH ) + "\n";
+		validationMessage = validationMessage + validation;
+	}	
+		
+}
+return validationMessage;

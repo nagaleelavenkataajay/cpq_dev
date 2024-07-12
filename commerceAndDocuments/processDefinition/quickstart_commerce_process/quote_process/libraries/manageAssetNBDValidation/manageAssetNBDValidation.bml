@@ -1,0 +1,67 @@
+//Date logic to check if OED is greater than Asset Next Bill Date
+if (quoteType_quote == "Add-On Business" AND orderEffectiveDate_quote <> "" AND billingCycle_quote == "Monthly") {
+	oedMonth = "";
+	oedYear = "";
+	matchedAssetNBDStr = "";
+	timezone = util.getUserTimeZone();
+	oedDate = getdate();
+	matchedAssetNBD = getdate();
+	DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd"; 
+	DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+	currentDate = getdate();
+	submissionDate = getdate();
+	currentDateStr = substring(datetostr(currentDate, DATE_FORMAT_PREFERENCE_SLASH, timezone), 0, 10);
+	submissionDate = strtojavadate(currentDateStr, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+	currDateMonth = substring(currentDateStr, 0, 2);	
+	currDateYear = substring(currentDateStr, 6, 10);
+	
+	if(find(orderEffectiveDate_quote, "/") <> -1){
+		oedMonth = substring(orderEffectiveDate_quote, 0, 2);	
+		oedYear = substring(orderEffectiveDate_quote, 6, 10);
+		if(timezone <> ""){
+			oedDate = strtojavadate(orderEffectiveDate_quote, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+		}
+		else{
+			oedDate = strtojavadate(orderEffectiveDate_quote, DATE_FORMAT_PREFERENCE_SLASH);
+		}
+	}
+	else{
+		oedMonth = substring(orderEffectiveDate_quote, 5, 7);	
+		oedYear = substring(orderEffectiveDate_quote, 0, 4);
+		if(timezone <> ""){
+			oedDate = strtojavadate(orderEffectiveDate_quote, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+		}
+		else{
+			oedDate = strtojavadate(orderEffectiveDate_quote, DATE_FORMAT_PREFERENCE_HYPHEN);
+		}
+	}
+	
+	tableResSet = bmql("SELECT AssetNextBillDate FROM AssetNextBillDates");
+	if (oedMonth == currDateMonth AND oedYear == currDateYear){
+		for item in tableResSet {
+			assetNBD = get(item, "AssetNextBillDate");
+			if (assetNBD <> ""){
+				assetNBDMonth = substring(assetNBD, 5, 7);
+				assetNBDYear = substring(assetNBD, 0, 4);
+				
+				if (assetNBDMonth == oedMonth AND assetNBDYear == oedYear){
+					matchedAssetNBDStr = assetNBD;
+					break;
+				}
+			}
+		}
+		if (matchedAssetNBDStr == ""){
+			matchedAssetNBDStr = oedYear + "-" + oedMonth + "-" + "06";
+		}
+		if(timezone <> ""){
+			matchedAssetNBD = strtojavadate(matchedAssetNBDStr, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+		}
+		else{
+			matchedAssetNBD = strtojavadate(matchedAssetNBDStr, DATE_FORMAT_PREFERENCE_HYPHEN);
+		}
+		if (comparedates(submissionDate, matchedAssetNBD) <= 0){
+			return true;
+		}
+	}
+}
+return false;

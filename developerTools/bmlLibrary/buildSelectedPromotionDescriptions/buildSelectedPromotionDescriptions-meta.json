@@ -1,0 +1,15 @@
+{
+  "name" : "Build Selected Promotion Descriptions",
+  "variableName" : "buildSelectedPromotionDescriptions",
+  "description" : "For CSYS-47375. Used in Auto update script and default functioon for selectedPromos_quote HTML attribute.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "externalPromotion",
+    "type" : "String"
+  }, {
+    "name" : "applicablePromotions",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

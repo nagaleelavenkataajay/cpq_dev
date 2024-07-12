@@ -1,0 +1,9 @@
+/* util -> getBillingCycleNumber
+billingCycle - String
+*/
+miscDataSet = bmql("SELECT miscDataKey FROM miscCommerceData WHERE miscDataVal = $billingCycle" );
+billingCycleNumber = "";
+for dataValue in miscDataSet{
+    billingCycleNumber = get( dataValue, "miscDataKey" );
+}
+return billingCycleNumber;

@@ -1,0 +1,28 @@
+/* util -> evalArrayAttribute
+
+expression - String
+arrayAttrDict - String[] Dictionary
+*/
+retVal = "";
+attrLabel = "";
+attrValue = "";
+condition = expression;
+
+conditionSplitArray = split(condition,"=");
+attrLabel = conditionSplitArray[0];
+attrValue = substring(conditionSplitArray[1],1,len(conditionSplitArray[1])-1);
+if(containskey(arrayAttrDict, attrLabel))
+{
+	compArray = get(arrayAttrDict, attrLabel);
+	if(findinarray(compArray,attrValue)>-1)
+	{
+		attrValIndex = findinarray(compArray,attrValue);
+		retVal = "TRUE::"+string(attrValIndex);
+	}
+	else
+	{
+		retVal = "FALSE";
+	}
+}
+
+return retVal;

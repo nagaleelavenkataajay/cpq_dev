@@ -1,0 +1,209 @@
+/* util -> manageARROffsetWithinProductFamily
+docNumList - string[]
+stringsDict - dict("string")
+integersDict - dict("integer")
+piDict - dict("string")
+triggerDict - dict("string")
+PRODUCT_FAMILY_DICT - dict("string")
+PRODUCT_FAMILY_CREATE_TIER_COUNT_DICT - dict("integer");
+PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT - dict("integer");
+PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT - dict("integer")
+PROD_FAM_TIER_DECREASE_OCCURRED_DICT - dict("string")
+*/
+PO_ID = "poId_line";
+PARENT_DOC_NUM = "_parent_doc_number";
+ASSET_ACTION = "assetAction_line";
+TERMINATE_ACTION = "TERMINATE";
+CREATE_ACTION = "CREATE";
+MODIFY_ACTION = "MODIFY";
+PI_ITEM_TYPE = "piItemType_line";
+TRANSACTIONS = "numCommittedTransaction_line";
+PRODUCT_FAMILY_ARR_OFFSET = "PRODUCT_FAMILY_ARR_OFFSET";//CSYS-95591
+PRODUCT_FAMILY = "productFamily_line";//CSYS-95591
+LINE_COMMENT_ASSET_STRING = "lineItemComment_line";//CSYS-95591
+DELIMITER = "@.@";
+BASE_FEE = "Base";
+INTERNAL_DELIMITER = "$$";
+ASSET_DELIMITER = "@@";
+ASSET_COMMITED_TRNS = 7;
+TRANS_STRING = "transString";
+BUSINESS_UNIT = "ownerBU_quote";
+SMB_BU = "SMB BU";
+QUOTE_DOC_NUM = "1";
+TRIG_KEY_VALUE_DELIM = "$,$";
+TRUE_STR = "true";
+expensePayClassicTerminated = false; //CSYS-103849 SV. 10-08-2021
+tranxCountArray = integer[]; //CSYS-104136 (OK. 09-29-2021)  
+
+//IESCNQRCPQ-756 (OK. 10-17-2023) Start
+tranxCountDict = dict("string"); 
+parentDocNumArray = string[]; 
+piArray = string[]; 
+coreBasedTransSizeDict = dict("integer");
+//IESCNQRCPQ-756 - End
+
+for docNum in docNumList {//CSYS-95500
+	pi = get(piDict, docNum);
+    poID = util.getStringAttribute(stringsDict, docNum, DELIMITER, PO_ID );
+    parentDocNum = util.getStringAttribute(stringsDict, docNum, DELIMITER, PARENT_DOC_NUM);
+    currentAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+    itemType = util.getStringAttribute( stringsDict, docNum, DELIMITER, PI_ITEM_TYPE );
+    numOfTransactions = util.getIntegerAttribute(integersDict, docNum, DELIMITER, TRANSACTIONS);
+    productFamily = util.getStringAttribute(stringsDict, pi, DELIMITER, PRODUCT_FAMILY);//CSYS-87106; CSYS-95591
+    lineItemComment = util.getStringAttribute(stringsDict, docNum, DELIMITER, LINE_COMMENT_ASSET_STRING);//CSYS-95591
+	
+	//CSYS-104136 (OK. 09-29-2021) Append all the transaction count to array
+	if (itemType == BASE_FEE AND (findinarray(tranxCountArray,numOfTransactions) == -1) AND currentAction <> TERMINATE_ACTION) {
+		append (tranxCountArray, numOfTransactions);
+		
+		//IESCNQRCPQ-756 (OK. 10-17-2023) Start - store the transaction count based on parentDocNum 
+		put(tranxCountDict, "*" + parentDocNum + "*" + pi + "*" , string(numOfTransactions)); 
+		append(parentDocNumArray, parentDocNum);
+		append(piArray, pi);
+		//IESCNQRCPQ-756 - End
+	}
+	
+    if (pi <> "") {
+        //CSYS-95591 - Expansion of CSYS-87106 (LN. 1/23/2018) - Track Transaction Count within Product Families
+        if( itemType == BASE_FEE AND containskey(PRODUCT_FAMILY_DICT, productFamily + DELIMITER + currentAction + DELIMITER + pi) ){
+            //Store the CREATE's number of transacions, to be used later for comparison
+            //CSYS-97291 (P.S. 1-8-2020) Updated all Product Family Tier Count Dictionary KEY references to add in scope of the ParentDocNum
+            if( currentAction == CREATE_ACTION ){
+                put(PRODUCT_FAMILY_CREATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum, numOfTransactions);
+            }
+            //Store the TERMINATE's & MODIFY's original number of transactions (# of trans on the asset) to be used for comparison later on
+            else {
+                 comment = split(lineItemComment,ASSET_DELIMITER);
+                if(sizeofarray(comment)>1){
+                    assetString = comment[2];
+                    if(assetString <> ""){
+                        currentAssetString = split(assetString,INTERNAL_DELIMITER);
+			//CSYS-101275, BS. 12/01/2020, Added below code to check for blank values before performing string to float conversion
+                        if( isnumber(currentAssetString[ASSET_COMMITED_TRNS]) ) {
+				originalTrxns = integer(atof(currentAssetString[ASSET_COMMITED_TRNS]));
+			}
+			else{
+				originalTrxns = 0;
+			}
+			//End CSYS-101275
+                        if(currentAction == TERMINATE_ACTION){
+                            put(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum, originalTrxns);
+                        }
+                        else {
+                            put(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum, originalTrxns);
+                            if(originalTrxns > numOfTransactions){//Tier Decrease has occurred:
+                                put(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + "MODIFY_TIER_DECREASE_TRANSACTION_COUNT" + DELIMITER + parentDocNum, numOfTransactions);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+		//CSYS-103849 SV. 10-08-2021 Start
+		expensePayPoidMasterString = "*461*1035*1268803*471*";
+		if(find(expensePayPoidMasterString , "*"+poId+"*") <> -1 AND currentAction == "TERMINATE"){
+			expensePayClassicTerminated = true;
+			break;
+		}
+		//CSYS-103849 End		
+	}	
+}
+
+//IESCNQRCPQ-756 (OK. 10-17-2023) Start - find the transacion count based on parentDocNum
+for num in parentDocNumArray {
+	transArray = string[];
+	for piNum in piArray {		
+		if (containskey(tranxCountDict, "*" + num + "*" + piNum + "*")) {
+			trans = get(tranxCountDict, "*" + num + "*" + piNum + "*") ;
+			append(transArray, trans);
+		}		
+	}
+	if (sizeofarray(transArray) > 0) {
+		transSize = sizeofarray(transArray);
+		put (coreBasedTransSizeDict, num, transSize);
+	}
+}
+//IESCNQRCPQ-756 - End
+
+/* CSYS-95591 (LN. 8-16-2019)
+    Moving this logic further down to account for the correct setting of MODIFY actions.  Expanding the original logic of CSYS-87106 to account for
+    MODIFY's within the same Product Family to offset the ARR at a reduced Tier Count (effectively reducing the ARR).
+*/
+ownerBU = util.getStringAttribute( stringsDict, QUOTE_DOC_NUM, DELIMITER, BUSINESS_UNIT );
+
+for docNum in docNumList {
+    pi = get(piDict, docNum);
+    productFamily = util.getStringAttribute(stringsDict, pi, DELIMITER, PRODUCT_FAMILY);//CSYS-87106; CSYS-95591
+    parentDocNum = util.getStringAttribute(stringsDict, docNum, DELIMITER, PARENT_DOC_NUM);//CSYS-97291 (P.S. 1-8-2020)
+    itemType = util.getStringAttribute( stringsDict, docNum, DELIMITER, PI_ITEM_TYPE );
+    currentAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+    numOfTransactions = util.getIntegerAttribute(integersDict, docNum, DELIMITER, TRANSACTIONS);
+    tierDecrease = false;
+	
+	if( itemType == BASE_FEE AND containskey(PRODUCT_FAMILY_DICT, productFamily + DELIMITER + currentAction + DELIMITER + pi) ){
+        // 1. This accounts for Tier Decrease Scenarios..
+//        if( containskey(PRODUCT_FAMILY_CREATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum) ){//CSYS-101072 DWC
+        if( containskey(PRODUCT_FAMILY_CREATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum) ){//CSYS-101072 DWC
+//            createTierCnt = get(PRODUCT_FAMILY_CREATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum);//CSYS-101072 DWC
+            createTierCnt = get(PRODUCT_FAMILY_CREATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum);//CSYS-101072 DWC
+//			if( currentAction == TERMINATE_ACTION AND containskey(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum) ){//CSYS-100370 //CSYS-101072 DWC
+			if( currentAction == TERMINATE_ACTION AND containskey(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum) ){//CSYS-100370 //CSYS-101072 DWC
+//                terminateTierCnt = get(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum);//CSYS-100370 //CSYS-101072 DWC
+                terminateTierCnt = get(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum);//CSYS-100370 //CSYS-101072 DWC
+				//If the original Termiante Trxn number is > than the Create, a tier decrease has occured,
+                if(terminateTierCnt > createTierCnt  AND createTierCnt <> 0){
+                    //CSYS-95591
+                    //Store the decreased number of transactions from the create at the terminate line level
+					
+					//CSYS-104136 (OK. 09-29-2021) When all the base lines in a quote have the same transaction count then only change the transaction count for Terminate line when we have Terminate / Create in same product family
+					//IESCNQRCPQ-756 (OK. 10-17-2023) Comment out the below if condition and add Dict based if condition to check the transaction count based on core service to support 2 core scenario
+					//if (sizeofarray(tranxCountArray) < 2) {
+					if (containskey(coreBasedTransSizeDict, parentDocNum)){
+						transSize = get(coreBasedTransSizeDict, parentDocNum);
+						if (transSize < 2) {
+							utilResultFlag = util.putIntegerAttribute(integersDict, docNum, DELIMITER, TRANSACTIONS, createTierCnt);
+							//Update the Ramp transaction string with the updated TRXN count:
+							utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, TRANS_STRING, string(createTierCnt));
+						}
+					}
+					tierDecrease = true;
+                }
+            }
+//            if( currentAction == MODIFY_ACTION AND containskey(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum) ){//CSYS-100370 //CSYS-101072 DWC
+            if( currentAction == MODIFY_ACTION AND containskey(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum) ){//CSYS-100370 //CSYS-101072 DWC
+//                modifyOriginalTierCnt = get(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum);//CSYS-100370 //CSYS-101072 DWC
+                modifyOriginalTierCnt = get(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum);//CSYS-100370 //CSYS-101072 DWC
+                if(modifyOriginalTierCnt > numOfTransactions){
+                    tierDecrease = true;
+                }
+            }
+        }
+        // 2. This accounts for the Tier Increase Scenario.
+        else {
+//            if( containskey(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum) AND containskey(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum) ){//CSYS-100370 //CSYS-101072 DWC
+            if( containskey(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum) AND containskey(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum) ){//CSYS-100370 //CSYS-101072 DWC
+//                modifyOriginalTierCnt = get(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum);//CSYS-100370 //CSYS-101072 DWC
+                modifyOriginalTierCnt = get(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum);//CSYS-100370 //CSYS-101072 DWC
+//                if(containskey(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + "MODIFY_TIER_DECREASE_TRANSACTION_COUNT" + DELIMITER + docNum)){//CSYS-100370 //CSYS-101072 DWC
+                if(containskey(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + "MODIFY_TIER_DECREASE_TRANSACTION_COUNT" + DELIMITER + parentDocNum)){//CSYS-100370 //CSYS-101072 DWC
+//                    terminateTierCnt = get(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + docNum);//CSYS-100370 //CSYS-101072 DWC
+                    terminateTierCnt = get(PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT, productFamily + DELIMITER + PRODUCT_FAMILY_ARR_OFFSET + DELIMITER + parentDocNum);//CSYS-100370 //CSYS-101072 DWC
+//                    modifyTierDecreaseTrxnCnt = get(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + "MODIFY_TIER_DECREASE_TRANSACTION_COUNT" + DELIMITER + docNum);//CSYS-100370 //CSYS-101072 DWC
+                    modifyTierDecreaseTrxnCnt = get(PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT, productFamily + DELIMITER + "MODIFY_TIER_DECREASE_TRANSACTION_COUNT" + DELIMITER + parentDocNum);//CSYS-100370 //CSYS-101072 DWC
+                    if(terminateTierCnt > modifyTierDecreaseTrxnCnt){
+                        utilResultFlag = util.putIntegerAttribute(integersDict, docNum, DELIMITER, TRANSACTIONS, modifyTierDecreaseTrxnCnt);
+                        tierDecrease = true;
+                    }
+                }
+            }
+            //CSYS-98152 SN. 01/2020
+			//CSYS-103849 SV. 10-08-2021 Modified the below if condition
+            if (ownerBU == SMB_BU AND currentAction == TERMINATE_ACTION AND expensePayClassicTerminated == false){
+                put(triggerDict, docNum + "~" + "terminateOutsideProductFamily", docNum + "~" + "terminateOutsideProductFamily" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+            }
+        }
+    }
+    //CSYS-95591
+    put(PROD_FAM_TIER_DECREASE_OCCURRED_DICT, currentAction + DELIMITER + pi, string(tierDecrease));
+}
+return "";

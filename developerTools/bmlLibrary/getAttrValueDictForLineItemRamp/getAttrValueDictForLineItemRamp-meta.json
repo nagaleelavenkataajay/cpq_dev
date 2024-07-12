@@ -1,0 +1,9 @@
+{
+  "name" : "Get Attr Value Dict For Line Item Ramp",
+  "variableName" : "getAttrValueDictForLineItemRamp",
+  "description" : "This util is called from Pricing and is one of the two utils used to build XML Ramp",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ ],
+  "attributes" : [ ]
+}

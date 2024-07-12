@@ -1,0 +1,17 @@
+//CSYS-97908
+rowCount = sizeofarray(values(unifiedPricingDataDict));
+iterArr = range(rowCount);
+rowCount = 0;
+unifiedPricingForModelDict = dict("string[]");
+DELIMITER = "@.@";
+
+for item in iterArr {
+	rowKey = string(rowCount) + DELIMITER + modelDocNum;
+	if (containskey(unifiedPricingDataDict, rowKey)){
+		poDataArr = get(unifiedPricingDataDict, rowKey);
+		put(unifiedPricingForModelDict, rowKey, PODataArr);	
+	}
+	rowCount = rowCount + 1;
+}
+
+return unifiedPricingForModelDict;

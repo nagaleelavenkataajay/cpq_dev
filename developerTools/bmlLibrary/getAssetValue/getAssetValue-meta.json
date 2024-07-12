@@ -1,0 +1,21 @@
+{
+  "name" : "getAssetValue",
+  "variableName" : "getAssetValue",
+  "description" : "NOT USED. this function returns the requested attribute value from the assets string",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "assetStr",
+    "type" : "String"
+  }, {
+    "name" : "pi",
+    "type" : "String"
+  }, {
+    "name" : "attIndex",
+    "type" : "Integer"
+  }, {
+    "name" : "attType",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,1979 @@
+ObjName= get(ObjectDict, "ObjectName","string");
+hideSMNOrderFormPreviewButton = false;
+hideSMNOrderFormGenerateButton = false;
+hideSMNOrderFormViewInWordLegalButton = false;
+hideSMNOrderFormHeader = false;
+hideSimplifiedOrderFormPreviewButton = false;
+hideSimplifiedOrderFormGenerateButton = false;
+hideSimplifiedOrderFormViewInWordLegalButton = false;
+hideSimplifiedOrderFormHeader = false;
+hideSpanishOrderFormPreviewButton = false;
+hideSpanishOrderFormGenerateButton = false;
+hideSpanishOrderFormViewInWordLegalButton = false;
+hideSpanishOrderFormHeader = false;
+hideGermanOrderFormPreviewButton = false;
+hideGermanOrderFormGenerateButton = false;
+hideGermanOrderFormViewInWordLegalButton = false;
+hideGermanOrderFormHeader = false;
+hideFrenchOrderFormPreviewButton = false;
+hideFrenchOrderFormGenerateButton = false;
+hideFrenchOrderFormViewInWordLegalButton = false;
+hideFrenchOrderFormHeader = false;
+hideCheckBoxes = false;
+ObjAction = false;
+//CSYS-107140 (PG 11-14-2022) Start
+hideSimplifiedOrderFormHeaderJapan = false;
+hideSimplifiedOrderFormGenerateJapanButton = false;
+hideSimplifiedOrderFormPreviewJapanButton = false;
+hideSimplifiedOrderFormJapanViewInWordLegalButton = false;
+//IESCNQRCPQ-1499 (LIK 01-31-2024)
+hideSEPAGermanGenerateButton = false;
+hideSEPAEnglishGenerateButton = false;
+//IESCNQRCPQ-1721 (LIK 04-30-2024)
+hideSEPASpanishPreviewButton = false;
+hideSEPAFrenchPreviewButton = false;
+hideSEPAGermanPreviewButton = false;
+hideSEPAEnglishPreviewButton = false;
+hideSEPASpanishGenerateButton = false;
+hideSEPAFrenchGenerateButton = false;
+//CSYS-107140 (PG 11-14-2022) End
+//CSYS-106919 (LBN. 9-20-2022) -start
+userLogin = _system_user_login; 
+loginName = "bpetsch"; 
+//CSYS-106919 end 
+purchasedFromPartnerCategory = string[]{"VAR", "Presell"};
+quoteType = quoteType_quote; //CSYS-101781 (OK. 1-18-2021)
+userType = _system_user_type; //CSYS-101781 (OK. 1-18-2021)
+contractConversionToSAPGTC = contractConversionToSAPGTC_quote; //CSYS-101781 (OK. 1-18-2021)
+
+//IESCNQRCPQ-1058-Override flag to show all contract buttons
+if (showAllContractButtons_quote == true) {
+	ObjAction = false; }
+else {	
+
+	// hideSMNOrderFormHeader
+
+	if(ObjName == "SMNOrderFormHeader" OR ObjName == "CheckBoxes") {
+	hideSMNOrderFormHeader = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSMNOrderFormHeader = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//CSYS-106919 (LBN. 9-20-2022)
+			if(find(userLogin, loginName) <> -1) {
+				hideSMNOrderFormHeader = false;
+			}
+			//Not in legal
+			elif(find(currentUserGroup_quote, "legal") == -1){
+				hideSMNOrderFormHeader = true;
+			}
+			else{
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormHeader = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormHeader = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(spanishContract){
+					if(serviceCountry <> "Puerto Rico"){
+						hideSMNOrderFormHeader = true;
+					}
+				}
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormHeader = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormHeader = true;
+				}
+			}
+			else{
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormHeader = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormHeader = true;
+				}
+			}		
+		}
+	}
+	//return hideSMNOrderFormHeader;
+	ObjAction =  hideSMNOrderFormHeader;
+	}
+
+	// hideSMNOrderFormPreview
+
+	if(ObjName == "SMNOrderFormPreviewButton" OR ObjName == "CheckBoxes") {
+	hideSMNOrderFormPreviewButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSMNOrderFormPreviewButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//CSYS-106919 (LBN. 9-20-2022)
+			if(find(userLogin, loginName) <> -1) {
+				hideSMNOrderFormPreviewButton = false;
+			}
+			//Not in legal
+			elif(find(currentUserGroup_quote, "legal") == -1){
+				hideSMNOrderFormPreviewButton = true;
+			}
+			else{
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormPreviewButton = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormPreviewButton = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(spanishContract){
+					if(serviceCountry <> "Puerto Rico"){
+						hideSMNOrderFormPreviewButton = true;
+					}
+				}
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormPreviewButton = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormPreviewButton = true;
+				}
+			}
+			//CSYS-106919 (LBN. 9-20-2022)
+			elif(find(userLogin, loginName) <> -1) {
+				hideSMNOrderFormPreviewButton = false;
+			}
+			else{
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormPreviewButton = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormPreviewButton = true;
+				}	
+			}		
+		}
+	}
+	//return hideSMNOrderFormPreviewButton;
+	ObjAction =  hideSMNOrderFormPreviewButton;
+	}
+	
+	//IESCNQRCPQ-1721 (LIK 04-30-2024)
+if(ObjName == "SEPAEnglishPreviewButton" OR ObjName == "CheckBoxes") {
+		hideSEPAEnglishPreviewButton = false;
+		serviceCountry = _quote_process_serviceAddress_country;
+	
+		spanishContract = false;
+		spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+	
+		if(paymentMethod_quote == "Direct Debit" AND ownerTheater_quote == "EMEA"){
+	
+	
+			if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+				spanishContract = true;
+			}
+	
+			if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+				hideSEPAEnglishPreviewButton = true;
+			}
+			else {
+				//Non- Systemetized
+				if(contractAutomation_quote == "Non-Systematized"){
+					//CSYS-106919 (LBN. 9-20-2022)
+					if(find(userLogin, loginName) <> -1) {
+						hideSEPAEnglishPreviewButton = false;
+					}
+					//Not in legal
+					elif(find(currentUserGroup_quote, "legal") == -1){
+						hideSEPAEnglishPreviewButton = true;
+					}
+					else{
+						if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+							hideSEPAEnglishPreviewButton = true;
+						}
+						//CSYS-101269 (TT. 12/10/2020)
+						if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+							hideSEPAEnglishPreviewButton = true;
+						}
+					}
+				}
+				//Systemetized
+				else{
+					//Not in legal
+					if(find(currentUserGroup_quote, "legal") == -1){
+						if(spanishContract){
+							if(serviceCountry <> "Puerto Rico"){
+								hideSEPAEnglishPreviewButton = true;
+							}
+						}
+						if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+							hideSEPAEnglishPreviewButton = true;
+						}
+						//CSYS-101269 (TT. 12/10/2020)
+						if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+							hideSEPAEnglishPreviewButton = true;
+						
+						}
+					}
+					//CSYS-106919 (LBN. 9-20-2022)
+					elif(find(userLogin, loginName) <> -1) {
+						hideSEPAEnglishPreviewButton = false;
+					}
+					else{
+						hideSEPAEnglishPreviewButton = true;
+					}		
+				}
+			}
+		}
+		else{
+			hideSEPAEnglishPreviewButton = true;
+			print "@330";
+		}
+	//return hideSEPAEnglishGenerateButton;
+	ObjAction =  hideSEPAEnglishPreviewButton;
+	}
+	//END -IESCNQRCPQ-1499
+	// hideSMNOrderFormGenerate
+
+	if(ObjName == "SMNOrderFormGenerateButton" OR ObjName == "CheckBoxes") {
+	hideSMNOrderFormGenerateButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSMNOrderFormGenerateButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//CSYS-106919 (LBN. 9-20-2022)
+			if(find(userLogin, loginName) <> -1) {
+				hideSMNOrderFormGenerateButton = false;
+			}
+			//Not in legal
+			elif(find(currentUserGroup_quote, "legal") == -1){
+				hideSMNOrderFormGenerateButton = true;
+			}
+			else{
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormGenerateButton = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormGenerateButton = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(spanishContract){
+					if(serviceCountry <> "Puerto Rico"){
+						hideSMNOrderFormGenerateButton = true;
+					}
+				}
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormGenerateButton = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormGenerateButton = true;
+				}
+			}
+			//CSYS-106919 (LBN. 9-20-2022)
+			elif(find(userLogin, loginName) <> -1) {
+				hideSMNOrderFormGenerateButton = false;
+			}
+			else{
+				hideSMNOrderFormGenerateButton = true;
+			}		
+		}
+	}
+	//return hideSMNOrderFormGenerateButton;
+	ObjAction =  hideSMNOrderFormGenerateButton;
+	}
+	
+	// hideSEPAEnglishGenerateButton - IESCNQRCPQ-1499 -LIK -01-31-2024
+
+	if(ObjName == "SEPAEnglishGenerateButton" OR ObjName == "CheckBoxes") {
+		hideSEPAEnglishGenerateButton = false;
+		serviceCountry = _quote_process_serviceAddress_country;
+	
+		spanishContract = false;
+		spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+	
+		if(paymentMethod_quote == "Direct Debit" AND ownerTheater_quote == "EMEA"){
+	
+	
+			if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+				spanishContract = true;
+			}
+	
+			if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+				hideSEPAEnglishGenerateButton = true;
+			}
+			else {
+				//Non- Systemetized
+				if(contractAutomation_quote == "Non-Systematized"){
+					//CSYS-106919 (LBN. 9-20-2022)
+					if(find(userLogin, loginName) <> -1) {
+						hideSEPAEnglishGenerateButton = false;
+					}
+					//Not in legal
+					elif(find(currentUserGroup_quote, "legal") == -1){
+						hideSEPAEnglishGenerateButton = true;
+					}
+					else{
+						if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+							hideSEPAEnglishGenerateButton = true;
+						}
+						//CSYS-101269 (TT. 12/10/2020)
+						if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+							hideSEPAEnglishGenerateButton = true;
+						}
+					}
+				}
+				//Systemetized
+				else{
+					//Not in legal
+					if(find(currentUserGroup_quote, "legal") == -1){
+						if(spanishContract){
+							if(serviceCountry <> "Puerto Rico"){
+								hideSEPAEnglishGenerateButton = true;
+							}
+						}
+						if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+							hideSEPAEnglishGenerateButton = true;
+						}
+						//CSYS-101269 (TT. 12/10/2020)
+						if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+							hideSEPAEnglishGenerateButton = true;
+						
+						}
+					}
+					//CSYS-106919 (LBN. 9-20-2022)
+					elif(find(userLogin, loginName) <> -1) {
+						hideSEPAEnglishGenerateButton = false;
+					}
+					else{
+						hideSEPAEnglishGenerateButton = true;
+					}		
+				}
+			}
+		}
+		else{
+			hideSEPAEnglishGenerateButton = true;
+			print "@330";
+		}
+	//return hideSEPAEnglishGenerateButton;
+	ObjAction =  hideSEPAEnglishGenerateButton;
+	}
+	//END -IESCNQRCPQ-1499
+
+	// hideSMNOrderFormViewInWordLegal
+
+	if(ObjName == "SMNOrderFormViewInWordLegalButton" OR ObjName == "CheckBoxes") {
+	hideSMNOrderFormViewInWordLegalButton = false;
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSMNOrderFormViewInWordLegalButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSMNOrderFormViewInWordLegalButton = true;
+			}
+			//CSYS-101082: Legal will be able to generate contract in word for VAR Partner Account
+			else{
+				if(bPOPartnerAccountMirror_quote <> "" and findinarray(purchasedFromPartnerCategory, purchasedFromPartnerCategorySFDC_quote)==-1){
+					hideSMNOrderFormViewInWordLegalButton = true;
+				}
+				//CSYS-101269 (TT. 12/10/2020)
+				if(purchasedFromPartnerCategorySFDC_quote == "Presell" and purchasedFromPartnerSFDC_quote <> "Concur Partner J.P. Morgan Asset Management"){
+					hideSMNOrderFormViewInWordLegalButton = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSMNOrderFormViewInWordLegalButton = true;
+			}
+			else{
+				hideSMNOrderFormViewInWordLegalButton = true;
+			}		
+		}
+	}
+	//return hideSMNOrderFormViewInWordLegalButton;
+	ObjAction =  hideSMNOrderFormViewInWordLegalButton;
+	}
+
+	// hideSimplifiedOrderFormHeader
+
+	if(ObjName == "SimplifiedOrderFormHeader" OR ObjName == "CheckBoxes"){
+		hideSimplifiedOrderFormHeader = false;
+		serviceCountry = _quote_process_serviceAddress_country;
+
+		germanContract = false;
+		germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+		//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+		if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+			germanContract = true;
+		}
+
+		spanishContract = false;
+		spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+		if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+			spanishContract = true;
+		}
+
+		//Simplified Order Form (formerly quotation) buttons should NOT display for Sales Or Legal when German buttons are available
+		if(germanContract == true){
+			hideSimplifiedOrderFormHeader = true;
+		}
+
+		//Simplified Order Form (formerly quotation) buttons should NOT display for Sales Or Legal when when Spanish buttons are available.
+		if(spanishContract){
+			if(serviceCountry <> "Puerto Rico"){
+				hideSimplifiedOrderFormHeader = true;
+			}
+		}
+
+		//CSYS-101769 (SV. 18-01-2021) Added an additional or contractConversionToSAPGTC in the below condition
+		if(showQuotationButtons_quote <> "true" OR contractConversionToSAPGTC_quote == true){
+			hideSimplifiedOrderFormHeader = true;
+		}
+
+		if(contractSource_quote == "Third Party Paper" OR contractSource_quote == "Concur Paper" OR contractSource_quote == ""){
+			hideSimplifiedOrderFormHeader = true;
+		}
+		else {
+			//Non- Systemetized, hide Simplified Order Form Preview for Sales
+			if(contractAutomation_quote == "Non-Systematized"){
+				//CSYS-106919 (LBN. 9-20-2022)
+				if(find(userLogin, loginName) <> -1) {
+					hideSimplifiedOrderFormHeader = false;
+				}
+				//Not in legal
+				elif(find(currentUserGroup_quote, "legal") == -1){
+					hideSimplifiedOrderFormHeader = true;
+				}
+			}
+			//Systemetized, show Simplified Order Form Preview for Sales and Legal.
+		}
+		//return hideSimplifiedOrderFormHeader;
+		ObjAction =  hideSimplifiedOrderFormHeader;
+	}
+
+
+	// hideSimplifiedOrderFormPreview
+
+	if(ObjName == "SimplifiedOrderFormPreviewButton" OR ObjName == "CheckBoxes") {
+		hideSimplifiedOrderFormPreviewButton = false;
+		serviceCountry = _quote_process_serviceAddress_country;
+
+		germanContract = false;
+		germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+		//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+		if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+			germanContract = true;
+		}
+
+		spanishContract = false;
+		spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+		if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+			spanishContract = true;
+		}
+
+		//Simplified Order Form (formerly quotation) buttons should NOT display for Sales Or Legal when German buttons are available
+		if(germanContract == true){
+			hideSimplifiedOrderFormPreviewButton = true;
+		}
+
+		//Simplified Order Form (formerly quotation) buttons should NOT display for Sales Or Legal when when Spanish buttons are available.
+		if(spanishContract){
+			if(serviceCountry <> "Puerto Rico"){
+				hideSimplifiedOrderFormPreviewButton = true;
+			}
+		}
+
+		//CSYS-101769 (SV. 18-01-2021) Added an additional or contractConversionToSAPGTC in the below condition
+		if(showQuotationButtons_quote <> "true" OR contractConversionToSAPGTC_quote == true){
+			hideSimplifiedOrderFormPreviewButton = true;
+		}
+
+		if(contractSource_quote == "Third Party Paper" OR contractSource_quote == "Concur Paper" OR contractSource_quote == ""){
+			hideSimplifiedOrderFormPreviewButton = true;
+		}
+		else {
+			//Non- Systemetized, hide Simplified Order Form Preview for Sales
+			if(contractAutomation_quote == "Non-Systematized"){
+				//CSYS-106919 (LBN. 9-20-2022)
+				if(find(userLogin, loginName) <> -1) {
+					hideSimplifiedOrderFormPreviewButton = false;
+				}
+				//Not in legal
+				elif(find(currentUserGroup_quote, "legal") == -1){
+					hideSimplifiedOrderFormPreviewButton = true;
+				}
+			}
+			//Systemetized, show Simplified Order Form Preview for Sales and Legal.
+		}
+		//return hideSimplifiedOrderFormPreviewButton;
+		ObjAction =  hideSimplifiedOrderFormPreviewButton;
+	}
+
+
+	// hideSimplifiedOrderFormGenerate
+
+	if(ObjName == "SimplifiedOrderFormGenerateButton" OR ObjName == "CheckBoxes") {
+		hideSimplifiedOrderFormGenerateButton = false;
+		serviceCountry = _quote_process_serviceAddress_country;
+
+		germanContract = false;
+		germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+		//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+		if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+			germanContract = true;
+		}
+
+		spanishContract = false;
+		spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+		if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+			spanishContract = true;
+		}
+
+		//Simplified Order Form (formerly quotation) buttons should NOT display for Sales Or Legal when German buttons are available
+		if(germanContract == true){
+			hideSimplifiedOrderFormGenerateButton = true;
+		}
+
+		//Simplified Order Form (formerly quotation) buttons should NOT display for Sales Or Legal when when Spanish buttons are available.
+		if(spanishContract){
+			if(serviceCountry <> "Puerto Rico"){
+				hideSimplifiedOrderFormGenerateButton = true;
+			}
+		}
+
+		//CSYS-101740 (BS, 01/15/21) Added below condition to hide generate button to match the SimplifiedOrderFormHeader condition
+		//Start
+		//CSYS-101769 (SV. 18-01-2021) Added an additional or contractConversionToSAPGTC in the below condition
+		if(showQuotationButtons_quote <> "true" OR contractConversionToSAPGTC_quote == true){
+			hideSimplifiedOrderFormGenerateButton = true;
+		}
+		//End
+
+		if(contractSource_quote == "Third Party Paper" OR contractSource_quote == "Concur Paper" OR contractSource_quote == ""){
+			hideSimplifiedOrderFormGenerateButton = true;
+		}
+		
+		//CSYS-105396 (PG. 14/02/2022) Start
+		//CSYS-107765 (TJG 13/12/2022) Exclude Partner quotes from the above ticket
+		if (quoteType == "New Business" AND serviceCountry == "Italy" AND partnerBillingQuote_quote == false){
+			hideSimplifiedOrderFormGenerateButton = true;
+		}
+		//CSYS-105396 (PG. 14/02/2022) End
+
+		else {
+			//Non- Systemetized, hide Simplified Order Form Generate for Sales.
+			if(contractAutomation_quote == "Non-Systematized"){
+				//CSYS-106919 (LBN. 9-20-2022)
+				if(find(userLogin, loginName) <> -1) {
+					hideSimplifiedOrderFormGenerateButton = false;
+				}
+				//Not in legal
+				elif(find(currentUserGroup_quote, "legal") == -1){
+					hideSimplifiedOrderFormGenerateButton = true;
+				}
+			}
+			//Systemetized, hide Simplified Order Form Generate for Legal.
+			else{
+				//CSYS-106919 (LBN. 9-20-2022)
+				if(find(userLogin, loginName) <> -1) {
+					hideSimplifiedOrderFormGenerateButton = false;
+				}
+				//In legal , hide button
+				elif(find(currentUserGroup_quote, "legal") <> -1){
+					hideSimplifiedOrderFormGenerateButton = true;
+				}	
+			}
+		}
+		//return hideSimplifiedOrderFormGenerateButton;
+		ObjAction =  hideSimplifiedOrderFormGenerateButton;
+	}
+
+	// hideSimplifiedOrderFormViewInWordLegal
+
+	if(ObjName == "SimplifiedOrderFormViewInWordLegalButton" OR ObjName == "CheckBoxes") {
+		hideSimplifiedOrderFormViewInWordLegalButton = false;
+		serviceCountry = _quote_process_serviceAddress_country;
+
+		germanContract = false;
+		germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+		//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+		if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+			germanContract = true;
+		}
+
+		spanishContract = false;
+		spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Trinidad and Tobago", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+		if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+			spanishContract = true;
+		}
+
+		//Simplified Order Form (formerly quotation) buttons should NOT display for Sales Or Legal when German buttons are available
+		if(germanContract == true){
+			hideSimplifiedOrderFormViewInWordLegalButton = true;
+		}
+
+		//Simplified Order Form (formerly quotation) buttons should NOT display for Sales Or Legal when when Spanish buttons are available.
+		if(spanishContract){
+			if(serviceCountry <> "Puerto Rico"){
+				hideSimplifiedOrderFormViewInWordLegalButton = true;
+			}
+		}
+
+		//CSYS-101769 (SV. 18-01-2021) Added an additional or contractConversionToSAPGTC in the below condition
+		if(showQuotationButtons_quote <> "true" OR contractConversionToSAPGTC_quote == true){
+			hideSimplifiedOrderFormViewInWordLegalButton = true;
+		}
+
+		if(contractSource_quote == "Third Party Paper" OR contractSource_quote == "Concur Paper" OR contractSource_quote == ""){
+			hideSimplifiedOrderFormViewInWordLegalButton = true;
+		}
+		else {
+			//Non- Systemetized, hide Simplified Order Form View In Word for Sales.
+			if(contractAutomation_quote == "Non-Systematized"){
+				//Not in legal
+				if(find(currentUserGroup_quote, "legal") == -1){
+					hideSimplifiedOrderFormViewInWordLegalButton = true;
+				}
+			}
+			//Systemetized, hide Simplified Order Form View In Word for Sales and Legal.
+			else{
+				hideSimplifiedOrderFormViewInWordLegalButton = true;			
+			}
+		}
+		//return hideSimplifiedOrderFormViewInWordLegalButton;
+		ObjAction =  hideSimplifiedOrderFormViewInWordLegalButton;
+	}
+
+	// hideSpanishOrderFormHeader
+
+	if(ObjName == "SpanishOrderFormHeader" OR ObjName == "CheckBoxes") {
+	hideSpanishOrderFormHeader = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSpanishOrderFormHeader = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSpanishOrderFormHeader = true;
+			}
+			else{
+				if(spanishContract == false){
+					hideSpanishOrderFormHeader = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(spanishContract == false){
+					hideSpanishOrderFormHeader = true;
+				}
+			}
+			else{
+				if(spanishContract == false){
+					hideSpanishOrderFormHeader = true;
+				}
+			}		
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideSpanishOrderFormHeader = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideSpanishOrderFormHeader;
+	ObjAction =  hideSpanishOrderFormHeader;
+	}
+
+	// hideSpanishOrderFormPreview
+
+	if(ObjName == "SpanishOrderFormPreviewButton" OR ObjName == "CheckBoxes") {
+	hideSpanishOrderFormPreviewButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSpanishOrderFormPreviewButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSpanishOrderFormPreviewButton = true;
+			}
+			else{
+				if(spanishContract == false){
+					hideSpanishOrderFormPreviewButton = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(spanishContract == false){
+					hideSpanishOrderFormPreviewButton = true;
+				}
+			}
+			else{
+				if(spanishContract == false){
+					hideSpanishOrderFormPreviewButton = true;
+				}
+			}		
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideSpanishOrderFormPreviewButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideSpanishOrderFormPreviewButton;
+	ObjAction =  hideSpanishOrderFormPreviewButton;
+	}
+	
+	// hideSEPASpanishPreviewButton
+
+	if(ObjName == "SEPASpanishPreviewButton" OR ObjName == "CheckBoxes") {
+	hideSEPASpanishPreviewButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSEPASpanishPreviewButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSEPASpanishPreviewButton = true;
+			}
+			else{
+				if(spanishContract == false){
+					hideSEPASpanishPreviewButton = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(spanishContract == false){
+					hideSEPASpanishPreviewButton = true;
+				}
+			}
+			else{
+				if(spanishContract == false){
+					hideSEPASpanishPreviewButton = true;
+				}
+			}		
+		}
+	}
+
+	//return hideSEPASpanishPreviewButton;
+	ObjAction =  hideSEPASpanishPreviewButton;
+	}
+
+
+	// hideSpanishOrderFormGenerate
+
+	if(ObjName == "SpanishOrderFormGenerateButton" OR ObjName == "CheckBoxes") {
+	hideSpanishOrderFormGenerateButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSpanishOrderFormGenerateButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSpanishOrderFormGenerateButton = true;
+			}
+			else{
+				if(spanishContract == false){
+					hideSpanishOrderFormGenerateButton = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(spanishContract == false){
+					hideSpanishOrderFormGenerateButton = true;
+				}
+			}
+			else{
+				hideSpanishOrderFormGenerateButton = true;
+			}		
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideSpanishOrderFormGenerateButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideSpanishOrderFormGenerateButton;
+	ObjAction =  hideSpanishOrderFormGenerateButton;
+	}
+	
+	// hideSEPASpanishGenerateButton
+
+	if(ObjName == "SEPASpanishGenerateButton" OR ObjName == "CheckBoxes") {
+	hideSEPASpanishGenerateButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSEPASpanishGenerateButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSEPASpanishGenerateButton = true;
+			}
+			else{
+				if(spanishContract == false){
+					hideSEPASpanishGenerateButton = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(spanishContract == false){
+					hideSEPASpanishGenerateButton = true;
+				}
+			}
+			else{
+				hideSEPASpanishGenerateButton = true;
+			}		
+		}
+	}
+
+
+	//return hideSEPASpanishGenerateButton;
+	ObjAction =  hideSEPASpanishGenerateButton;
+	}
+
+	// hideSpanishOrderFormViewInWordLegal
+
+	if(ObjName == "SpanishOrderFormViewInWordLegalButton" OR ObjName == "CheckBoxes") {
+	hideSpanishOrderFormViewInWordLegalButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	spanishContract = false;
+	spanishCountryArr = string[]{"Argentina", "Chile", "Peru", "Brazil", "Colombia", "Venezuela", "Panama", "Costa Rica", "Mexico", "Puerto Rico", "El Salvador", "Guatemala", "Nicaragua", "Honduras", "Ecuador", "Dominican Republic", "Uruguay", "Bolivia", "Paraguay"};
+
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper" ) AND (ownerMarket_quote == "LATAM" OR ownerMarket_quote == "Mexico") AND findinarray(spanishCountryArr,serviceCountry) <> -1){
+		spanishContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSpanishOrderFormViewInWordLegalButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSpanishOrderFormViewInWordLegalButton = true;
+			}
+			else{
+				if(spanishContract == false){
+					hideSpanishOrderFormViewInWordLegalButton = true;
+				}
+			}
+		}
+		//Systemetized
+		else{
+			//Not in legal
+			hideSpanishOrderFormViewInWordLegalButton = true;		
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideSpanishOrderFormViewInWordLegalButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideSpanishOrderFormViewInWordLegalButton;
+	ObjAction =  hideSpanishOrderFormViewInWordLegalButton;
+	}
+
+	// hideGermanOrderFormHeader
+
+	if(ObjName == "GermanOrderFormHeader" OR ObjName == "CheckBoxes") {
+	hideGermanOrderFormHeader = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	germanContract = false;
+	germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+	//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+		germanContract = true;
+	}
+
+	if(germanContract == false){
+		hideGermanOrderFormHeader = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideGermanOrderFormHeader = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideGermanOrderFormHeader = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideGermanOrderFormHeader = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideGermanOrderFormHeader;
+	ObjAction =  hideGermanOrderFormHeader;
+	}
+
+	// hideGermanOrderFormPreview
+
+	if(ObjName == "GermanOrderFormPreviewButton" OR ObjName == "CheckBoxes") {
+	hideGermanOrderFormPreviewButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	germanContract = false;
+	germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+	//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+		germanContract = true;
+	}
+
+	if(germanContract == false){
+		hideGermanOrderFormPreviewButton = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideGermanOrderFormPreviewButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideGermanOrderFormPreviewButton = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideGermanOrderFormPreviewButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideGermanOrderFormPreviewButton;
+	ObjAction =  hideGermanOrderFormPreviewButton;
+	}
+	
+	
+	// hideSEPAGermanPreviewButton
+
+	if(ObjName == "SEPAGermanPreviewButton" OR ObjName == "CheckBoxes") {
+	hideSEPAGermanPreviewButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	germanContract = false;
+	germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+	//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+		germanContract = true;
+	}
+
+	if(germanContract == false){
+		hideSEPAGermanPreviewButton = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSEPAGermanPreviewButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSEPAGermanPreviewButton = true;
+			}
+		}
+	}
+
+	//return hideSEPAGermanPreviewButton;
+	ObjAction =  hideSEPAGermanPreviewButton;
+	}
+
+	// hideGermanOrderFormGenerate
+
+	if(ObjName == "GermanOrderFormGenerateButton" OR ObjName == "CheckBoxes") {
+	hideGermanOrderFormGenerateButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	germanContract = false;
+	germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+	//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+		germanContract = true;
+	}
+	if(germanContract == false){
+		hideGermanOrderFormGenerateButton = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideGermanOrderFormGenerateButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideGermanOrderFormGenerateButton = true;
+			}
+		}
+		// Systemetized
+		else{
+			//In legal
+			if(find(currentUserGroup_quote, "legal") <> -1){
+				hideGermanOrderFormGenerateButton = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideGermanOrderFormGenerateButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideGermanOrderFormGenerateButton;
+	ObjAction =  hideGermanOrderFormGenerateButton;
+	}
+
+	// hideGermanOrderFormViewInWordLegal
+
+	if(ObjName == "GermanOrderFormViewInWordLegalButton" OR ObjName == "CheckBoxes") {
+	hideGermanOrderFormViewInWordLegalButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	germanContract = false;
+	germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+	//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+		germanContract = true;
+	}
+
+	if(germanContract == false){
+		hideGermanOrderFormViewInWordLegalButton = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideGermanOrderFormViewInWordLegalButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideGermanOrderFormViewInWordLegalButton = true;
+			}
+		}
+		else{
+			hideGermanOrderFormViewInWordLegalButton = true;
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideGermanOrderFormViewInWordLegalButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideGermanOrderFormViewInWordLegalButton;
+	ObjAction =  hideGermanOrderFormViewInWordLegalButton;
+	}
+
+	// hideSEPAGermanGenerateButton - IESCNQRCPQ-1499 - LIK - 01-31-2024
+	
+	if(ObjName == "SEPAGermanGenerateButton" OR ObjName == "CheckBoxes") {
+		if(paymentMethod_quote == "Direct Debit" AND ownerTheater_quote == "EMEA"){
+			hideSEPAGermanGenerateButton = false;
+			serviceCountry = _quote_process_serviceAddress_country;
+	
+			germanContract = false;
+			germanCountryArr = string[]{"Liechtenstein", "Germany", "Austria", "Switzerland"};
+			//IESCNQRCPQ-1022 SV.07-09-2023 Adding CEE as one of the Owner Market
+			if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Germany" OR ownerMarket_quote == "Switzerland" OR ownerMarket_quote == "CEE") AND findinarray(germanCountryArr,serviceCountry) <> -1){
+				germanContract = true;
+			}
+			if(germanContract == false){
+				hideSEPAGermanGenerateButton = true;
+			}
+	
+			if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+				hideSEPAGermanGenerateButton = true;
+			}
+			else {
+				//Non- Systemetized
+				if(contractAutomation_quote == "Non-Systematized"){
+					//Not in legal
+					if(find(currentUserGroup_quote, "legal") == -1){
+						hideSEPAGermanGenerateButton = true;
+					}
+				}
+				// Systemetized
+				else{
+					//In legal
+					if(find(currentUserGroup_quote, "legal") <> -1){
+						hideSEPAGermanGenerateButton = true;
+					}
+				}
+			}
+		}
+		else{
+			hideSEPAGermanGenerateButton = true;
+		}
+	
+	
+	//return hideSEPAGermanGenerateButton;
+	ObjAction =  hideSEPAGermanGenerateButton;
+	}
+	//END
+
+	// hideFrenchOrderFormHeader
+
+	if(ObjName == "FrenchOrderFormHeader" OR ObjName == "CheckBoxes") {
+	hideFrenchOrderFormHeader = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	frenchContract = false;
+
+	if((ownerMarket_quote == "France" ) AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		frenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideFrenchOrderFormHeader = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideFrenchOrderFormHeader = true;
+			}
+			else{
+				if(frenchContract == false){
+					hideFrenchOrderFormHeader = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			if(frenchContract == false){
+				hideFrenchOrderFormHeader = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideFrenchOrderFormHeader = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideFrenchOrderFormHeader;
+	ObjAction =  hideFrenchOrderFormHeader;
+	}
+
+	// hideFrenchOrderFormPreview
+
+	if(ObjName == "FrenchOrderFormPreviewButton" OR ObjName == "CheckBoxes") {
+	hideFrenchOrderFormPreviewButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	frenchContract = false;
+
+	if((ownerMarket_quote == "France" ) AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		frenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideFrenchOrderFormPreviewButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideFrenchOrderFormPreviewButton = true;
+			}
+			else{
+				if(frenchContract == false){
+					hideFrenchOrderFormPreviewButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			if(frenchContract == false){
+				hideFrenchOrderFormPreviewButton = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideFrenchOrderFormPreviewButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideFrenchOrderFormPreviewButton;
+	ObjAction =  hideFrenchOrderFormPreviewButton;
+	}
+	
+	// hideSEPAFrenchPreviewButton
+
+	if(ObjName == "SEPAFrenchPreviewButton" OR ObjName == "CheckBoxes") {
+	hideSEPAFrenchPreviewButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	frenchContract = false;
+
+	if((ownerMarket_quote == "France" ) AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		frenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSEPAFrenchPreviewButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSEPAFrenchPreviewButton = true;
+			}
+			else{
+				if(frenchContract == false){
+					hideSEPAFrenchPreviewButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			if(frenchContract == false){
+				hideSEPAFrenchPreviewButton = true;
+			}
+		}
+	}
+
+	//return hideSEPAFrenchPreviewButton;
+	ObjAction =  hideSEPAFrenchPreviewButton;
+	}
+
+
+
+	// hideFrenchOrderFormGenerate
+
+	if(ObjName == "FrenchOrderFormGenerateButton" OR ObjName == "CheckBoxes") {
+	hideFrenchOrderFormGenerateButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	frenchContract = false;
+
+	if((ownerMarket_quote == "France" ) AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		frenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideFrenchOrderFormGenerateButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideFrenchOrderFormGenerateButton = true;
+			}
+			else{
+				if(frenchContract == false){
+					hideFrenchOrderFormGenerateButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(frenchContract == false){
+					hideFrenchOrderFormGenerateButton = true;
+				}
+			}
+			else{
+				hideFrenchOrderFormGenerateButton = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideFrenchOrderFormGenerateButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideFrenchOrderFormGenerateButton;
+	ObjAction =  hideFrenchOrderFormGenerateButton;
+	}
+	
+	
+	// hideSEPAFrenchGenerateButton
+
+	if(ObjName == "SEPAFrenchGenerateButton" OR ObjName == "CheckBoxes") {
+	hideSEPAFrenchGenerateButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	frenchContract = false;
+
+	if((ownerMarket_quote == "France" ) AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		frenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSEPAFrenchGenerateButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSEPAFrenchGenerateButton = true;
+			}
+			else{
+				if(frenchContract == false){
+					hideSEPAFrenchGenerateButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(frenchContract == false){
+					hideSEPAFrenchGenerateButton = true;
+				}
+			}
+			else{
+				hideSEPAFrenchGenerateButton = true;
+			}
+		}
+	}
+
+	//return hideSEPAFrenchGenerateButton;
+	ObjAction =  hideSEPAFrenchGenerateButton;
+	}
+
+	// hideFrenchOrderFormViewInWordLegal
+
+	if(ObjName == "FrenchOrderFormViewInWordLegalButton" OR ObjName == "CheckBoxes") {
+	hideFrenchOrderFormViewInWordLegalButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	frenchContract = false;
+
+	if((ownerMarket_quote == "France" ) AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		frenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideFrenchOrderFormViewInWordLegalButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideFrenchOrderFormViewInWordLegalButton = true;
+			}
+			else{
+				if(frenchContract == false){
+					hideFrenchOrderFormViewInWordLegalButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			hideFrenchOrderFormViewInWordLegalButton = true;
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideFrenchOrderFormViewInWordLegalButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideFrenchOrderFormViewInWordLegalButton;
+	ObjAction =  hideFrenchOrderFormViewInWordLegalButton;
+	}
+
+
+	//IESCNQRCPQ-1856 (Akash : 05-06-2024) hideCanadianFrenchOrderFormHeader
+
+	if(ObjName == "canadianFrenchOrderForm" OR ObjName == "CheckBoxes") {
+	hideCanadianFrenchOrderFormHeader = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	canadianfrenchContract = false;
+
+	if((serviceCountry == "Canada" OR ownerMarket_quote == "Canada" ) AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		canadianfrenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideCanadianFrenchOrderFormHeader = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideCanadianFrenchOrderFormHeader = true;
+			}
+			else{
+				if(canadianfrenchContract == false){
+					hideCanadianFrenchOrderFormHeader = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			if(canadianfrenchContract == false){
+				hideCanadianFrenchOrderFormHeader = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hideCanadianFrenchOrderFormHeader = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hideCanadianFrenchOrderFormHeader;
+	ObjAction =  hideCanadianFrenchOrderFormHeader;
+	}
+	
+	//IESCNQRCPQ-1856 (Akash. 05-06-2024) hidecanadianFrenchOrderFormPreviewButton
+    
+	if(ObjName == "canadianFrenchOrderFormPreviewButton" OR ObjName == "CheckBoxes") {
+	hidecanadianFrenchOrderFormPreviewButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	canadianfrenchContract = false;
+
+	if((serviceCountry == "Canada" OR ownerMarket_quote == "Canada") AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		canadianfrenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hidecanadianFrenchOrderFormPreviewButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hidecanadianFrenchOrderFormPreviewButton = true;
+			}
+			else{
+				if(canadianfrenchContract == false){
+					hidecanadianFrenchOrderFormPreviewButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			if(canadianfrenchContract == false){
+				hidecanadianFrenchOrderFormPreviewButton = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hidecanadianFrenchOrderFormPreviewButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hidecanadianFrenchOrderFormPreviewButton;
+	ObjAction =  hidecanadianFrenchOrderFormPreviewButton;
+	}
+	
+	//IESCNQRCPQ-1856 (Akash. 05-06-2024) hidecanadianFrenchOrderFormGenerateButton
+
+	if(ObjName == "canadianFrenchOrderFormGenerateButton" OR ObjName == "CheckBoxes") {
+	hidecanadianFrenchOrderFormGenerateButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	canadianfrenchContract = false;
+
+	if((serviceCountry == "Canada" OR ownerMarket_quote == "Canada" ) AND (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper")){
+		canadianfrenchContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hidecanadianFrenchOrderFormGenerateButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hidecanadianFrenchOrderFormGenerateButton = true;
+			}
+			else{
+				if(canadianfrenchContract == false){
+					hidecanadianFrenchOrderFormGenerateButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				if(canadianfrenchContract == false){
+					hidecanadianFrenchOrderFormGenerateButton = true;
+				}
+			}
+			else{
+				hidecanadianFrenchOrderFormGenerateButton = true;
+			}
+		}
+	}
+
+	//CSYS-101906 (OK. 2-2-2021) Comment out the conditions added as part of CSYS-101781 to hide the buttons
+	/*
+	//CSYS-101781 (OK. 1-18-2021) Start: Hide Non-English Contract Buttons for Add-on when Concur Paper is migrating to SAP GTC
+	if (quoteType == "Add-On Business" AND contractConversionToSAPGTC == true AND userType == "SalesAgent" AND find(currentUserGroup_quote, "legal") == -1) {
+		hidecanadianFrenchOrderFormGenerateButton = true;
+	}
+	//CSYS-101781 - End
+	*/
+
+	//return hidecanadianFrenchOrderFormGenerateButton;
+	ObjAction =  hidecanadianFrenchOrderFormGenerateButton;
+	}
+	
+	// CSYS-107140 (PG 11/14/2022) - Simplified Order Form Japan Start
+	if(ObjName == "SimplifiedOrderFormHeaderJapan" OR ObjName == "CheckBoxes") {
+	hideSimplifiedOrderFormHeaderJapan = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	japanContract = false;
+	japanCountryArr = string[]{"Japan"};
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Japan") AND findinarray(japanCountryArr,serviceCountry) <> -1){
+		japanContract = true;
+	}
+	if(japanContract == false){
+		hideSimplifiedOrderFormHeaderJapan = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSimplifiedOrderFormHeaderJapan = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSimplifiedOrderFormHeaderJapan = true;
+			}
+			//IESCNQRCPQ-1485- LIK -01-10-2024 - Added the condition to show preview button for Legal.
+			elif((find(currentUserGroup_quote, "legal") <> -1) AND japanContract){
+				hideSimplifiedOrderFormHeaderJapan = false;
+			}
+			else{
+				if(japanContract == false){
+					hideSimplifiedOrderFormHeaderJapan = true;
+				}
+			}
+			//IESCNQRCPQ-1485-End
+			
+		}
+		// Systemetized
+		else{
+			//In legal
+			//IESCNQRCPQ-1485- LIK -01-10-2024 - Updated the condition to show preview button for Legal.
+			if((find(currentUserGroup_quote, "legal") <> -1) AND japanContract){
+				hideSimplifiedOrderFormHeaderJapan = false;
+			}
+			else{
+				if(japanContract){
+					hideSimplifiedOrderFormHeaderJapan = false;
+				}
+				else{
+				hideSimplifiedOrderFormHeaderJapan = true;
+				}
+			}
+		}
+	}
+
+	//return hideSimplifiedOrderFormHeaderJapan;
+	ObjAction =  hideSimplifiedOrderFormHeaderJapan;
+	}
+
+	if(ObjName == "SimplifiedOrderFormGenerateJapanButton" OR ObjName == "CheckBoxes") {
+	hideSimplifiedOrderFormGenerateJapanButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	japanContract = false;
+	japanCountryArr = string[]{"Japan"};
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Japan") AND findinarray(japanCountryArr,serviceCountry) <> -1){
+		japanContract = true;
+	}
+	if(japanContract == false){
+		hideSimplifiedOrderFormGenerateJapanButton = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSimplifiedOrderFormGenerateJapanButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSimplifiedOrderFormGenerateJapanButton = true;
+			}
+		}
+		// Systemetized
+		else{
+			//In legal
+			if(find(currentUserGroup_quote, "legal") <> -1){
+				hideSimplifiedOrderFormGenerateJapanButton = true;
+			}
+		}
+	}
+
+	//return hideSimplifiedOrderFormGenerateJapanButton;
+	ObjAction =  hideSimplifiedOrderFormGenerateJapanButton;
+	}
+
+	if(ObjName == "SimplifiedOrderFormPreviewJapanButton" OR ObjName == "CheckBoxes") {
+	hideSimplifiedOrderFormPreviewJapanButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+
+	japanContract = false;
+	japanCountryArr = string[]{"Japan"};
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Japan") AND findinarray(japanCountryArr,serviceCountry) <> -1){
+		japanContract = true;
+	}
+	if(japanContract == false){
+		hideSimplifiedOrderFormPreviewJapanButton = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSimplifiedOrderFormPreviewJapanButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSimplifiedOrderFormPreviewJapanButton = true;
+			}
+			//IESCNQRCPQ-1485- LIK -01-10-2024 - Added the condition to show preview button for Legal.
+			elif((find(currentUserGroup_quote, "legal") <> -1) AND japanContract){
+				hideSimplifiedOrderFormPreviewJapanButton = false;
+			}
+			else{
+				if(japanContract == false){
+					hideSimplifiedOrderFormPreviewJapanButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			//In legal
+			//IESCNQRCPQ-1485- LIK -01-10-2024 - Updated the condition to show preview button for Legal.
+			if((find(currentUserGroup_quote, "legal") <> -1) AND japanContract){
+				hideSimplifiedOrderFormPreviewJapanButton = false;
+			}
+			else{
+				if(japanContract){
+				hideSimplifiedOrderFormPreviewJapanButton = false;	
+				}
+				else{
+				hideSimplifiedOrderFormPreviewJapanButton = true;
+				}
+			}
+		}
+	}
+
+	//return hideSimplifiedOrderFormPreviewJapanButton;
+	ObjAction =  hideSimplifiedOrderFormPreviewJapanButton;
+	}
+
+	// hideSimplifiedOrderFormJapanViewInWordLegalButton
+
+	if(ObjName == "SimplifiedOrderFormJapanViewInWordLegalButton" OR ObjName == "CheckBoxes") {
+	hideSimplifiedOrderFormJapanViewInWordLegalButton = false;
+	serviceCountry = _quote_process_serviceAddress_country;
+	japanContract = false;
+
+	japanCountryArr = string[]{"Japan"};
+	if( (contractSource_quote == "SAP GTC" OR contractSource_quote == "Concur Paper") AND (ownerMarket_quote == "Japan") AND findinarray(japanCountryArr,serviceCountry) <> -1){
+		japanContract = true;
+	}
+
+	if(contractSource_quote == "Third Party Paper" OR contractSource_quote == ""){
+		hideSimplifiedOrderFormJapanViewInWordLegalButton = true;
+	}
+	else {
+		//Non- Systemetized
+		if(contractAutomation_quote == "Non-Systematized"){
+			//Not in legal
+			if(find(currentUserGroup_quote, "legal") == -1){
+				hideSimplifiedOrderFormJapanViewInWordLegalButton = true;
+			}
+			//IESCNQRCPQ-1485- LIK -01-10-2024 - Added the condition to show preview button for Legal.
+			elif((find(currentUserGroup_quote, "legal") <> -1) AND japanContract){
+				hideSimplifiedOrderFormJapanViewInWordLegalButton = false;
+			}
+			else{
+				if(japanContract == false){
+					hideSimplifiedOrderFormJapanViewInWordLegalButton = true;
+				}
+			}
+		}
+		// Systemetized
+		else{
+			//In legal
+			//IESCNQRCPQ-1485- LIK -01-10-2024 - Updated the condition to show preview button for Legal.
+			if((find(currentUserGroup_quote, "legal") <> -1) AND japanContract){
+				hideSimplifiedOrderFormJapanViewInWordLegalButton = false;
+			}
+			else{
+				
+				hideSimplifiedOrderFormJapanViewInWordLegalButton = true;
+				
+			}
+		}
+	}
+
+	ObjAction = hideSimplifiedOrderFormJapanViewInWordLegalButton;
+	}
+
+	// CSYS-107140 (PG 11/14/2022) - Simplified Order Form Japan End
+
+	/*CSYS-104207 (OK. 11-24-2021) Start - Comment out the below conditions to make the Checkboxes visible for Non- Systematized contract
+	if(ObjName == "CheckBoxes") {
+	//hideCheckboxes
+	hideCheckBoxes = false;
+
+	if ( hideSMNOrderFormPreviewButton == true
+	and hideSMNOrderFormGenerateButton == true
+	and hideSMNOrderFormViewInWordLegalButton == true
+	//and hideSMNOrderFormHeader == true
+	and hideSimplifiedOrderFormPreviewButton == true
+	and hideSimplifiedOrderFormGenerateButton == true
+	and hideSimplifiedOrderFormViewInWordLegalButton == true
+	//and hideSimplifiedOrderFormHeader == true
+	and hideSpanishOrderFormPreviewButton == true
+	and hideSpanishOrderFormGenerateButton == true
+	and hideSpanishOrderFormViewInWordLegalButton == true
+	//and hideSpanishOrderFormHeader == true
+	and hideGermanOrderFormPreviewButton == true
+	and hideGermanOrderFormGenerateButton == true
+	and hideGermanOrderFormViewInWordLegalButton == true
+	//and hideGermanOrderFormHeader == true
+	and hideFrenchOrderFormPreviewButton == true
+	and hideFrenchOrderFormGenerateButton == true
+	and hideFrenchOrderFormViewInWordLegalButton == true
+	//and hideFrenchOrderFormHeader == true
+	) 
+	{
+	hideCheckBoxes = true;
+	}
+	Else {
+	hideCheckBoxes = false; 
+	}
+	ObjAction =  hideCheckBoxes;
+	}
+	CSYS-104207 - End */
+
+	//CSYS-106868 (LBN 07-09-2022)Start: Commenting below code to allow TFSD override functionality
+
+	/*//CSYS-104211 (OK. 2-18-2022) Start - TFSD Override Option is hidden for Non English order forms. Using existing ObjName "CheckBoxes".
+	if(ObjName == "CheckBoxes") {
+		hideOverrideTFSDOption = false;
+		if (hideSMNOrderFormPreviewButton == true AND hideSMNOrderFormGenerateButton == true AND 
+		hideSMNOrderFormViewInWordLegalButton == true AND hideSimplifiedOrderFormPreviewButton == true AND 
+		hideSimplifiedOrderFormGenerateButton == true AND hideSimplifiedOrderFormViewInWordLegalButton == true) {
+			hideOverrideTFSDOption = true;
+		}
+		
+		ObjAction =  hideOverrideTFSDOption;
+	}
+	//CSYS-104211 - End
+	*/
+
+	//CSYS-106868 end
+}  //IESCNQRCPQ-1058 - end Override flag to show all contract buttons
+
+Return 	ObjAction;

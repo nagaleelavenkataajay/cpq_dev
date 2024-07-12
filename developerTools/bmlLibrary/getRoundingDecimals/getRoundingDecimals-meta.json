@@ -1,0 +1,12 @@
+{
+  "name" : "getRoundingDecimals",
+  "variableName" : "getRoundingDecimals",
+  "description" : "NOT USED. Obtains the number of rounding decimals for a specific currencyCode.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Integer",
+  "parameters" : [ {
+    "name" : "currencyCode",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

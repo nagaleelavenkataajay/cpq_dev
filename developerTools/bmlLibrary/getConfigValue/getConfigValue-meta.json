@@ -1,0 +1,15 @@
+{
+  "name" : "getConfigValue",
+  "variableName" : "getConfigValue",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "configAttrInfo",
+    "type" : "String"
+  }, {
+    "name" : "inputConfigInfoVarName",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,30 @@
+{
+  "name" : "calculatePromotion",
+  "variableName" : "calculatePromotion",
+  "description" : "",
+  "libraryFunctions" : [ "util.putStringAttribute" ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "promotionsDataDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "promoCodeAppliedList",
+    "type" : "String[]"
+  }, {
+    "name" : "lineDocNum",
+    "type" : "String"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "tempPromoCodeAppliedDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

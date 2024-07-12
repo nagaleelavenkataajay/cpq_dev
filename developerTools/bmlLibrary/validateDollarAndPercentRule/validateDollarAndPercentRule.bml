@@ -1,0 +1,25 @@
+dollarArray = string[];
+percentArray = string[];
+result = false;
+
+
+
+for docNum in docNumList {
+
+	if (containskey(dollarDict, docNum)){
+		append(dollarArray, docNum);
+	}
+	elif (containskey(percentDict, docNum)){
+		append(percentArray, docNum);
+	}
+}
+
+if (isempty(dollarArray) or isempty(percentArray)){
+	result = false;
+
+}
+else {
+	result = true;
+
+}
+return result;

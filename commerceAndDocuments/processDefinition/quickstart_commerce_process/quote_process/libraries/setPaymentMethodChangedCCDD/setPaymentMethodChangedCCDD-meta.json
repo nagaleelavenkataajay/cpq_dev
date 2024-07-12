@@ -1,0 +1,11 @@
+{
+  "name" : "Set Payment Method changed CC/DD",
+  "variableName" : "setPaymentMethodChangedCCDD",
+  "description" : "CSYS-97516, Bhavna S, 11/05/2020.\nAdded to store the updates of Payment Method for Add-On Business to CC/DD",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "quoteType_quote", "paymentMethod_quote", "currentPaymentMethod_quote" ],
+  "systemAttributes" : [ ]
+}

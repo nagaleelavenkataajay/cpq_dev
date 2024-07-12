@@ -1,0 +1,14 @@
+{
+  "name" : "crossModelValidation",
+  "variableName" : "crossModelValidation",
+  "description" : "CSYS-89647",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "attributeName",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_parent_doc_number", "_part_number", "implementationMethod_line", "poId_line", "coreOffering_line", "lineDescription_line", "poCategory_line", "assetAction_line" ],
+  "mainDocAttributes" : [ "quoteType_quote" ],
+  "systemAttributes" : [ "_system_user_login" ]
+}

@@ -1,0 +1,181 @@
+//CSYS-89647: Existing intel script has been transformed into this commerce library. However, refactoring of this script still needs to be done, which includes renaming the variables
+
+result = false;
+
+//myIntellMappingArray = string[];
+corePOArray = string[];
+corePONameArray = string[];
+extServPOArray = string[];
+parentDocNumArray = integer[];
+coreHasSelectableIntellDict = dict("string");
+//finalParentDocNumArray = string[];
+intellMappingDict = dict("string");
+PO_DELIMITER = "~";
+
+//CSYS-89209 (LN. 2-7-2018) Setting up new Constants, an array, and a dict
+CORE_SERVICE = "Core Service";
+BASE_FEE = "Base";
+coreMappingArr = string[];
+intellAssetNoneDict = dict("string");
+
+//(AP 04-08-2022) CSYS-106637- Troubleshoot Service Assistant Cross Model issue
+extServActionArray = string[];
+/*
+rez = bmql("SELECT RelatedIntelPO FROM AddCoreWithIntell");
+	for entry in rez {
+		intellPO = get(entry,"RelatedIntelPO");
+		append(myIntellMappingArray, intellPO);
+	}
+
+INTELL_PO5 = "662007"; //Insight Premium for Expense (CSYS-68545. KA. 8-11-2016)
+INTELL_PO6 = "662299"; //Insight Premium for Travel & Expense (CSYS-68545. KA. 8-11-2016)
+INTELL_PO7 = "662306"; //Insight Preimum for Invoice Processing (CSYS-68545. KA. 8-11-2016)
+INTELL_PO8 = "662323"; //Insight Premium for Concur Request - Standalone (CSYS-68545. KA. 8-11-2016)
+
+append(myIntellMappingArray, INTELL_PO5);
+append(myIntellMappingArray, INTELL_PO6);
+append(myIntellMappingArray, INTELL_PO7);
+append(myIntellMappingArray, INTELL_PO8);
+*/
+//Start
+queryResult = bmql("SELECT ExtServicePOs, CorePOs FROM ExtServValidation where ServiceAttribute = $attributeName");
+for entry in queryResult {
+	extServPOs = get(entry,"ExtServicePOs");
+	corePOs = get(entry,"CorePOs");
+	extServPOArray = split(extServPOs, PO_DELIMITER);
+	corePOArray = split(corePOs, PO_DELIMITER);
+	break;
+}
+partRecords = bmql("select part_number, description, custom_field1, custom_field2 from _parts where custom_field1 in $corePOArray");
+	
+for partRecord in partRecords {
+	corePOName = get(partRecord, "custom_field2");
+	append(corePONameArray, corePOName);
+}
+//End
+	
+for line in line_process {
+	//if the core has selectable intell, map the cores for next loop
+	parentDocNum = line._parent_doc_number;
+	docNum = line._document_number;
+	poID = line.poId_line;
+	pi = line._part_number;
+	//lineDescription = line.lineDescription_line; 
+	coreDesc = line.coreOffering_line + " - " + line.implementationMethod_line;
+	assetAction = line.assetAction_line;//CSYS-89209
+	poCategory = line.poCategory_line;//CSYS-89209
+	
+	//CSYS-93236 SN. 04/2020 Add edge case for Concur Request - Standalone because the parts table does not contain seperate lines for each implementation method
+	if(line.coreOffering_line == "Concur Request - Standalone"){
+		coreDesc = line.coreOffering_line;
+	}
+	//CSYS-104667 LIN 11/17/2021
+	if(line.lineDescription_line == "Invoice Processing - Standard Implementation"){
+		coreDesc = line.lineDescription_line;
+	}
+
+	if (pi == ""){ //if it's a model, determine if the model has selectable intell using the table
+		/*
+		rez2 = bmql("SELECT RelatedIntelPO FROM AddCoreWithIntell WHERE CoreWithoutIntel = $coreDesc");
+		for entry in rez2 {
+			if (get(entry,"RelatedIntelPO")<>""){
+				put(coreHasSelectableIntellDict, docNum, "true");
+			}
+		}
+		*/
+		//Start
+		if (findinarray(corePONameArray, coreDesc) <> -1){
+			put(coreHasSelectableIntellDict, docNum, "true");
+		}
+	}
+
+	//CSYS-89209 Determine how many cores exist on the Assets
+	if(pi <> "" AND poCategory == CORE_SERVICE AND assetAction <> "TERMINATE" AND assetAction <> "CREATE"){
+		if(findinarray(coreMappingArr, poID) == -1){
+			append(coreMappingArr, poID);
+		}	
+	}
+}
+
+
+
+
+//CSYS-89209 Determine of the Intell on the core is an existing asset (NONE Action Code)
+for line in line_process{
+	parentDocNum = line._parent_doc_number;
+	pi = line._part_number;
+	assetAction = line.assetAction_line;
+	poID = line.poId_line;
+
+	if(pi <> ""){
+
+		if(containskey(coreHasSelectableIntellDict, parentDocNum)){
+			//If there is a model with a selectable Intell, and the Intell asset is a NONE action code, and there are more 2 cores on the asset, map this to the dict
+			if((assetAction == "NONE" OR assetAction == "MODIFY")AND findinarray(extServPOArray, poID) <> -1 AND sizeofarray(coreMappingArr) > 1){
+				put(intellAssetNoneDict, "1", "true");
+			}
+
+		}
+		//(AP 04-08-2022) CSYS-106637- Troubleshoot Service Assistant Cross Model issue
+		//added the following block to not fire the rule when one Intell Asset is Terminated and one of similar type is added to one of the Core services out of the 2.
+		if (findinarray(extServPOArray, poID) <> -1){
+			append(extServActionArray, assetAction);
+		}
+	}
+}
+
+
+for line in line_process {
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	assetAction = line.assetAction_line;
+	pi = line._part_number;
+	poID = line.poId_line;
+	poCategory = line.poCategory_line;
+	parentDocNumInt = 0;
+	//doesCoreHaveSelectableIntell = get(coreHasSelectableIntellDict, parentDocNum);
+	if (pi <> ""){
+		if(containskey(coreHasSelectableIntellDict, parentDocNum)){ //if the model has selectable intell
+			if (isnumber(parentDocNum)){
+				parentDocNumInt = atoi(parentDocNum);
+			}
+
+			append(parentDocNumArray, parentDocNumInt);
+
+			if (get(intellMappingDict, parentDocNum) <> "true"){
+				put(intellMappingDict, parentDocNum, "false");
+			}
+
+			if (assetAction <> "TERMINATE" AND findinarray(extServPOArray, poID) <> -1 AND NOT(containskey(intellAssetNoneDict, "1")) ){ //CSYS-89209 Needed to update the condition to not set to true in the event that there are 2 cores, and one core with Intell on the asset - bypass the rule in this scenario
+				put(intellMappingDict, parentDocNum, "true");
+			}
+			
+			//CSYS-89209 In the event that there are 2 cores, both with Intell assets, and a user is attempting to TERMINATE only one, fire the rule (all or nothing)
+			//(AP 04-08-2022) CSYS-106637- Troubleshoot Service Assistant Cross Model issue
+			//added the extServActionArray condition to not fire the rule when one Intell Asset is Terminated and one of similar type is added to one of the Core services out of the 2.
+			if(assetAction == "TERMINATE" AND findinarray(extServPOArray, poID) <> -1 AND findinarray(extServActionArray, "CREATE") == -1 AND containskey(intellAssetNoneDict, "1")){
+				put(intellMappingDict, parentDocNum, "true");
+			}
+		}		
+	}
+}
+
+	
+parentCount = 0;
+trueFalseString = "";
+for index1 in parentDocNumArray {
+	if (parentDocNumArray[parentCount] <> parentDocNumArray[parentCount - 1]){
+		//append(finalParentDocNumArray, string(index1) + get(intellMappingDict,string(index1)));
+		trueFalseString = trueFalseString + string(index1) +  get(intellMappingDict,string(index1));
+	}
+	parentCount = parentCount + 1;
+}
+
+
+if(_system_user_login <> "benbrovold"){
+	if (find(trueFalseString, "true") <> -1 AND find(trueFalseString, "false") <> -1){ 	
+		result = true;
+	}
+}
+
+return result;

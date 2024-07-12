@@ -1,0 +1,21 @@
+{
+  "name" : "getQuoteValueViaSoap",
+  "variableName" : "getQuoteValueViaSoap",
+  "description" : "NOT USED.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "siteCompany",
+    "type" : "String"
+  }, {
+    "name" : "sessionId",
+    "type" : "String"
+  }, {
+    "name" : "bsid",
+    "type" : "String"
+  }, {
+    "name" : "attrTag",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

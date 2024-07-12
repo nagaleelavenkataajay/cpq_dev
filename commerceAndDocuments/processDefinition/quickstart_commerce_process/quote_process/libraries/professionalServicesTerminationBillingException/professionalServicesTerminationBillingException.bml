@@ -1,0 +1,38 @@
+//CSYS-99880, AP. 10/16/2020, When Professional Service Import Quote" equals TRUE, populate the Professional Services Termination Billing Exception with, "Credit Required for Professional Service Termination"
+result = "";
+BILLING_EXCEPTION = "Credit Required for Professional Service Termination: ";
+attributesDict = dict("string");
+tempString = "";
+
+if(isProfessionalServicesImport_quote == true){// Run only when isProfessionServiceImport_quote is true
+
+	for line in line_process{
+		
+		pi = line._part_number;
+		credit = line.creditAmount_line;
+
+		if(pi <> ""){
+			if(line.terminateSetupFee_line == true){
+				//Only for those professional services where Terminate checkbox is selected, form the string to have the terminated product with credit line
+				//CSYS-101006, (BS. 11/04/2020) Formatting credit as string to display Billing Exception credit amount with 2 decimal places.
+				formattedCredit = string(credit) + "0";
+				tempString = tempString + line.lineDescription_line + ": "+ formattedCredit + ", ";
+			}      
+		}                
+    }
+
+	//CSYS-101006, (BS. 11/04/2020) Formatting the tempString to remove the last unwanted comma (,)
+	tempString = trim(tempString);
+	if(endswith(tempString, ",")){
+		tempString = substring(tempString, 0, -1);
+	}
+	//End CSYS-101006
+	
+	utilResultString = util.formAttrValueStr(attributesDict, "professionalServTerminationBillingException_quote", "1", BILLING_EXCEPTION + tempString);
+}
+
+
+if(NOT(isnull(attributesDict))){	
+	result = commerce.setAttributes(attributesDict);  //Parses the attributes dictionary and sets quote and line level attributes based on that parsing.
+}
+return result;

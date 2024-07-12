@@ -1,0 +1,27 @@
+{
+  "name" : "hideCrossModelMessage",
+  "variableName" : "hideCrossModelMessage",
+  "description" : "CSYS-89647",
+  "libraryFunctions" : [ "util.getLineItemsInfoFromCommerceToConfig" ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "coreOfferings",
+    "type" : "String"
+  }, {
+    "name" : "implementationMethods",
+    "type" : "String"
+  }, {
+    "name" : "currentAssetSAId",
+    "type" : "String"
+  }, {
+    "name" : "reconfigure",
+    "type" : "String"
+  }, {
+    "name" : "attributeName",
+    "type" : "String"
+  }, {
+    "name" : "attributeValue",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

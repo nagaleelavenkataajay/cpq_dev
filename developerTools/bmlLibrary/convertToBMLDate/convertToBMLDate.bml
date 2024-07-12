@@ -1,0 +1,21 @@
+/*
+  convertToBMLDate
+  param:
+    inputDate 
+  return 
+    string
+*/
+
+
+result = inputDate;
+
+if (result <> "" ) {
+  inputYear = substring(result, 0, 4);
+  inputMonth = substring(result, 5, 7);
+  inputDay = substring(result, 8, 10);
+
+  result = inputMonth + "/" + inputDay + "/" + inputYear; 
+
+} 
+
+return result;

@@ -1,0 +1,20 @@
+{
+  "name" : "manageNextBillDates",
+  "variableName" : "manageNextBillDates",
+  "description" : "CSYS-100741",
+  "libraryFunctions" : [ "util.formAttrValueStr", "util.getStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "assetBillingDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_parent_doc_number", "assetString_line", "assetAction_line", "poCategory_line", "_part_number", "piItemType_line", "nextBillingDate_line", "subscriptionID_line" ],
+  "mainDocAttributes" : [ "assetsString_quote", "SAPSellsConcurFromAccount_quote", "quoteType_quote", "orderEffectiveDate_quote" ],
+  "systemAttributes" : [ ]
+}

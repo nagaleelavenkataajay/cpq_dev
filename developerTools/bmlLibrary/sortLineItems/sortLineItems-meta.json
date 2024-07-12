@@ -1,0 +1,21 @@
+{
+  "name" : "Sort Line Items",
+  "variableName" : "sortLineItems",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "docNums",
+    "type" : "String[]"
+  } ],
+  "attributes" : [ ]
+}

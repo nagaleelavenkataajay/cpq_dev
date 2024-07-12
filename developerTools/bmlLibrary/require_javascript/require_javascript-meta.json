@@ -1,0 +1,12 @@
+{
+  "name" : "require_javascript",
+  "variableName" : "require_javascript",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "filename",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

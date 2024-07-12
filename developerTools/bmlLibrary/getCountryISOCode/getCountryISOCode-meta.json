@@ -1,0 +1,12 @@
+{
+  "name" : "getCountryISOCode",
+  "variableName" : "getCountryISOCode",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "billingCountry",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

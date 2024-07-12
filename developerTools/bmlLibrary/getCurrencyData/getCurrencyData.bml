@@ -1,0 +1,30 @@
+/* Util -> getCurrencyData
+
+Parameter:
+1.	String currencyCode
+
+Return:
+	String Dictionary  Key: conversionRate, numDecimals, error
+					   Value: table data from the currencyData table.
+	
+*/
+
+retDict = dict("string");
+// Expected : 1 Record returned.
+currencySet = bmql( "SELECT conversionRate, numDecimals, currencySymbol FROM currencyData WHERE currencyCode = $currencyCode" );
+
+
+// Assuming 1 record.
+recordFound = false;
+for record in currencySet{
+	recordFound = true;
+	put( retDict, "conversionRate", get( record, "conversionRate" ) );
+	put( retDict, "numDecimals", get( record, "numDecimals" ) );
+	put( retDict, "currencySymbol", get( record, "currencySymbol" ) );
+}
+
+// No records found
+if( recordFound == false ){
+	put( retDict, "error", "No records found matching the given currency code." );
+}
+return retDict;

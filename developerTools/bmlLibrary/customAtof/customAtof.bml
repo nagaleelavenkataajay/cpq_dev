@@ -1,0 +1,7 @@
+result = defaultValue;
+
+if (  isnumber(inputValue) ) {
+	result = atof(inputValue);
+} 
+
+return result;

@@ -1,0 +1,16 @@
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd";
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+returnDateObj = getdate();
+dateString = argumentDateString;
+
+if (dateString <> "" AND NOT isnull(dateString)){
+	//timezone = util.getUserTimeZone();
+	dateString = substring(dateString, 0, 10);
+	
+	if(find(dateString, "/") <> -1) {
+		returnDateObj = strtojavadate(dateString, DATE_FORMAT_PREFERENCE_SLASH);
+	}else{
+		returnDateObj = strtojavadate(dateString, DATE_FORMAT_PREFERENCE_HYPHEN); 
+	}
+}
+return returnDateObj;

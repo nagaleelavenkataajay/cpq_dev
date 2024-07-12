@@ -1,0 +1,57 @@
+//For CSYS-47375 KA 8-11-2015. Short promo descriptions displayed next selected promotions.
+//Takes Parameters: externalPromotion
+
+promoStr = "";
+if(externalPromotion <> ""){ //1 or more promos are selected
+	QUOTE_DOC_NUM = "1";
+	INTERNAL_NAME = "INTERNAL_NAME";
+	promoArray = split(externalPromotion, "~"); //Array of all selected promos
+	applicablePromoList = split(applicablePromotions, "#^#"); 
+	
+	promoDescArray = string[];
+	rez = bmql("SELECT description, promotionCode FROM PromoMessage WHERE descriptionType = $INTERNAL_NAME AND promotionCode in $promoArray");
+	for entry in rez{
+		promoCode = get(entry, "promotionCode");
+		shortDesc = get(entry, "description");
+		if(findinarray(applicablePromoList, promoCode) <> -1){ //if the selected promo is found in the applicable promo list
+			append(promoDescArray, "<b>" + promoCode + "</b>" + " - " + shortDesc); //add it to the list of selected promos with description
+		}
+		else{ //tell the user to deselect the promo or add back the product it applies to
+			append(promoDescArray, "<font color='red'><b>" + promoCode + "</b>" + " - " + "Please deselect this promo and re-save the quote, or re-add the product it applies to." + "</font>"); 
+		}
+	}
+	//CSYS-77513
+	invalidPromoCombosArray = string[];
+	rez2 = bmql("Select NotAllowedCombi, PromoName from RestrictedPromoCombi where PromoName IN $promoArray");
+	validPromo = "";
+	invalidPromo = "";
+	for record in rez2{
+		validPromo = get(record,"PromoName");
+		invalidPromo = get(record,"NotAllowedCombi");
+		if(invalidPromo <> "" AND validPromo <> ""){
+			if(findinarray(promoArray, invalidPromo) > -1){
+				
+				if ((findinarray(invalidPromoCombosArray,validPromo + " & " + invalidPromo) == -1) AND (findinarray(invalidPromoCombosArray,invalidPromo + " & " + validPromo) == -1)){
+					append(invalidPromoCombosArray, validPromo + " & " + invalidPromo);
+				}
+			}
+		}
+	}
+	
+	promoStr = "";
+	for promo in promoDescArray{
+		promoStr = promoStr + promo + "<br/>";
+	}
+	
+	//CSYS-77513
+	if (sizeofarray( invalidPromoCombosArray ) >= 1){
+		promoStr = promoStr + "<font color='red'><b>" + "Invalid Promo Combinations: " + "</b>" + "</font>" + "<br/>";
+		for invalidCombo in invalidPromoCombosArray{
+			promoStr = promoStr + invalidCombo + "<br/>";
+		}
+	}
+}
+
+
+
+return promoStr;

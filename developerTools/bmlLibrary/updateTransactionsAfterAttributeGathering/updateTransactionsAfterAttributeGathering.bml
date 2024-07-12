@@ -1,0 +1,225 @@
+/* util.updateTransactionsAfterAttributeGathering
+
+This is used to update the transactions of all line items after the initial information gathering process.
+
+This is used becauuse line items later in the grid can affect line items previously in the grid
+
+transactionArr = String[]; 
+stringsDict
+integersDict
+floatsDict  
+triggerDict// Dictionaries used for holding quote state information
+*/
+TRIG_KEY_VALUE_DELIM = "$,$";
+DELIMITER = "@.@";
+PART_NUM = "_part_number";
+DESCRIPTION = "lineDescription_line";
+SEQ_NUM = "_sequence_number";
+DOC_NUM = "_document_number";
+PARENT_DOC_NUM = "_parent_doc_number";
+IMPLEMENTATION_METHOD = "implementationMethod_line";
+CORE_OFFERING = "coreOffering_line";
+EDITION_LINE = "edition_line";
+ADV_LEARNING_SERVICES_REQUIRED = "advLearningSvcsReqd_line";
+APPROVAL_LINE_TRIGGER = "approval_line";
+ADDL_DISC_DISALLOWED = "addlDiscDisallowed_line";
+
+QTY = "_price_quantity";
+TRANSACTIONS = "numCommittedTransaction_line";
+TRANSACTION_BY_BC = "transactionsBC";
+PREV_TRANSACTIONS = "prevNumCommittedTransaction_line";
+PREV_DISCOUNT = "prevDiscount_line";
+IS_TRANS_OVERRIDDEN = "numTransOverride_line";
+IS_GROUPED = "isPartOfPackage_line"; //This form field is checked if the user wishes to DYNAMICALLY GROUP this line item
+IS_UNITBASED = "unitBasedTransaction";
+DISCOUNT = "discount_line";
+DISCOUNTHIDDEN = "discountHidden_line";
+DISCOUNT_TYPE = "discountType_line";
+PERCENTAGE_DISCOUNT_TYPE = "%";
+AMOUNT_DISCOUNT_TYPE = "Amt";
+DISCOUNT_AMOUNT = "discountAmt_line";
+DISCOUNT_PERCENT = "discountPercent_line";
+TERM_BASED_DISC = "termBasedDiscount_line";
+//add on related
+ASSETS_NUM_OF_TRANSACTIONS = "assetOriginalOfCommittedMonthlyTransactions_line";
+ASSETS_ORIGINAL_DISCOUNT = "assetsOriginalDiscount_line";
+ASSETS_ADJUSTED_ARR = "assetAdjustedArr_line";
+ASSETS_ORIGINAL_PI = "assetOriginalPI_line";
+ASSETS_ORIGINAL_PO = "assetOriginalPO_line";
+ASSETS_ORIGINAL_NET_PRICE = "assetOriginalNetPrice_list";
+ASSETS_ORIGINAL_LIST_PRICE = "assetOriginalListPrice_list";
+ASSETS_ORIGINAL_BUNDLE_ID = "originalBundleID_line";
+ASSETS_ORIGINAL_IS_GROUPED = "assetOriginalGroupCheck_line";
+
+
+CORE_ASSET_SERVICEID = "coreAssetServiceId";
+INCREMENTAL_FEE_LIST = "incrementalFeeList";
+INCREMENTAL_FEE_LIST_USD = "incrementalFeeListUSD";
+INCREMENTAL_FEE_NET = "incrementalFeeNet";
+INCREMENTAL_FEE_NET_USD = "incrementalFeeNetUSD";
+INC_FEE_NON_UNIFIED_NET = "increFeeNonUnifiedNet";
+BASE_FEE_NET_NON_UNIFIED = "baseFeeNonUnifiedNet";
+INC_FEE_NON_UNIFIED_NET_USD = "increFeeNonUnifiedNetUSD";
+BASE_FEE_NET_NON_UNIFIED_USD = "baseFeeNonUnifiedNetUSD";
+
+MODEL_FORCE_GROUPING = "modelForceGrouping";
+//Ramp plan attribute variable names
+RAMP_PLAN_OVERRIDE = "overrideDefaultRampPlan_line";
+RAMP_PLAN_DETAIL = "rampPlanDetails_line";
+RAMP_PLAN_DETAIL_SAVE_XML = "rampPlanDetailXMLSave_line";
+RAMP_DELIMITER = "-_**_-";
+PO_DELIMITER = "***";
+PO_GROUPS_TRANS = "poGroupsInModelTrans";
+PO_GROUPS_DYNAMIC_GROUPING = "poGroupsDynamicGrouping";
+PO_RAMP_OVERRIDE = "poRampOverride";
+PRIMARY_BASE_FEE = "primaryBaseFee";
+ROLLUP_DOC_NUM = "rollupDocNum";
+TRANS_STRING = "transString";
+FROM = "from";
+TO = "to";
+RAMP_MESSAGE = "rampValidationMessage_quote";
+//Pricing Attribute Variable Names
+TIER_PRICE = "tierPrice_line";
+EXT_TIER_PRICE = "extTierPrice_line";
+PROD_BASED_PRICE = "productBasedPrice_line";
+PROD_BASED_PRICE_USD = "extProductBasedPriceUSD_line";
+EXT_PROD_BASED_PRICE = "extProductBasedPrice_line";
+TERM_BASED_PRICE = "termBasedListPrice_line";
+EXT_TERM_BASED_PRICE = "extTermBasedListPrice_line";
+BASE_LIST_PRICE_UNIFIED = "listPriceUnified";
+LIST_PRICE = "listPrice_line";
+EXT_LIST_PRICE = "extendedList_line";
+LIST_PRICE_USD = "listPriceUSD_line";
+EXT_LIST_PRICE_USD = "extListPriceUSD_line";
+CUSTOM_LIST_PRICE = "customListPrice_line";
+ARR_LINE = "arr_line";
+ARR_NET = "arrNet_line";
+PROD_ROLL = "productBasedPriceRollUp";
+NET_PRICE = "netPriceEach_line";
+ORIG_NET_PRICE = "origNetPriceEa_line";
+NET_PRICE_USD = "netPriceUSD_line";
+EXT_NET_PRICE_USD = "extNetPriceUSD_line";
+EXT_NET_PRICE = "extendedNetPrice_line";
+NET_PRICE_NON_UNIFIED = "netPriceNonUnified_line";
+EXT_NET_PRICE_NON_UNIFIED = "extNetPriceNonUnified_line";
+NET_PRICE_UNIFIED = "netPriceUnified_line";
+EXT_NET_PRICE_UNIFIED = "extNetPriceUnified_line";
+NET_PRICE_NON_UNIFIED_USD = "netPriceNonUnifiedUSD_line";
+EXT_NET_PRICE_NON_UNIFIED_USD = "extNetPriceNonUnifiedUSD_line";
+NET_PRICE_UNIFIED_USD = "netPriceUnifiedUSD_line";
+EXT_NET_PRICE_UNIFIED_USD = "extNetPriceUnifiedUSD_line";
+LIST_PRICE_NON_UNIFIED = "listPriceNonUnified_line";
+EXT_LIST_PRICE_NON_UNIFIED = "extListPriceNonUnified_line";
+LIST_PRICE_NON_UNIFIED_USD = "listPriceNonUnifiedUSD_line";
+EXT_LIST_PRICE_NON_UNIFIED_USD = "extListPriceNonUnifiedUSD_line";
+PACKAGE_ID = "package_line";
+BUNDLE_ID = "bundleID_line";
+EXT_NET_PER_BILLING_PERIOD = "extNetPricePerBillingPeriod_line";
+NUM_TRANSACTIONS_PER_BILLING_PERIOD = "numTransPerBillingPeriod_line";
+RAMP_PLAN_MESSAGE = "rampPlanMessageText_line";
+
+// Used for Base Fee that are not rampable to unify
+RAMP_PRICE_FOR_NON_RAMPABLE_BASE = "rampPriceForNonRampableBase";
+PI_ITEM_TYPE = "piItemType_line"; 
+MODEL_PO_PRIORITY = "poPriority_concur";
+EXT_NET_UNGROUPED = "extNetPriceUngrouped_line";
+NET_UNGROUPED = "netPriceUngrouped_line";
+NUMBER_RAMP_ENTRIES = "numRampEntries";
+MODEL_HAS_GROUPING = "modelHasGrouping_line";
+CORE_TRANSACTIONS = "coreTransactions";
+TRANSACTION_RATIO = "transactionRatio";
+INCREMENTAL_FEE_RATIO_VALUE = "incrementalFeeRatioValue";
+MODEL_TRANSACTION_OVERRIDE = "modelTransactionOverride";
+LINE_TRANSACTION_OVERRIDE = "lineTransactionOverride";
+CUSTOM_SEQ_NUM = "lineOrderCustom_line";
+PO_ID = "poId_line";
+PO_NAME = "poName_line";
+PO_START_DATE = "poStartDate_line";
+PO_END_DATE = "poEndDate_line";
+PI_ITEM_TYPE = "piItemType_line"; 
+USAGE_QUALIFCATION_GROUP = "usageQualificationGroup_line";
+TERM_OF_COMMITMENT = "termOfCommitment_line";
+EDITION = "edition_line";
+PARAMETER_ID = "parameterId_line";
+RAMP_FLAG = "rampFlag_line";
+SPECIAL_WORKFLOW_FLAG = "specialWorkflowFlag_line";
+UOM_TYPE = "uomType_line";
+ROLL_UP = "rollUp_line";
+UOM_BLOCK = "uomBlock_line";
+BUNDLE_FLAG = "bundleFlag_line";
+PO_CATEGORY = "poCategory_line";
+UNIT_OR_FIXED = "unitOrFixed_line";
+MODEL_TRANSACTIONS = "modelTransactions";
+MODEL_NEW_TRANSACTIONS = "modelNewTransactions";
+TRUE_STR = "true";
+ASSET_ACTION = "assetAction_line";
+MODIFY_ACTION = "MODIFY";
+NONE_ACTION = "NONE";
+TERMINATE_ACTION = "TERMINATE";
+CREATE_ACTION = "CREATE";
+ADD_ON = "Add-On Business";
+
+
+for docNum in transactionArr {
+	pi = get(piDict, docNum);
+	trxns = 0;
+	if ( pi <> "" ){
+		itemType = get( stringsDict, docNum+DELIMITER+ PI_ITEM_TYPE );
+		parentDocNum = get(stringsDict, docNum+DELIMITER+ PARENT_DOC_NUM );
+		poGroupTrans = get(stringsDict, docNum /*parentdocNum*/ +DELIMITER+ PO_GROUPS_TRANS );
+		poGroupArr = split( poGroupTrans, PO_DELIMITER );
+		poID = get(stringsDict, docNum+DELIMITER+ PO_ID );
+
+		// This will activate if the user has changed the line transactions for this item before update
+		if ( containskey( integersDict, docNum /*parentDocNum*/ + DELIMITER + MODEL_NEW_TRANSACTIONS ) AND findinarray( poGroupArr, poID ) <> -1 ){
+			trxns = get( integersDict, docNum /*parentDocNum*/ +DELIMITER+ MODEL_NEW_TRANSACTIONS );
+
+			
+			
+			put( integersDict, docNum+DELIMITER+ TRANSACTIONS, trxns );
+			put( stringsDict, docNum+DELIMITER+ IS_TRANS_OVERRIDDEN, TRUE_STR );
+		}
+		else{
+			if( itemType == "Incremental" ){
+				if ( containskey( incrementalFeeTransactionDict, parentDocNum + DELIMITER + poID ) ){
+
+					trxns = get( incrementalFeeTransactionDict, parentDocNum + DELIMITER + poID );
+					
+
+					put( integersDict, docNum+DELIMITER+ TRANSACTIONS, trxns );
+					// Set the approval triggers for incremental line items to use their new transactions 
+					if ( billingCycleNumber == "12" ) {
+						//put(lineTriggersDict, docNum + "~" + "annualTransaction", docNum + "~" + "annualTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns * 12));
+						put(triggerDict, docNum + "~" + "annualTransaction", docNum + "~" + "annualTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns * 12));
+					} elif ( billingCycleNumber == "3" ) {
+						//put(lineTriggersDict, docNum + "~" + "quarterlyTransaction", docNum + "~" + "quarterlyTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns * 3));
+						put(triggerDict, docNum + "~" + "quarterlyTransaction", docNum + "~" + "quarterlyTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns * 3));
+					} else {
+						//put(lineTriggersDict, docNum + "~" + "monthlyTransaction", docNum + "~" + "monthlyTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns));
+						put(triggerDict, docNum + "~" + "monthlyTransaction", docNum + "~" + "monthlyTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns));
+					}
+					
+					continue;
+				}
+			}
+			//assetAction = get( stringsDict, docNum+DELIMITER+ ASSET_ACTION );
+		
+			/*if ( get( stringsDict, docNum+DELIMITER+ IS_TRANS_OVERRIDDEN ) <> TRUE_STR AND assetAction <> TERMINATE_ACTION){
+								
+				trxns = quoteTransactions;
+				
+				//addon related By Sai Krishna Case 108831: Double Save Action
+			//if( quoteType == ADD_ON  AND assetAction == NONE_ACTION and (quoteTransactions <> oRGNumberOfComittedTransactions AND oRGNumberOfComittedTransactions > 1 AND quoteTransactions > 1) and get(stringsDict, docNum+DELIMITER+ "isFirstIteration_line") <> "true"){
+			if( quoteType == ADD_ON  AND assetAction == NONE_ACTION and (quoteTransactions <> get(integersDict, docNum+DELIMITER+ "originalNumCommittedTransaction_line") AND get(integersDict, docNum+DELIMITER+ "originalNumCommittedTransaction_line") > 1 AND quoteTransactions > 1) and get(stringsDict, docNum+DELIMITER+ "isFirstIteration_line") <> "true"){
+					
+					assetAction = MODIFY_ACTION;
+					put( stringsDict, docNum+DELIMITER+ ASSET_ACTION, assetAction );
+				}	
+				put( integersDict, docNum+DELIMITER+ TRANSACTIONS, trxns );
+			}	*/
+		}
+		
+	}
+}
+
+return "true";

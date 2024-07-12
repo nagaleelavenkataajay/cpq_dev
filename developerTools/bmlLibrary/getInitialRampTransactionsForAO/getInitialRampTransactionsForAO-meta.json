@@ -1,0 +1,12 @@
+{
+  "name" : "getInitialRampTransactionsForAO",
+  "variableName" : "getInitialRampTransactionsForAO",
+  "description" : "",
+  "libraryFunctions" : [ "util.customAtof" ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "assetsInfo",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

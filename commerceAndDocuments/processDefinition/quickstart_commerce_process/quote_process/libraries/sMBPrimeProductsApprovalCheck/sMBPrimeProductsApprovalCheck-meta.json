@@ -1,0 +1,11 @@
+{
+  "name" : "SMB Prime Products Approval Check",
+  "variableName" : "sMBPrimeProductsApprovalCheck",
+  "description" : "CSYS-101279 (OK. 12-4-2020) to check if the selected SMB Primes products need approval or not.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_part_number", "_part_custom_field8", "numCommittedTransaction_line", "_part_custom_field1" ],
+  "mainDocAttributes" : [ "quoteType_quote", "ownerBU_quote", "ownerTeam_quote", "ownerMarket_quote", "ownerRegion_quote" ],
+  "systemAttributes" : [ ]
+}

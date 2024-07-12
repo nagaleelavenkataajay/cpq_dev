@@ -1,0 +1,12 @@
+{
+  "name" : "Get Attributes Dict Value",
+  "variableName" : "getAttributesDictValue",
+  "description" : "Parses a value from the attributes dict.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "valueString",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

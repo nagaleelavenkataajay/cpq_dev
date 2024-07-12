@@ -1,0 +1,51 @@
+//Date logic to check if OED is not more than 2 days in the future
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd";
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+
+if(sAPSellsConcur_quote <> "Shadow Harmony Quote"){ //CSYS-99439 (OK. 6-18-2020) When SAP Sells Concur = Shadow Harmony Quote allow OED to be set into Future date.
+	//if (aRRInvolvedFlag_quote OR setupOnlyFlag_quote) { //1b, //2b //CSYS-100410 TT. 8/25/20
+	
+		if (orderEffectiveDate_quote <> "") { 
+	
+			timezone = util.getUserTimeZone(); //get the timezone the user is in
+			OED_TEXT = substring(orderEffectiveDate_quote, 0, 10);
+			OED_DATE = getdate();
+	
+			if(find(OED_TEXT, "/") <> -1) {
+				//CSYS-82480 (LN. 8/22/2017) Adding timezone component back into logic after timezone table rework
+				OED_DATE = strtojavadate(OED_TEXT, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+	
+			} else {
+				OED_DATE = strtojavadate(OED_TEXT, DATE_FORMAT_PREFERENCE_HYPHEN, timezone); 
+			}	
+			//OED_DATE = strtojavadate(orderEffectiveDate_quote, "MM/dd/yyyy");
+			CURRENT_DATE = getdate();
+			CURRENT_DATESTR = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_SLASH, timezone), 0, 10);
+			
+			// CSYS-82480 (KA. 6-1-2017): remove timezone logic
+			//CSYS-82480 (LN. 8/22/2017): implementing timezone component back into logic due to addition of timezone table rework
+			if(timezone <> ""){
+	
+				if(find(CURRENT_DATESTR, "/") <> -1) {
+					CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+				} else {
+					CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+	
+				}
+			}
+			else{
+				if(find(CURRENT_DATESTR, "/") <> -1) {
+					CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_SLASH);
+				} else {
+					CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_HYPHEN);
+				}
+			}
+			
+			if (OED_DATE > adddays(CURRENT_DATE, 2)) {
+				return true;
+			}
+		}
+	//}
+}
+
+return false;

@@ -1,0 +1,14 @@
+{
+  "name" : "Validation",
+  "variableName" : "validation",
+  "description" : "Legacy validation script. This is still used, but  commerce rules are leveraged for new rules.",
+  "libraryFunctions" : [ "util.customAtoi", "util.getXMLNodeValues" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "actionName",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_parent_doc_number", "_part_number", "discountType_line", "_sequence_number", "_part_desc", "isPartOfPackage_line", "_model_name", "discount_line", "addlDiscDisallowed_line", "_line_item_comment", "modelHasGrouping_line", "rampPlanDetails_line", "numCommittedTransaction_line", "overrideDefaultRampPlan_line", "_part_custom_field10", "_part_custom_field20", "piItemType_line", "assetAction_line", "_part_custom_field1", "poId_line", "bundleFlag_line" ],
+  "mainDocAttributes" : [ "preparedByName_quote", "preparedByTitle_quote", "preparedByPhone_quote", "preparedByCell_quote", "preparedByEmail_quote", "bsaRegion_quote", "bsaSource_quote", "bsaType_quote", "customerRegion_quote", "_quote_process_billing_first_name", "_quote_process_billing_last_name", "_quote_process_billing_address", "_quote_process_billing_address_2", "_quote_process_billing_city", "_quote_process_billing_state", "_quote_process_billing_zip", "_quote_process_billing_country", "_quote_process_billing_phone", "_quote_process_billing_fax", "_quote_process_billing_email", "billToCounty_quote", "_quote_process_serviceAddress_first_name", "_quote_process_serviceAddress_last_name", "_quote_process_serviceAddress_address", "_quote_process_serviceAddress_address_2", "_quote_process_serviceAddress_city", "_quote_process_serviceAddress_state", "_quote_process_serviceAddress_zip", "_quote_process_serviceAddress_country", "_quote_process_serviceAddress_phone", "_quote_process_serviceAddress_fax", "_quote_process_serviceAddress_email", "service_county_quote", "terms_quote", "billingCycle_quote", "paymentMethod_quote", "contractSource_quote", "contractType_quote", "invoiceLanguage_quote", "advantageServicesFlag_quote", "learningServicesFlag_quote", "rampPlanDetails_quote", "numCommittedTransaction_quote", "contractLength_quote", "_quote_process_noticeAddress_first_name", "_quote_process_noticeAddress_last_name", "_quote_process_noticeAddress_address", "_quote_process_noticeAddress_city", "_quote_process_noticeAddress_state", "_quote_process_noticeAddress_zip", "_quote_process_noticeAddress_country", "notice_county_quote", "rampValidationMessage_quote", "status_quote", "externalPromotion_quote", "assetsString_quote", "partnerServicesFlag_quote", "quoteType_quote", "businessUnit_quote", "market_quote", "accountVertical_quote", "stateAndLocal_quote", "isProfessionalServicesImport_quote", "ownerBU_quote", "ownerMarket_quote", "purchasedFromPartnerSFDC_quote", "purchasedFromPartnerCategorySFDC_quote" ],
+  "systemAttributes" : [ "_system_current_step_var" ]
+}

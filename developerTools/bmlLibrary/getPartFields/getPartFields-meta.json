@@ -1,0 +1,21 @@
+{
+  "name" : "getPartFields",
+  "variableName" : "getPartFields",
+  "description" : "Populates the partFieldsDict dictionary with the values of all part custom fields. Key: <partNumber><partDelim><fieldName>. Value: <fieldValue>. Returns a dictionary with the number of parts processed, and any associated errors.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "partList",
+    "type" : "String[]"
+  }, {
+    "name" : "customFieldDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "partFieldsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "partDelim",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

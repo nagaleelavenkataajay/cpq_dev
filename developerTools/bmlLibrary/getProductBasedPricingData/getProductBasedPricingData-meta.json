@@ -1,0 +1,15 @@
+{
+  "name" : "getProductBasedPricingData",
+  "variableName" : "getProductBasedPricingData",
+  "description" : "Wrapper function that populates the productBasedData String[] Dictionary with results from the BMQL query to the productBasedDisc table.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "piList",
+    "type" : "String[]"
+  }, {
+    "name" : "productBasedData",
+    "type" : "String[] Dictionary"
+  } ],
+  "attributes" : [ ]
+}

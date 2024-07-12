@@ -1,0 +1,9 @@
+commerceDataDict = dict("string");
+
+records = bmql("select miscDataKey, miscDataVal from miscCommerceData");
+
+for record in records {
+	put(commerceDataDict, get(record, "miscDataKey"), get(record, "miscDataVal"));
+}
+
+return commerceDataDict;

@@ -1,0 +1,209 @@
+// Incremental Base Approval Flag Logic - added by ATG 10/25/13
+result = "";
+QUOTE_DOC_NUM = "1";
+ADD_ON = "Add-On Business";
+MODIFY_ACTION = "MODIFY";
+NONE_ACTION = "NONE";
+TERMINATE_ACTION = "TERMINATE";
+CREATE_ACTION = "CREATE";
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";
+DISCOUNT = "discount_line";
+TIER_PRICE = "tierPrice_line";
+NET_PRICE = "netPriceEach_line";
+ASSET_ACTION = "assetAction_line";
+DOCNUM_DELIM = "$*$";
+DELIMITER = "@.@";
+
+//baseFeePrice = float[];
+incBaseFee = float[];
+baseAction = string[];
+incAction = string[];
+//aseDisc = float[];
+//incDisc = float[];
+//tierIncFee = float[];
+//cntBase = 0;
+//cntInc = 0;
+//cntIncTier = 0;
+incrementalLessThanBaseFlag = false;
+baseIncrementalApprovalBypassFlag = false;
+
+poList = string[];
+poInfoDict = dict("float");
+
+//for key in seqNumArray {
+for line in line_process { 
+	//seqNumber = string(key);
+	//docNum = get(seqNumAttributeMappingDict, seqNumber); //docNum = line._document_number;
+	docNum = line._document_number;
+	//familyName = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field23"); //NEW initialization 
+	familyName = line._part_custom_field23;
+	utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, "_part_custom_field23", familyName);
+	//pi = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_number"); //pi = line._part_number;
+	pi = line._part_number;
+	po = line._part_custom_field1; 
+	//itemType = get(primeStringsDict, docNum + DOCNUM_DELIM + "piItemType_line"); //itemType = line.piItemType_line;
+	//CSYS-93584
+	itemType = line.piItemType_line;
+	rollupLine = line.rollUp_line;
+	bundled = line.isPartOfPackage_line;
+	rolledUpAndBundled = false;
+	assetAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+	netPriceEach = util.getFloatAttribute(floatsDict, docNum, DELIMITER, NET_PRICE);
+	tierPriceEach = util.getFloatAttribute(floatsDict, docNum, DELIMITER, TIER_PRICE);
+	disc = util.getFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT);
+	
+	//added for CSYS-61507. KA. 5-5-2016.
+	po = line._part_custom_field1;
+	//CSYS-93584	
+	if (rollupLine == "N" AND bundled){
+		continue;
+	}
+	if( quoteType_quote <> ADD_ON ){
+		
+		if(itemType == BASE_FEE AND pi <> "6446"){ 
+			//append(baseFeePrice, netPriceEach);
+			//append(baseDisc, disc);
+			
+			//CSYS-61507 next 5 lines were added
+			
+			if(findinarray(poList, po) == -1){ //po wasn't added to the list previously
+				append(poList, po);
+			}
+			put(poInfoDict, po + DELIMITER + "Base Discount", disc);
+			put(poInfoDict, po + DELIMITER + "BaseFee Net Price", netPriceEach);	
+					
+			//cntBase = cntBase + 1;
+		}
+		
+		if(itemType == INCREMENTAL_FEE AND pi <> "9730") {
+			//append(incBaseFee, netPriceEach);
+			//append(tierIncFee, tierPriceEach);
+			//append(incDisc, disc);
+			
+			//CSYS-61507 next 6 lines were added
+			if(findinarray(poList, po) == -1){ //po wasn't added to the list previously
+				append(poList, po);
+			}
+			put(poInfoDict, po + DELIMITER + "Inc Discount", disc);
+			put(poInfoDict, po + DELIMITER + "IncFee Net Price", netPriceEach);	
+			put(poInfoDict, po + DELIMITER + "IncFee Tier price", tierPriceEach);
+			
+			//cntInc = cntInc + 1;
+			//cntIncTier = cntIncTier + 1;
+		}
+	
+	}elif( quoteType_quote == ADD_ON) {
+
+		if(itemType == BASE_FEE AND assetAction <> TERMINATE_ACTION AND assetAction <> NONE_ACTION AND pi <> "6446"){ 
+			//append(baseFeePrice, netPriceEach);
+			//append(baseAction, assetAction);
+			//append(baseDisc, disc);
+			
+			//CSYS-61507 next 5 lines were added
+			if(findinarray(poList, po) == -1){ //po wasn't added to the list previously
+				append(poList, po);
+			}
+			put(poInfoDict, po + DELIMITER + "Base Discount", disc);
+			put(poInfoDict, po + DELIMITER + "BaseFee Net Price", netPriceEach);
+			
+			//cntBase = cntBase + 1;
+		}
+		
+		if(itemType == INCREMENTAL_FEE AND assetAction <> TERMINATE_ACTION AND assetAction <> NONE_ACTION AND pi <> "9730") {
+			//append(incBaseFee, netPriceEach);
+			//append(incAction, assetAction);
+			//append(tierIncFee, tierPriceEach);
+			//append(incDisc, disc);
+			
+			//CSYS-61507 next 6 lines were added
+			if(findinarray(poList, po) == -1){ //po wasn't added to the list previously
+				append(poList, po);
+			}
+			put(poInfoDict, po + DELIMITER + "Inc Discount", disc);
+			put(poInfoDict, po + DELIMITER + "IncFee Net Price", netPriceEach);	
+			put(poInfoDict, po + DELIMITER + "IncFee Tier price", tierPriceEach);
+			
+			//cntInc = cntInc + 1;
+			//cntIncTier = cntIncTier + 1;
+		}
+	}
+	
+}
+
+//CSYS-61507 next loop was added
+for po in poList {
+	incFee = 0.0;
+	incFeeExists = false;
+	if(containskey(poInfoDict, po + DELIMITER + "IncFee Net Price")){
+		incFee = get(poInfoDict, po + DELIMITER + "IncFee Net Price");
+		incFeeExists = true;
+	}
+	baseFeePrice = 0.0;
+	baseFeePriceExists = false;
+	if(containskey(poInfoDict, po + DELIMITER + "BaseFee Net Price")){
+		baseFeePrice = get(poInfoDict, po + DELIMITER + "BaseFee Net Price");
+		baseFeePriceExists = true;
+	}
+	incDisc = 0.0;
+	incDiscExists = false;
+	if(containskey(poInfoDict, po + DELIMITER + "Inc Discount")){
+		incDisc = get(poInfoDict, po + DELIMITER + "Inc Discount");
+		incDiscExists = true;
+	}
+	baseDisc = 0.0;
+	baseDiscExists = false;
+	if(containskey(poInfoDict, po + DELIMITER + "Base Discount")){
+		baseDisc = get(poInfoDict, po + DELIMITER + "Base Discount");
+		baseDiscExists = true;
+	}
+	tierIncFee = 0.0;
+	tierIncFeeExists = false;
+	if(containskey(poInfoDict, po + DELIMITER + "IncFee Tier price")){
+		tierIncFee = get(poInfoDict, po + DELIMITER + "IncFee Tier price");
+		tierIncFeeExists = true;
+	}
+		
+	if(incFeeExists AND baseFeePriceExists AND tierIncFeeExists AND baseDiscExists AND incDiscExists){
+		if(incFee < baseFeePrice AND tierIncFee <> 0.0 AND (baseDisc <> 0.0 OR incDisc <> 0.0)){
+			incrementalLessThanBaseFlag = true;
+		}
+	}
+	if(incDiscExists){
+		if(incrementalLessThanBaseFlag == false AND incDisc > 0.0){
+			baseIncrementalApprovalBypassFlag = true;
+		}
+	}
+
+}
+
+//CSYS-61507 next section was commented out
+/*
+if (cntBase == cntInc AND cntIncTier == cntInc AND cntInc > 0){
+	count = 0;
+	print "Made it inside the first condition for IncFee array (before the loop)";
+	
+	for incFee in incBaseFee{
+		print "KA incDisc:";
+		print incDisc[count];
+		
+		if( incFee < baseFeePrice[count] AND tierIncFee[count] <> 0.00 AND ownerBU_quote == "Enterprise BU" AND quoteType_quote <> ADD_ON AND (baseDisc[count] <> 0.0 OR incDisc[count] <> 0.0)){
+					incrementalLessThanBaseFlag = true;
+		}elif( incFee < baseFeePrice[count] AND tierIncFee[count] <> 0.00 AND ownerBU_quote == "Enterprise BU" AND (incAction[count] <> NONE_ACTION OR baseAction[count] <> NONE_ACTION) AND quoteType_quote == ADD_ON AND (baseDisc[count] <> 0.0 OR incDisc[count] <> 0.0)){
+					print "incFee:" + string(incFee) + "," + "baseFeePrice:" + string(baseFeePrice[count]);
+					incrementalLessThanBaseFlag = true;
+		}
+		if(ownerBU_quote == "Enterprise BU" AND incrementalLessThanBaseFlag == false AND incDisc[count] > 0.0){
+				baseIncrementalApprovalBypassFlag = true;
+		}
+	count = count + 1;
+	}
+}
+*/
+
+utilResultString = util.formAttrValueStr(attributesDict, "incrementalBaseApprovalFlag_quote", QUOTE_DOC_NUM , string(incrementalLessThanBaseFlag));
+utilResultString = util.formAttrValueStr(attributesDict, "baseIncrementalApprovalBypassFlag_quote", QUOTE_DOC_NUM , string(baseIncrementalApprovalBypassFlag));
+put(triggerDict,"incrementalBaseApprovalFlag", string(incrementalLessThanBaseFlag));
+// END Incremental Base Approval Flag Logic - added by ATG 10/25/13
+
+return "";

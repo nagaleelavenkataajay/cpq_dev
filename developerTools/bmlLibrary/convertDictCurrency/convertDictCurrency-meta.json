@@ -1,0 +1,27 @@
+{
+  "name" : "convertDictCurrency",
+  "variableName" : "convertDictCurrency",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "delimiter",
+    "type" : "String"
+  }, {
+    "name" : "commerceField",
+    "type" : "String"
+  }, {
+    "name" : "conversionFactor",
+    "type" : "Float"
+  }, {
+    "name" : "roundingDecimal",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

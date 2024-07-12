@@ -1,0 +1,120 @@
+//Date logic to check if OED is within current month
+//Also checks to see if OED is not older than 2 months in past
+timezone = util.getUserTimeZone(); //get the timezone the user is in
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd";
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+CURRENT_DATE = getdate();
+CURRENT_DATESTR = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_SLASH, timezone), 0, 10);
+OED_MONTH = "";
+OED_YEAR = "";
+CURRENT_MONTH = "";
+CURRENT_DAY = "";
+CURRENT_YEAR = "";
+sAPSellsConcur = sAPSellsConcur_quote; //CSYS-99439 (OK. 6-18-2020)
+
+
+// CSYS-82480 (KA. 6-1-2017): remove timezone logic
+//CSYS-82480 (LN. 8/22/2017) Adding timezone component back in due to timezone table rework
+if(timezone <> ""){	
+	if(find(CURRENT_DATESTR, "/") <> -1) {
+		CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+	} else {
+		CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+	}
+}
+else{
+	if(find(CURRENT_DATESTR, "/") <> -1) {
+		CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_SLASH);
+	} else {
+		CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_HYPHEN);
+	}
+}
+
+if(sAPSellsConcur <> "Shadow Harmony Quote"){ //CSYS-99439 (OK. 6-18-2020) When SAP Sells Concur field have Shadow Harmony Quote allow OED to be set into Future date.
+	if (aRRInvolvedFlag_quote) { //1a
+		if (orderEffectiveDate_quote <> "") { 
+			if(find(orderEffectiveDate_quote, "/") <> -1) {
+				OED_MONTH = substring(orderEffectiveDate_quote, 0, 2);	
+				OED_YEAR = substring(orderEffectiveDate_quote, 6, 10); //CSYS-57128
+			}
+			else{
+				OED_MONTH = substring(orderEffectiveDate_quote, 5, 7);	
+				OED_YEAR = substring(orderEffectiveDate_quote, 0, 4);
+			}
+			if(find(CURRENT_DATESTR, "/") <> -1) {	
+				CURRENT_MONTH = substring(CURRENT_DATESTR, 0, 2);
+				CURRENT_DAY = substring(CURRENT_DATESTR, 3, 5);
+				CURRENT_YEAR = substring(CURRENT_DATESTR, 6, 10); //CSYS-57128
+			}
+			else{
+				CURRENT_MONTH = substring(CURRENT_DATESTR, 5, 7);
+				CURRENT_DAY = substring(CURRENT_DATESTR, 8, 10);
+				CURRENT_YEAR = substring(CURRENT_DATESTR, 0, 4);
+			}
+			userGroups = split(_system_user_groups, "+");
+			if(_system_user_type <> "FullAccess" AND findinarray(userGroups, "legal") == -1){ //CSYS-65230: if user is not full access AND user doesn't belong to legal group
+				if (OED_MONTH <> CURRENT_MONTH OR OED_YEAR <> CURRENT_YEAR) { //not in the current month OR not in current year. KA added the year check for CSYS-57128. 1-14-2016.
+					return "validation trigger";
+				}
+			}
+	
+			allowedDayList = string[]{"1", "2", "3", "4", "01", "02", "03", "04"};
+	
+			if(_system_user_type == "FullAccess" OR findinarray(userGroups, "legal") <> -1){ //CSYS-65230: if user is full access OR user belongs to legal group
+				if(findinarray(allowedDayList, CURRENT_DAY) == -1){ //current day is not day 1-4 of the month
+					if (OED_MONTH <> CURRENT_MONTH OR OED_YEAR <> CURRENT_YEAR) { 
+					//not in the current month OR not in current year.
+						return "validation trigger";
+					}
+				}
+				
+				/* CSYS-107575 (OK. 12-30-2022) Comment out below code. Future OED is allowed for legal. so billing exception is not required.
+				if(findinarray(allowedDayList, CURRENT_DAY) <> -1){ //current day is day 1-4 of the month
+					if (OED_MONTH <> CURRENT_MONTH OR OED_YEAR <> CURRENT_YEAR) { //not in the current month OR not in current year.
+						return "flagged";
+					}
+				}*/
+	
+			}
+			
+		}
+	}
+}
+
+if (NOT aRRInvolvedFlag_quote AND setupOnlyFlag_quote) { //2a
+	if (orderEffectiveDate_quote <> "") {
+		//OED_DATE = strtojavadate(orderEffectiveDate_quote, "MM/dd/yyyy"); //validations parse date formatting differently
+		//TODAY = substring(datetostr(CURRENT_DATE), 0, 10);
+		//TODAY_MINUS_TWO_MO = strtojavadate(util.addMonthsToDate(TODAY, string(-2)), "yyyy-MM-dd");
+		OED_DATE = getdate();
+		OED_TEXT = substring(orderEffectiveDate_quote, 0, 10);
+		if(find(OED_TEXT, "/") <> -1) {
+			OED_DATE = strtojavadate(OED_TEXT, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+		} else {
+			OED_DATE = strtojavadate(OED_TEXT, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+		}
+		TODAY_MINUS_60_DAYS = minusdays(CURRENT_DATE, 60); //Temp fix for CSYS-75902 until better solution found. KA. 1-3-2017.
+		if (OED_DATE < TODAY_MINUS_60_DAYS /*TODAY_MINUS_TWO_MO*/ ) { //older than 2 months in the past
+			return "validation trigger";
+		}
+	}
+}
+
+//TT. CSYS-100410
+if (NOT (aRRInvolvedFlag_quote AND setupOnlyFlag_quote)) { //Add-on quote which has all action codes on a quote are NONE
+    if (orderEffectiveDate_quote <> "") {
+        OED_DATE = getdate();
+        OED_TEXT = substring(orderEffectiveDate_quote, 0, 10);
+        if (find(OED_TEXT, "/") <> -1) {
+            OED_DATE = strtojavadate(OED_TEXT, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+        } else {
+            OED_DATE = strtojavadate(OED_TEXT, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+        }
+        TODAY_MINUS_60_DAYS = minusdays(CURRENT_DATE, 60);
+        if (OED_DATE < TODAY_MINUS_60_DAYS /*TODAY_MINUS_TWO_MO*/ ) { //older than 2 months in the past
+            return "validation trigger";
+        }
+    }
+}
+
+return "";

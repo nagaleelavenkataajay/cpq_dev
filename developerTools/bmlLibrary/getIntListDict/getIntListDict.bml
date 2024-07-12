@@ -1,0 +1,16 @@
+/*
+  getIntListDict - Get the integer[] from dict("integer[]")
+  param:
+    dictionary
+    dictionaryKey
+    defaultList
+  return 
+    integer[]
+*/
+result = defaultList;
+
+if ( containskey(dictionary, dictionaryKey) ) {
+  result = get(dictionary, dictionaryKey);
+} 
+
+return result;

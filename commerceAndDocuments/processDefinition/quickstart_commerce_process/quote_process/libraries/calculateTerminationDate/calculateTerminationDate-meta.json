@@ -1,0 +1,20 @@
+{
+  "name" : "Calculate Termination Date",
+  "variableName" : "calculateTerminationDate",
+  "description" : "CSYS-106714 (OK. 7-22-2022)  Calculate Termination date for all the terminated lines and display it in line item grid",
+  "libraryFunctions" : [ "util.formAttrValueStr", "util.formatDate", "util.getDateFromString", "util.setDateToLastDayOfMonth" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "anyTypeDict",
+    "type" : "Anytype Dictionary"
+  }, {
+    "name" : "parentDocNumArray",
+    "type" : "String[]"
+  } ],
+  "subDocAttributes" : [ "assetAction_line", "poId_line", "_document_number", "poCategory_line", "piItemType_line", "_parent_doc_number", "nextBillingDate_line" ],
+  "mainDocAttributes" : [ "terminationDate_quote", "orderEffectiveDateHDS_quote", "isAccountPreProdTerminate_quote", "detectByAppzenTerminate_quote", "detectMigrateToIntelligentAuditAdvanced_quote", "detectMigrateToIntelligentAuditEssential_quote", "detectMigrateToVerify_quote", "billingCycle_quote", "legalUpdatedTerminationDate_quote", "orderEffectiveDate_quote", "terminationNotes_quote" ],
+  "systemAttributes" : [ ]
+}

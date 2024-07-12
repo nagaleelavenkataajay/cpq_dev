@@ -1,0 +1,15 @@
+{
+  "name" : "getTermBasedDisc",
+  "variableName" : "getTermBasedDisc",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Float",
+  "parameters" : [ {
+    "name" : "commerceTerm",
+    "type" : "String"
+  }, {
+    "name" : "defaultVal",
+    "type" : "Float"
+  } ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,14 @@
+{
+  "name" : "Populate Billing Exception from Opportunity",
+  "variableName" : "populateBillingExceptionFromOpportunity",
+  "description" : "CSYS-100914 BS 11/11/2020, to split the single concatenated billing exception field updated from Opportunity using @!@ as delimiter and populate quote billing exception fields",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "fieldName",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "quoteNumber_quote", "opportunityPrimaryQuote_quote", "billingExceptionsFromOpportunity_quote" ],
+  "systemAttributes" : [ ]
+}

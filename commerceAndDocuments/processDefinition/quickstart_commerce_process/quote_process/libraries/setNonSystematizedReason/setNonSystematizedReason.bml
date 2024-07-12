@@ -1,0 +1,668 @@
+/*
+//future improvement: combine/integrate quote line loops into one loop, to prevent performance hit
+result = "";
+reason = "";
+CRLF = "\r\n";
+
+//rule#1:
+//name: Contract Automation must be Non-Systematized if Special Terms is populated
+//mseeage: Contract Automation must be Non-Systematized when a Quote has Special Terms.
+if (specialTerms_quote <> ""){
+	reason = reason + "Contract Automation must be Non-Systematized when a Quote has Special Terms."+CRLF;
+}
+//specialTerms_quote
+
+
+//rule#2:
+//name: Contract Automation Must be Non-Systematized for Products - Validation
+//mesage: Contract Automation must be Non-Systematized because the Quote contains one or more of the following: Japan Single Country Expense Configuration, Corporate Subsidiary Billings, Additional Multi-Country Deployment T and M, or Additional Multi-Country Expense Configuration in the EMEA or Americas theater.
+system_result = false;
+for system_doc in line_process {
+indexExpression1 = (system_doc.assetAction_line <> "NONE");
+indexExpression2 = (system_doc._part_number == "2274925");
+indexExpression3 = (system_doc._part_number == "6414");
+indexExpression4 = (system_doc._part_number == "203658");
+indexExpression5 = (system_doc._part_number == "203735");
+indexExpression6 = (system_doc._part_number == "217");
+indexExpression7 = (ownerTheater_quote <> "APAC");
+system_result = system_result OR (indexExpression1 AND (indexExpression2 OR indexExpression3 OR indexExpression4 OR indexExpression5 OR (indexExpression6 AND indexExpression7)));
+}
+if (system_result){
+	reason = reason + "Contract Automation must be Non-Systematized because the Quote contains one or more of the following: Japan Single Country Expense Configuration, Corporate Subsidiary Billings, Additional Multi-Country Deployment T and M, or Additional Multi-Country Expense Configuration in the EMEA or Americas theater."+CRLF;
+}
+//productsValidationFlag1
+
+
+
+//rule#3:
+//name: Contract Automation must be Non-Systematized if Contract/BSA Type is Modified
+//mesage: Contract Automation must be Non-Systematized if the Contract Type and/or the BSA Type is modified.
+if (contractType_quote=="Modified"){
+	reason = reason + "Contract Automation must be Non-Systematized if the Contract Type and/or the BSA Type is modified."+CRLF;
+}
+//contractType_quote
+
+
+//rule#4:
+//name: Contract Automation must be Non-Systematized if the Current Billing Cycle is longer than the New Billing Cycle.
+//message: Contract Automation must be Non-Systematized if the Current Billing Cycle is longer than the New Billing Cycle.
+result1 = false;
+currentBillingCycle_num = 0;
+if (currentBillingCycle_quote == "Annually" ){currentBillingCycle_num = 12;}
+if (currentBillingCycle_quote == "Semi-Annually" ){currentBillingCycle_num = 6;}
+if (currentBillingCycle_quote == "Quarterly" ){currentBillingCycle_num = 3;}
+if (currentBillingCycle_quote == "Monthly" ){currentBillingCycle_num = 1;}
+billingCycle_num = 0;
+if (billingCycle_quote == "Annually" ){billingCycle_num = 12;}
+if (billingCycle_quote == "Semi-Annually" ){billingCycle_num = 6;}
+if (billingCycle_quote == "Quarterly" ){billingCycle_num = 3;}
+if (billingCycle_quote == "Monthly" ){billingCycle_num = 1;}
+
+if(currentBillingCycle_num > 0 AND quoteType_quote == "Add-On Business" AND (currentBillingCycle_num > billingCycle_num))
+{result1 = true;}
+else{result1 = false;}
+if (result1){
+	reason = reason + "Contract Automation must be Non-Systematized if the Current Billing Cycle is longer than the New Billing Cycle."+CRLF;
+}
+//billingCycleVarianceFlag
+
+
+//rule#5:
+//name: Contract Automation must be Non-Systematized if Billing in Arrears
+//message: Contract Automation must be Non-Systematized if customer is billed in arrears.
+system_result = false;
+for system_doc in line_process {
+indexExpression1 = (find(system_doc.poName_line, "Arrears") <> -1);
+indexExpression2 = (find(system_doc.poName_line, "arrears") <> -1);
+system_result = system_result OR (indexExpression1 OR indexExpression2);
+}
+if (system_result){
+	reason = reason + "Contract Automation must be Non-Systematized if customer is billed in arrears."+CRLF;
+}
+
+// the validation rule is disabled in UAT and PROD
+//rule#6:
+//name: Contract Automation must be Non-Systematized if Concur Technologies Inc. and BSA Region EMEA or APA
+//message: Contract Automation must be Non-Systematized because the Contracting Entity and BSA Region combination results in Legal involvement.
+//system_result = false;
+//indexExpression1 = ((contractingEntity_quote=="Concur Technologies Inc."));
+//indexExpression2 = ((bsaRegion_quote=="APA") OR (bsaRegion_quote=="EMEA"));
+//system_result = system_result OR (indexExpression1 AND indexExpression2);
+//if (system_result){
+//	reason = reason + "Contract Automation must be Non-Systematized because the Contracting Entity and BSA Region combination results in Legal involvement."+CRLF;
+//}
+//
+
+//rule#7:
+//name: Contract Automation must be Non-Systematized if Contract ARR greater than 150K
+//message: Contract Automation must be Non-Systematized if Contract ARR is greater than $150000.
+quoteCurrency = quoteCurrency_quote;
+totalArrNet = totalArrNet_quote;
+result1 = false;
+
+if (quoteType_quote == "Add-On Business" and termNumMonths_quote <> ""){
+	rez = bmql("SELECT currencyCode, conversionRate FROM currencyData WHERE currencyCode = $quoteCurrency");
+	convertedArrNet = 0.0;
+
+	for entry in rez {
+		rate = get(entry, "conversionRate");
+		convertedArrNet = totalArrNet/atof(rate);
+	}
+
+	if (convertedArrNet > 150000){
+		result1 = true;
+	}	
+}
+if (result1){
+	reason = reason + "Contract Automation must be Non-Systematized if Contract ARR is greater than $150000."+CRLF;
+}
+//arrGreaterThan150K
+
+
+//rule#8:
+//name: Contract Automation must be Non-Systematized if Current Contract Renewal Date is older than January 1, 2008
+//message: Contract Automation must be Non-Systematized if Current Contract Renewal Date is older than January 1, 2008.
+system_result = false;
+date1 = util.getDateFromString(contractRenewalDateAcc_quote);
+date2 = util.getDateFromString("01/01/2008");
+indexExpression1 = (comparedates(date1,date2) < 0);
+indexExpression2 = ((quoteType_quote=="Add-On Business"));
+system_result = system_result OR (indexExpression1 AND indexExpression2);
+if (system_result){
+	reason = reason + "Contract Automation must be Non-Systematized if Current Contract Renewal Date is older than January 1, 2008."+CRLF;
+}
+//veryOldContractRenewalDate
+
+
+//rule#9:
+//name: Contract Automation must be Non-Systematized for Add-ons with Annual Billing
+//message: Contract Automation must be Non-Systematized for Add-on quotes with Annual Billing Cycle.
+system_result = false;
+indexExpression1 = ((quoteType_quote=="Add-On Business"));
+indexExpression2 = ((billingCycle_quote=="Annually"));
+indexExpression3 = (partnerBillingQuote_quote == false);
+system_result = system_result OR (indexExpression1 AND indexExpression2 AND indexExpression3);
+if (system_result){
+	reason = reason + "Contract Automation must be Non-Systematized for Add-on quotes with Annual Billing Cycle."+CRLF;
+}
+//annualBillingAddonFlag
+
+
+//rule#10:
+//name: Contract Automation must be Non-Systematized for 3 core quotes
+//message: Contract Automation must be Non-Systematized because there are 3 cores on the quote.
+if (moreThanTwoCoresFlag_quote == true){
+	reason = reason + "Contract Automation must be Non-Systematized because there are 3 cores on the quote."+CRLF;
+}
+//threeCoreFlag
+
+
+//rule#11:
+//name: Contract Automation must be Non-Systematized if AccountPreProd pass thru flag is true.
+//message: Contract Automation must be Non-Systematized because the pre-production flag on the account is true.
+if (accountPreProductionStatic_quote == true){
+	reason = reason + "Contract Automation must be Non-Systematized because the pre-production flag on the account is true."+CRLF;
+}
+//accountPreProdFlag
+
+
+//rule#12:
+//name: Contract Must Be Non-Systematized For Governing Country Law Exception
+//message: Contract Automation must be Non-Systematized for the Service Address Country Specified. Please review
+//CSYS-104247 changed from Validation Trigger to Governing Law Country
+if(governingCountryLawException == "Governing Law Country"){
+	reason = reason + "Contract Automation must be Non-Systematized for the Service Address Country Specified."+CRLF;
+}
+//governingCountryLawFlag
+
+
+//rule#13:
+//name: Contract Automation must be Non-Systematized based on Contracting Entity
+//message: Contract Automation must be Non-Systematized for the selected Contracting Entity.
+system_result = false;
+indexExpression1 = ((contractingEntity_quote=="SAP (China) Co. Ltd."));
+indexExpression2 = ((contractingEntity_quote=="SAP Brasil Ltda."));
+indexExpression3 = ((contractingEntity_quote=="SAP Other"));
+system_result = system_result OR (indexExpression1 OR indexExpression2 OR indexExpression3);
+if (system_result){
+	reason = reason + "Contract Automation must be Non-Systematized for the selected Contracting Entity."+CRLF;
+}
+
+//rule#14:
+//name: Contract Automation Must be Non-Systematized for Additional Premium Support
+//message: Additional Premium Support requires confirmation by Contracts that a Custom Quote from Premium Implementation is attached to Opportunity. Please set Contract Automation to Non-Systematized.
+system_result = false;
+for system_doc in line_process {
+	indexExpression1 = (system_doc.assetAction_line <> "NONE");
+	indexExpression2 = (system_doc._part_number == "6453");
+	system_result = system_result OR (indexExpression1 AND indexExpression2);
+}
+if (system_result){
+	reason = reason + "Additional Premium Support requires confirmation by Contracts that a Custom Quote from Premium Implementation is attached to Opportunity. Please set Contract Automation to Non-Systematized."+CRLF;
+}
+
+//rule#15:
+//name: Contract Automation must be Non-Systematized for Non-EFT Quotes in LATAM
+//message: Contract Automation must be Non-Systematized when the owner market is LATAM and the Payment Method is not Electronic Funds Transfer.
+system_result = false;
+if ((ownerMarket_quote == "LATAM") and (paymentMethod_quote<>"Electronic Funds Transfer")){
+	reason = reason + "Contract Automation must be Non-Systematized when the owner market is LATAM and the Payment Method is not Electronic Funds Transfer."+CRLF;
+}
+//enforceEFTPaymentMethodForLATAM
+
+//rule#16:
+//name: Contract Automation must be Non-Systematized when Contract Source is Concur Paper with a Contract Renewal for LATAM/Mexico.
+//message: Please change the Contract Automation field to Non-Systematized.
+system_result = false;
+indexExpression1 = ((quoteType_quote=="Add-On Business"));
+indexExpression2 = ((contractSource_quote=="Concur Paper"));
+indexExpression3 = ((termNumMonths_quote<>""));
+indexExpression4 = (ownerMarket_quote == "Mexico");
+indexExpression5 = (ownerMarket_quote == "LATAM");
+system_result = system_result OR (indexExpression1 AND indexExpression2 AND indexExpression3 AND (indexExpression4 OR indexExpression5));
+if(system_result){
+	reason = reason + "Please change the Contract Automation field to Non-Systematized."+CRLF;
+}
+//concurPaperLATAMMexicoAddonFlag
+
+//CSYS-97516, Bhavna S, 11/05/2020: Validation Rule inactivated
+//rule#17
+//name: Contract Automation must be Non-Systematized if Current and New Payment Methods are Different
+//message: Contract Automation must be Non-Systematized if Current Payment Method and the new Payment Method do not match.
+//if(currentPaymentMethod_quote <> "" AND quoteType_quote == "Add-On Business" AND (paymentMethod_quote <> currentPaymentMethod_quote)){
+//	reason = reason + "Contract Automation must be Non-Systematized if Current Payment Method and the new Payment Method do not match."+CRLF;
+//}
+//CSYS-97516 End
+
+//rule#18
+//name: Contract Automation must be Non-Systematized when Edition is Premium - Validation
+//message: Contract Automation must be Non-Systematized when the Implementation Method is Premium.
+if(implementationMethods_quote == "Premium"){
+	reason = reason + "Contract Automation must be Non-Systematized when the Implementation Method is Premium."+CRLF;
+}
+
+//CSYS-100719 (BS. 10/11/2020) Update Non-Systematized reason for Enterprise BU contract RENEWALS where the Contract Source = Concur Paper and the Term (no of mo) greater than 36 months
+//rule#19
+//name: Contract Automation must be Non-Systematized when Contract Source is Concur Paper with a Contract Renewal for Enterprise BU.
+//message: Contract renewals on Concur Paper greater than 36 months must be reviewed by the Legal team.
+if(quoteType_quote == "Add-On Business"  AND ownerBU_quote == "Enterprise BU" AND contractSource_quote == "Concur Paper" AND termNumMonths_quote > "36"){
+	reason = reason + "Contract renewals on Concur Paper greater than 36 months must be reviewed by the Legal team."+CRLF;
+}
+//CSYS-100719 (BS. 10/11/2020) End
+
+//CSYS-101150 (OK. 11-17-2020) Update Non-Systematized reason when the SAP MAR ID is populated
+//rule#20
+//name: Contract Automation must be Non-Systematized when the SAP MAR ID is populated
+//message: SAP MAR ID Quotes must be set to Non-Systematized.
+if(SAP_MAR_ID_quote <> ""){
+	reason = reason + "SAP MAR ID Quotes must be set to Non-Systematized."+CRLF;
+}
+//CSYS-101150 End
+
+//When the field is changed to non-systematized WITHOUT a BMI rule enforcing the change, populate the reason as "NOT REQUIRED - MANUAL OVERRIDE"
+if (contractAutomation_quote == "Non-Systematized" and reason == ""){
+	reason = reason + "NOT REQUIRED - MANUAL OVERRIDE";
+}
+
+
+result = "1~nonSystematizedReason_quote~" + reason + "|";
+
+return result;
+*/
+//CSYS-101176 TJG 01/08/2021  START
+result = "";
+//CSYS-106036 - LBN, 11/05/2022
+TRUE_STR = "true";
+NonSystematizedreason = "";
+nonSystematizedDict = dict("string");
+//CSYS-106036 - End
+CRLF = "\r\n";
+ContractDateBefore2008 = false;
+ARRGreaterThan150K = false;
+ProfServOnlyArray = Boolean[]; 
+hasAdditionalPremiumSupportArray = Boolean[]; 
+nonProfServCreate = false; 
+hasArrearsBilling = false;
+hasCorporateSubsidiaryBilling = false;
+hasAdditionalMultiCountryExpenseConfiguration = false;
+hasAdditionalPremiumSupport = false;
+hasAdditionalMultiCountryDeploymentTandM = false;
+hasWalkMeSetupandImp = false;
+hasESAS = false;
+hasHDSWithNonMonthlyCycle = false; //CSYS-105851 (OK. 3-21-2022)
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd"; //CSYS-105966 (OK. 4-18-2022)
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy"; //CSYS-105966 (OK. 4-18-2022)
+
+//CSYS-106464 - Start, LBN-17/06/2022
+detectByOversightCreateVar=false;
+detectByAppzenTerminateVar=false;
+intelligentAuditCreate=false;
+intelligentAuditEssentialCreate=false;
+verifyCreate=false;
+TERM_DATE="";
+
+for line in line_process{
+	poID = line._part_custom_field1;
+	assetAction = line.assetAction_line;
+	pi = line._part_number;
+	
+	
+	if(find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == "TERMINATE")
+	{
+		TERM_DATE = line.termDate_line;
+		detectByAppZenTerminateVar=true;
+	}
+	if(pi=="7526964" AND assetAction == "CREATE" )
+	{
+		detectByOversightCreateVar=true;
+	}
+	if ((pi == "8224071" OR pi == "8825412") AND assetAction == "CREATE") {
+		intelligentAuditCreate = true;
+	}
+	if ((pi == "8224087" OR pi == "8825428") AND assetAction == "CREATE") {
+		intelligentAuditEssentialCreate = true;
+	}
+	if ((pi == "7877693") AND assetAction == "CREATE") {
+		verifyCreate = true;
+	}
+}
+//CSYS-106464 - end
+
+if (quoteType_quote == "Add-On Business" and contractRenewalDateAcc_quote <> ""){
+	if(comparedates(strtojavadate(contractRenewalDateAcc_quote, "yyyy-MM-dd"), strtojavadate("2008-01-01", "yyyy-MM-dd")) < 0){
+	 	ContractDateBefore2008 = true;
+	}
+}
+
+if (quoteType_quote == "Add-On Business" AND termNumMonths_quote <> ""){
+//if (termNumMonths_quote <> ""){
+	quoteCurrency = quoteCurrency_quote;
+	totalArrNet = totalArrNet_quote;
+	convertedArrNet = 0.0;
+	rez = bmql("SELECT currencyCode, conversionRate FROM currencyData WHERE currencyCode = $quoteCurrency");
+	for entry in rez {
+		rate = get(entry, "conversionRate");
+		convertedArrNet = totalArrNet/atof(rate);
+	}
+	if (convertedArrNet > 150000){
+		ARRGreaterThan150K = true;
+	}
+}
+
+
+for line in line_process {
+	assetAction = line.assetAction_line;  //CSYS-105851 (OK. 3-21-2022)
+	poId = line._part_custom_field1;  //CSYS-105851 (OK. 3-21-2022)
+	
+	if(find(line.poName_line, "Arrears") <> -1 OR find(line.poName_line, "arrears") <> -1) {
+		hasArrearsBilling = true;		
+	}	
+	if(quoteType_quote == "Add-On Business"){
+		if((line.poCategory_line <> "Professional Service" AND line.assetAction_line == "CREATE") OR line.assetAction_line == "MODIFY" OR line.assetAction_line == "TERMINATE"){ 				
+			nonProfServCreate = true;
+		}        
+		if(line.poCategory_line == "Professional Service" AND line.assetAction_line == "CREATE"){
+			append(ProfServOnlyArray, true);				
+		}
+		if(line._part_custom_field1 == "6382"){
+			append(hasAdditionalPremiumSupportArray, true);
+			//IESCNQRCPQ-1725 (OK. 4-22-2024) Comment out the below line and added it out of this loop
+			//hasAdditionalPremiumSupport = true;
+		}
+	}
+	if(line.assetAction_line <> "NONE"){
+		if(line._part_number == "203735" OR line._part_number == "203658"){
+			hasCorporateSubsidiaryBilling = true;
+		}
+		if(line._part_number == "217"){
+			hasAdditionalMultiCountryExpenseConfiguration = true;
+		}
+		if(line._part_number == "203658"){
+			hasAdditionalMultiCountryDeploymentTandM = true;
+		}
+		
+		//IESCNQRCPQ-1725 (OK. 4-22-2024) Moved from above to here
+		if(line._part_custom_field1 == "6382") {
+			hasAdditionalPremiumSupport = true;
+		}
+	}
+	
+      //CSYS-104750 (TJG 11/29/2021)
+     if(line._part_custom_field1 == "8602393" AND line.assetAction_line == "CREATE"){ 
+         hasWalkMeSetupandImp = true;
+       }
+
+     //CSYS-104956 (TJG 11/29/2021)
+     if(line._part_custom_field1 == "228" AND line.assetAction_line == "CREATE" AND line.timeMaterialsFlag_line == true){ 
+         hasESAS = true;
+     }
+	
+	//CSYS-105851 (OK. 3-21-2022) Check billing cycle Historical Data Services quotes if billing cycle is non Monthly then force the contract automation to be set to Non-Systematized
+	if (poId == "6969985" AND assetAction == "CREATE" AND billingCycle_quote <> "Monthly") {
+		hasHDSWithNonMonthlyCycle = true;
+	}
+}	
+//CSYS-106036, LBN: Removed hard coded reason and added put statement in order to refactoring non-systematized reason - Start
+
+if(contractAutomation_quote == "Non-Systematized") {
+	
+	//CSYS-105851 (OK. 3-21-2022) Start: Non-Systematized reason
+	if (hasHDSWithNonMonthlyCycle == true) {
+		put(nonSystematizedDict, "quotesWithHDS", TRUE_STR);
+	}
+	//CSYS-105851 - End
+	
+//rule#1: Contract Automation must be Non-Systematized if Special Terms is populated
+	
+	if (specialTerms_quote <> ""){
+		put(nonSystematizedDict, "specialTerms_quote", specialTerms_quote);
+	}
+
+//rule#2: Contract Automation must be Non-Systematized when Contract Source is Third Party Paper
+	
+	if(contractSource_quote == "Third Party Paper"){
+		put(nonSystematizedDict, "thirdPartyContract", TRUE_STR);
+	}
+
+//rule#3: Contract Automation must be Non-Systematized for Enterprise BU contract RENEWALS where the Contract Source = Concur Paper and the Term (no of mo) greater than 36 months //CSYS-100719 (BS. 10/11/2020) 
+//IESCNQRCPQ-1793	
+//	if(quoteType_quote == "Add-On Business" AND ownerBU_quote == "Enterprise BU" AND contractSource_quote == "Concur Paper" AND termNumMonths_quote > "36"){
+//			put(nonSystematizedDict, "concurPaperEnterpriseRenewal", TRUE_STR);
+//	} 
+
+//rule#4: Contract Automation must be Non-Systematized when the SAP MAR ID is populated
+	
+	if(SAP_MAR_ID_quote <> ""){
+		put(nonSystematizedDict, "sapMARiD", TRUE_STR);
+	}
+
+//rule#5: Contract Automation must be Non-Systematized for SAP Other contracting entity
+	
+	if(contractingEntity_quote == "SAP Other"){
+			put(nonSystematizedDict, "sapOtherContractingEntity", TRUE_STR);
+    	}
+
+//rule#6: Contract Automation must be Non-Systematized for Brazil contracting entity and purchased from partner is not VAR
+	//CSYS-107770 TJG 12/13/2022    ROLLBACK on1/11/2023
+	if(contractingEntity_quote == "SAP Brasil Ltda." AND purchasedFromPartnerCategorySFDC_quote <> "VAR") {
+    		put(nonSystematizedDict, "sapBrasilNotVAR", TRUE_STR);
+    		//put(nonSystematizedDict, "sapBrasil", TRUE_STR);
+    	}
+
+//rule#7: Contract Automation must be Non-Systematized for SAP (China) Co. Ltd. contracting entity
+	
+	if(contractingEntity_quote == "SAP (China) Co. Ltd."){
+    		put(nonSystematizedDict, "sapChinaContractingEntity", TRUE_STR);
+    	}
+
+//rule#8: Contract Automation must be Non-Systematized when service address is in China Peoples Rep
+	
+	if (_quote_process_serviceAddress_country == "China Peoples Rep" AND quoteType_quote == "New Business"){
+		put(nonSystematizedDict, "serviceAdress", TRUE_STR);
+	}
+
+//rule#9: Contract Must Be Non-Systematized For Governing Country Law Exception
+	// governingCountryLawException is set by Build Soft Validations
+	//if SELECT governingCountryLaw FROM governingLawMapping WHERE svcAddressCountry = $_quote_process_serviceAddress_country returns no results then validation trigger 
+	if(governingCountryLawException == "Governing Law Country"){
+		put(nonSystematizedDict, "governingLawException", TRUE_STR);
+	}
+
+//rule#10: Contract Automation must be Non-Systematized if Billing in Arrears
+
+	if(hasArrearsBilling == true) {
+		put(nonSystematizedDict, "billingInArrears", TRUE_STR);
+	}
+
+//rule#11: Contract Automation must be Non-Systematized if the current Billing Cycle is changed from Annual.
+		
+	if(quoteType_quote == "Add-On Business" AND currentBillingCycle_quote == "Annually" AND billingCycle_quote <> "Annually") {
+		put(nonSystematizedDict, "changeOfBillingCycle", TRUE_STR);
+	}
+
+//rule#12: Contract Automation must be Non-Systematized for Add-ons with Annual Billing and recurring fees
+	//IESCNQRCPQ-372 exclude Japan
+	if(quoteType_quote == "Add-On Business" AND billingCycle_quote == "Annually" AND NOT(partnerBillingQuote_quote) AND NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1)) AND contractingEntity_quote <> "Concur Japan (JV)"){
+		put(nonSystematizedDict, "annualAObilling", TRUE_STR);
+	}
+
+//rule#13: Contract Automation must be Non-Systematized for 3 core quotes
+	
+	if (moreThanTwoCoresFlag_quote == true){
+		put(nonSystematizedDict, "threeCoreQuotes", TRUE_STR);
+	}
+
+//rule#14: Contract Automation must be Non-Systematized if AccountPreProd pass thru flag is true.
+
+	if (accountPreProductionStatic_quote AND NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){
+		put(nonSystematizedDict, "accountPreProdflag", TRUE_STR);
+	}
+
+//rule#15: Contract Automation must be Non-Systematized if Current Contract Renewal Date is older than January 1, 2008
+
+	if (ContractDateBefore2008 == true){
+		put(nonSystematizedDict, "oldContractDate2008", TRUE_STR);
+	}
+
+//rule#16: Contract Automation must be Non-Systematized if Contract ARR greater than 150K
+	//IESCNQRCPQ-709 exclude Japan
+	if(ARRGreaterThan150K == true AND legalEgregiousTerms_quote <> "Reviewed -- No Egregious Terms" AND contractingEntity_quote <> "Concur Japan (JV)") { 
+		put(nonSystematizedDict, "contractARRgreaterThan150K", TRUE_STR);
+	}
+
+//rule#17: Contract Automation must be Non-Systematized when Edition is Premium with Recurring Fees
+							
+	if(implementationMethods_quote == "Premium" AND NOT( (findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1) ) ) { //Professional Services or Setup Only Quote
+		put(nonSystematizedDict, "implementationMethods_quote", "Premium");
+	}	
+
+//rule#18: Contract Automation must be Non-Systematized if Quote contains Corporate Subsidiary Billing.
+	
+	if(hasCorporateSubsidiaryBilling == true) { 	
+		put(nonSystematizedDict, "productValidation1", TRUE_STR);
+	}
+
+//rule#19: Contract Automation Must be Non-Systematized if Quote contains Additional Premium Support without Multi-Country Deployment.	
+
+	//IESCNQRCPQ-1725 (OK. 4-22-2024) Comment out the below line to remove the hasAdditionalMultiCountryDeploymentTandM from the condition
+	//if(hasAdditionalPremiumSupport == true AND hasAdditionalMultiCountryDeploymentTandM == false) {	
+	if(hasAdditionalPremiumSupport == true) {
+		put(nonSystematizedDict, "productValidation2", TRUE_STR);
+	}
+
+//rule#20: Contract Automation must be Non-Systematized if Quote contains Additional Multi-Country Expense Configuration in the EMEA or Americas theater.
+	
+	if(ownerTheater_quote <> "APAC" AND hasAdditionalMultiCountryExpenseConfiguration == true) { 	
+		put(nonSystematizedDict, "productValidation", TRUE_STR);
+	}	
+
+//rule#21: Contract Automation must be Non-Systematized when Docusign is not used. //CSYS-67974
+//IESCNQRCPQ-1793 Inactivating Non-Systematized reason	
+	//if(quoteType_quote == "New Business" AND customerAgreesToUseDocusign_quote == false AND (paymentMethod_quote == "Credit Card" OR paymentMethod_quote == "Direct Debit") AND (quoteCurrency_quote == "USD" OR quoteCurrency_quote == "CAD") ){
+	//		put(nonSystematizedDict, "noDocuSign", TRUE_STR);
+	//}
+
+       //CSYS-105008 (TJG 11/29/2021)
+//rule#22: Contract Automation must be Non-Systematized if Quote contains Concur User Assistant by WalkMe - Set up and Implementation Custom Edition
+       if(hasWalkMeSetupandImp == true) { 
+           put(nonSystematizedDict, "productValidation3", TRUE_STR);
+       }
+	//IESCNQRCPQ-1499 - LIK-01-25-2024- Contract Automation must be Non-Systematized when Docusign is not used for EMEA.
+	if(quoteType_quote == "New Business" AND customerAgreesToUseDocusign_quote == false AND (paymentMethod_quote == "Direct Debit") AND (quoteCurrency_quote == "EUR") ){
+			put(nonSystematizedDict, "noDocuSign", TRUE_STR);
+	}
+       //CSYS-104956 (TJG 11/29/2021)
+//rule#23: Contract Automation must be Non-Systematized if Quote contains Extended Services Advisory Support
+       if(hasESAS == true) { 
+             put(nonSystematizedDict, "productValidation4", TRUE_STR);
+        }
+
+//CSYS-105667 - For New Business orders On Submit for Sales Approval, check the Monthly Offset.  If the value is blank, this means that there is an issue and the transaction fee start date will not be set correctly on the contract.  In this instance, force the Contract Automation to be Non-Systematized.
+	monthlyOffSet = false;
+	for line in line_process {
+		if(line.piItemType_line == "Base" AND contractAutomation_quote=="Non-Systematized" AND quoteType_quote=="New Business" AND (line.monthlyOffSetBeforeSubmit_line == "" OR line.monthlyOffSetBeforeSubmit_line== "0") ){
+		monthlyOffSet = true;
+		}
+	}
+
+	if (monthlyOffSet){
+		put(nonSystematizedDict, "monthlyOffsetTFSD", TRUE_STR);
+	}
+//End - CSYS-105667
+
+
+//IESCNQRCPQ-1377 (SV. 13-12-2023) Commented out the below code
+//CSYS-105865 (OK. 3-18-2022) Start - Force Contract Automation to be Non-Systematized for all Addon contracts within the current month Grace Period for Monthly and Quarterly billing cycles	
+	/*if (standardToProfessionalMigrationFlag OR (orderEffectiveDateHDS_quote <> "") OR ((detectByOversightCreateVar==true OR intelligentAuditCreate==true OR intelligentAuditEssentialCreate==true OR verifyCreate==true) AND (detectByAppZenTerminateVar==true AND TERM_DATE<>""))) { // CSYS-106464, LBN 06/09/2022, Adding Future dated conditions
+		if (quoteType_quote == "Add-On Business") {
+			withinGracePeriod = false;
+			if (billingCycle_quote == "Monthly") {
+				withinGracePeriod = commerce.manageAssetNBDValidation();
+			}
+			if (billingCycle_quote == "Quarterly") {
+				withinGracePeriod = commerce.assetNBDValidationForQuarterlyCycle();
+			}
+			if (withinGracePeriod == true) {
+				put(nonSystematizedDict, "gracePeriodContracts", TRUE_STR);
+			}
+		}
+	}*/
+//CSYS-105865 - End
+
+//CSYS-105960 (OK. 3-29-2022) Start - New Business require Contract Automation to be Non-Systematized when the Contracting Entity and the Service or Billing Address Country mismatch
+	countryISOCode = "*CA*US*MX*";
+	iSOCodeCheck = false;
+	if (quoteType_quote == "New Business") { 
+		if ((find(countryISOCode, "*"+billTo_countryISOCode_quote+"*") == -1) OR find(countryISOCode, "*"+service_countryISOCode_quote+"*") == -1) {
+		iSOCodeCheck = true;
+		}
+	
+		if ((contractingEntity_quote == "Concur Technologies Inc." AND iSOCodeCheck == true) OR (contractingEntity_quote == "Concur Holdings (Netherlands) B.V." AND iSOCodeCheck == false))  {
+			put(nonSystematizedDict, "basedOnContractingEntity1", TRUE_STR);
+		}
+	}
+//CSYS-105960 - End	
+
+//CSYS-105842 - (AP, 29-03-2022) BMI: Create Concur France SAS Contracting Entity
+	if (contractingEntity_quote == "Concur France SAS"){
+		put(nonSystematizedDict, "basedOnContractingEntity3", TRUE_STR);
+	}
+//CSYS-105842 - End
+
+//CSYS-105966 (OK. 4-18-2022) Start: If the order effective date is before the Contract Effective Date, then force the contract automation to set Non-Systematized
+	if (quoteType_quote == "Add-On Business" AND contractEffectiveDate_quote <> "" AND orderEffectiveDate_quote <> "") {
+		orderEffectiveDate = getdate();
+		contractEffectiveDate = getdate();
+		if(find(orderEffectiveDate_quote, "/") <> -1) {
+			orderEffectiveDate = strtojavadate(orderEffectiveDate_quote, DATE_FORMAT_PREFERENCE_SLASH);
+		}
+		else {
+			orderEffectiveDate = strtojavadate(orderEffectiveDate_quote, DATE_FORMAT_PREFERENCE_HYPHEN);
+		}
+
+		if(find(contractEffectiveDate_quote, "/") <> -1) {
+			contractEffectiveDate = strtojavadate(contractEffectiveDate_quote, DATE_FORMAT_PREFERENCE_SLASH);
+		}
+		else {
+			contractEffectiveDate = strtojavadate(contractEffectiveDate_quote, DATE_FORMAT_PREFERENCE_HYPHEN);
+		}
+
+		if (comparedates(orderEffectiveDate, contractEffectiveDate) == -1) {
+			put(nonSystematizedDict, "contractDateValidation", TRUE_STR);
+		}
+	}
+//CSYS-105966 - End
+
+//CSYS-106212 - (LIN, 05-05-2022) BMI: Add Legal Egregious Terms to Integration and force Non-Systematized
+	if (legalEgregiousTerms_quote == "Reviewed - Egregious Terms" AND quoteType_quote == "Add-On Business"){
+		put(nonSystematizedDict, "legalEgregiousTermsValidation", TRUE_STR);
+	}
+//CSYS-106212 - End
+
+}
+
+//CSYS-106036 - LBN: Query the table
+nonSysValArray = values(nonSystematizedDict);
+if(NOT isempty(nonSysValArray)){
+	
+	recordSet = BMQL("SELECT Varname, CurrentValue, Message FROM NonSystematizedRea");
+	for entry in recordSet{
+		VarName = get(entry, "Varname");
+		CurrentValue = get(entry, "CurrentValue");
+		Message = get(entry, "Message");
+		if(containskey(nonSystematizedDict, VarName)){
+			NonSystematizedreason = NonSystematizedreason + Message + CRLF;
+		}
+	}
+	result = "1~nonSystematizedReason_quote~" + NonSystematizedreason + "|"; 
+}
+else{
+	//rule#LAST: When the field is changed to non-systematized WITHOUT a BMI rule enforcing the change, populate the reason as "NOT REQUIRED - MANUAL OVERRIDE"
+	if (contractAutomation_quote == "Non-Systematized" and NonSystematizedreason == ""){
+		NonSystematizedreason = NonSystematizedreason + "NOT REQUIRED - MANUAL OVERRIDE";
+	}
+	result = "1~nonSystematizedReason_quote~" + NonSystematizedreason + "|";
+}
+//CSYS-106036 - LBN - End
+
+return result;

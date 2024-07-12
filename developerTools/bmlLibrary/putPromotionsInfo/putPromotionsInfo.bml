@@ -1,0 +1,744 @@
+/*Parameters to this UTIL
+stringsDict
+promotionsDataDict
+promoResultsDict
+promoCodeDescAndDetailsDict
+internalPromoDescDictinternalPromoDescDict
+externalPromoDescDict
+customerFriendlyPromoDescDict
+legalPromoDescDict
+implementationMethodArr
+partNumArr
+*/
+/* ------------------------- Variables for Promotions	----------------------- */
+invalidPromoMessage = "";
+promoCodeApplied = "";
+promoCodeDetails = "";
+//CSYS-98218
+promoCodeAppliedArr = string[];
+
+applicablePromotions = "";
+
+// Static variables
+PARENT_DOC_NUM = "_parent_doc_number";
+ASSET_ACTION = "assetAction_line";
+PART_NUM = "_part_number";
+PO_CATEGORY = "poCategory_line";
+ITEM_TYPE = "piItemType_line";
+SERVICE_MODEL = "edition_line";
+CORE_OFFERING = "coreOffering_line";
+PO_ID = "poId_line";
+DOC_NUM_RAMP_PLAN_DELIM = "_**_";
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd"; 
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+currentDateFormat= "";
+startDateFormat = "";
+endDateFormat = "";
+DELIMITER = "@.@";
+stringsDictDelimiter = "@.@";
+
+promoSecretCodeDelimiter = ",";
+externalPromoDelimiter = "~"; // Multi-Select in the buy side
+applicablePromoDelimiter = "#^#";
+
+// Get all the data needed from the promoDataDict to query promo information
+autoAppliedPromotions = "";
+ownerRegion = "";
+ownerBU = "";
+segment = "";
+ownerMarket = "";
+ownerRevenueGroup = "";
+ownerTheater = "";
+ownerTeam = "";
+accountVertical = "";
+customerType = "";
+quoteType = "";
+promotionSecretCode = "";
+externalPromo = "";
+quoteDocNum = "1";
+orderedPromoCodeApplied = "";
+applicablePromotions = "";
+serviceModelArr = string[];
+coreOfferingArr = string[];
+poIdArr = string[];
+
+// To order the promotions based on the execution order, use this dictionary
+promoCodePromoCategoryStr = ""; //promoCode$^$promoCategory#^#promoCode$^$promoCategory...
+promoCategoryExecList = string[];
+
+
+// Promotions to be auto selected in addition to the ones selected by the user
+autoAppliedPromos = "";
+autoAppliedPromosArr = string[];
+
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerRegion_quote")) {
+  ownerRegion = get(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerRegion_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerBU_quote")) {
+  ownerBU = get(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerBU_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "segment_quote")) {
+  segment = get(stringsDict, quoteDocNum + stringsDictDelimiter + "segment_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerMarket_quote")) {
+  ownerMarket = get(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerMarket_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerRevenueGroup_quote")) {
+  ownerRevenueGroup = get(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerRevenueGroup_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "customerType_quote")) {
+  customerType = get(stringsDict, quoteDocNum + stringsDictDelimiter + "customerType_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "quoteType_quote")) {
+  quoteType = get(stringsDict, quoteDocNum + stringsDictDelimiter + "quoteType_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "promotionCode_quote")) {
+  promotionSecretCode = get(stringsDict, quoteDocNum + stringsDictDelimiter + "promotionCode_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "externalPromotion_quote")) {
+  externalPromo = get(stringsDict, quoteDocNum + stringsDictDelimiter + "externalPromotion_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerTheater_quote")) {
+  ownerTheater = get(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerTheater_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerTeam_quote")) {
+  ownerTeam = get(stringsDict, quoteDocNum + stringsDictDelimiter + "ownerTeam_quote");
+}
+if(containskey(stringsDict, quoteDocNum + stringsDictDelimiter + "accountVertical_quote")) {
+  accountVertical = get(stringsDict, quoteDocNum + stringsDictDelimiter + "accountVertical_quote");
+}
+
+//  Get the line level paramters to fetch the promotion
+for docNum in docNumList {
+	if(find(docNum, DOC_NUM_RAMP_PLAN_DELIM) == -1) { // Ignore the keys with ramp plan keys
+		serviceModelKey = docNum + stringsDictDelimiter + SERVICE_MODEL;
+		if(containskey(stringsDict, serviceModelKey)) {
+			append(serviceModelArr, get(stringsDict, serviceModelKey));
+		}
+		coreOfferingKey = docNum + stringsDictDelimiter + CORE_OFFERING;
+		if(containskey(stringsDict, coreOfferingKey)) {
+			append(coreOfferingArr, get(stringsDict, coreOfferingKey));		
+		}
+		piKey = docNum + stringsDictDelimiter + PART_NUM;
+		if(containskey(stringsDict, piKey)) {
+			pi = get(stringsDict, piKey);
+			poIdKey = pi + stringsDictDelimiter + PO_ID;
+			if(containskey(stringsDict, poIdKey)) {
+				poId = get(stringsDict, poIdKey);
+				if(findinarray(poIdArr, poId) == -1) {
+					append(poIdArr, poId);
+				}
+			}
+		}
+	}
+}
+
+//currentDate = get(stringsDict, quoteDocNum + stringsDictDelimiter + "_system_date");
+currentDate = datetostr(getDate());
+// Select (and to show) only applicable promotions
+applicablePromosArr = string[];
+allApplicablePromosArr = string[];
+uniquePromosArr = string[];
+coreApplicablePromoArr = string[]; //for CSYS-53200. KA. 10-21-2015
+promoCoreArr = string[]; //for CSYS-53200. KA. 10-21-2015
+promoPiArr = string[]; //for CSYS-53200. KA. 10-21-2015
+//CSYS-92211
+netNewCorePromoArr = string[]; 
+netNewCorePiArr = string[]; 
+netNewExtServPromoArr = string[]; 
+netNewExtServPiArr = string[];
+isDigitalCommerceTransARR = string[]; //CSYS-101913
+/*IESCNQRCPQ-231
+isPremiumImplementationARR = string[]; 
+professionalPromotionARR = string[];
+isPremPromos = false;
+isProfPromos = false;
+*/
+//IESCNQRCPQ-231
+
+//CSYS-77853 main logic (KA. 3-3-2017):
+promoListDict = dict("string[]");
+//Query only the records that are dependent on core action code:
+actionCodeBasedPromoResSet = bmql("SELECT Distinct promotionCode, coreOffering, coreActionCode FROM PromoCodeDetails WHERE coreActionCode IS NOT NULL");
+for actionCodeBasedPromo in actionCodeBasedPromoResSet{
+	promotionCode = get(actionCodeBasedPromo, "promotionCode");
+	coreOffering = get(actionCodeBasedPromo, "coreOffering");
+	coreActionCode = get(actionCodeBasedPromo, "coreActionCode");
+
+	coreBasedPromoList = string[];
+
+	if(containskey(promoListDict, coreOffering + DELIMITER + coreActionCode)){
+		coreBasedPromoList = get(promoListDict, coreOffering + DELIMITER + coreActionCode);
+	}
+
+	//build 'core with action code' related lists:
+	append(coreBasedPromoList, promotionCode);
+
+	//build dictionary of lists:
+	put(promoListDict, coreOffering + DELIMITER + coreActionCode, coreBasedPromoList);
+
+}
+
+//Intialize non-empty array to store the core action code based promos to show.
+//Array must be non-empty for table query to work:
+coreActionCodeBasedPromosToShow = string[]{"~PLACEHOLDERXXX~"};
+for docNum in docNumList{
+	assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+	coreOffering = util.getStringAttribute(stringsDict, docNum, DELIMITER, CORE_OFFERING);
+	poCat = util.getStringAttribute(stringsDict, docNum, DELIMITER, PO_CATEGORY);
+
+	//CSYS-77853: Check the line item Core Service action code and cross reference that to the related list built above:
+	if(poCat == "Core Service" AND containskey(promoListDict, coreOffering + DELIMITER + assetAction)){
+
+		promotionCodeList = get(promoListDict, coreOffering + DELIMITER + assetAction);
+
+		//allow the following core action code based promos (these are promos whose availability is dependent on the core's action code):
+		if(NOT isempty(promotionCodeList)){
+			for promo in promotionCodeList{
+				append(coreActionCodeBasedPromosToShow, promo);
+			}
+		}
+	}
+
+}
+
+//END CSYS-77853 main logic
+
+//CSYS-98999
+promoCategoryDict = dict("string");
+
+//CSYS-77853: added the following to the query: '(coreActionCode IS NULL OR promotionCode IN $coreActionCodeBasedPromosToShow)'
+//CSYS-101913: Add isDigitalCommerce; //IESCNQRCPQ-231 Add isPremImplementation (Commenting as of now)
+applicablePromoResSet = bmql("SELECT startDate, endDate, promotionCode, promoSfdcId, promoPI, autoApply, promotionCategory, coreOffering, netNewExtServ, netNewCore, requiredPO, businessUnit, ownerMarket, accountSegment, ownerRevenueGroup, ownerRegion, coreOffering, implementationMethod, customerType, quoteType, serviceModel, promoType, promoValue, addlDiscDisallowed, promoStartPeriod, promoEndPeriod, ownerTheater, ownerTeam, accountVertical, coreActionCode, isDigitalCommerce FROM PromoCodeDetails WHERE (coreActionCode IS NULL OR promotionCode IN $coreActionCodeBasedPromosToShow) AND (ownerRegion IS NULL OR ownerRegion=$ownerRegion) AND (businessUnit IS NULL OR businessUnit=$ownerBU) AND (accountSegment IS NULL OR accountSegment=$segment) AND (ownerMarket IS NULL OR ownerMarket=$ownerMarket) AND (ownerRevenueGroup IS NULL OR ownerRevenueGroup=$ownerRevenueGroup) AND (ownerTheater IS NULL OR ownerTheater=$ownerTheater) AND (ownerTeam IS NULL OR ownerTeam=$ownerTeam) AND (accountVertical IS NULL OR accountVertical=$accountVertical) AND (customerType IS NULL OR customerType=$customerType) AND (quoteType IS NULL OR quoteType=$quoteType) AND (implementationMethod IS NULL OR implementationMethod IN $implementationMethodArr) AND (serviceModel IS NULL OR serviceModel IN $serviceModelArr) AND (coreOffering IS NULL OR coreOffering IN $coreOfferingArr) AND (requiredPO IS NULL OR requiredPO IN $poIdArr) AND promoPI IN $partNumArr");
+
+
+for applicablePromoRes in applicablePromoResSet {
+	tempPromoCode = get(applicablePromoRes, "promotionCode");
+	tempPromoCategory = get(applicablePromoRes, "promotionCategory");
+	autoApply =  get(applicablePromoRes, "autoApply");
+	tempPromoSfdcId = get(applicablePromoRes, "promoSfdcId" );
+	startDate = get(applicablePromoRes, "startDate");
+    endDate = get(applicablePromoRes, "endDate");
+	coreOffering = get(applicablePromoRes, "coreOffering"); //for CSYS-50332. KA. 9-2-2015
+	promoPI = get(applicablePromoRes, "promoPI");  //for CSYS-53200. KA. 10-21-2015
+	
+	//CSYS-101913 (TT. 02/01/2021)
+	isDigitalCommerceTrans = get(applicablePromoRes, "isDigitalCommerce"); 
+	if (isDigitalCommerceTrans == "TRUE"){
+		append(isDigitalCommerceTransARR, tempPromoCode);
+	}
+	
+	/*IESCNQRCPQ-231 (LBN 23/02/2023)
+	isPremImplementationColumn = get(applicablePromoRes, "isPremImplementation");
+	edition = get(applicablePromoRes, "implementationMethod");
+	if(containskey(stringsDict, "premiumEdition") AND isPremImplementationColumn == "TRUE" AND edition == "Professional" AND (startswith(promoCode, "MOVE23")== true)) {   
+		append(isPremiumImplementationARR, tempPromoCode);
+		isPremPromos = true;
+		append(applicablePromosArr, tempPromoCode);
+	}
+	
+	if(containskey(stringsDict, "professionalEdition") AND isPremImplementationColumn == "FALSE" AND edition == "Professional" AND (startswith(promoCode, "MOVE23")== true)) { 
+		append(professionalPromotionARR, tempPromoCode);
+		isProfPromos = true;
+		append(applicablePromosArr, tempPromoCode);
+	}*/
+	//IESCNQRCPQ-231 END
+	
+	//CSYS-98999
+	if (NOT containskey(promoCategoryDict, tempPromoCode) ){
+        	put( promoCategoryDict, tempPromoCode,  tempPromoCategory );    
+    	}
+
+	//CSYS-92211
+	netNewExtServValue = get(applicablePromoRes, "netNewExtServ");
+	netNewCoreValue = get(applicablePromoRes, "netNewCore");
+	
+	if (netNewCoreValue == "TRUE"){
+		append(netNewCorePromoArr, tempPromoCode);
+		append(netNewCorePiArr, promoPI);
+	}
+
+	if (netNewExtServValue == "TRUE"){
+		append(netNewExtServPromoArr, tempPromoCode);
+		append(netNewExtServPiArr, promoPI);
+	}	
+
+	if(coreOffering <> "" and findinarray(promoPiArr, promoPI) == -1){ //core based promos
+		append(coreApplicablePromoArr, tempPromoCode); //CSYS-53200
+		append(promoCoreArr, coreOffering); //CSYS-53200
+		append(promoPiArr, promoPI); //CSYS-53200
+	}
+	
+	if(find(currentDate, "/") <> -1) {
+		currentDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+	} else {
+		currentDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+	}
+	if(find(startDate, "/") <> -1) {
+		startDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+	} else {
+		startDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+	}
+	if(find(endDate, "/") <> -1) {
+		endDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+	} else {
+		endDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+	}
+	put( stringsDict, "promoCodeSFDC" + stringsDictDelimiter + tempPromoCode, tempPromoSfdcId ); 
+	if((comparedates(strtojavadate(currentDate, currentDateFormat), strtojavadate(startDate, startDateFormat)) >= 0) AND (comparedates(strtojavadate(currentDate, currentDateFormat), strtojavadate(endDate, endDateFormat)) <= 0)) {
+		if(autoApply == "Yes") {
+			append(autoAppliedPromosArr, tempPromoCode);
+			if( /*CSYS-98218 find(promoCodeApplied, tempPromoCode) == -1 */ findinarray(promoCodeAppliedArr, tempPromoCode) == -1) {
+				append(promoCodeAppliedArr, tempPromoCode); //CSYS-98218
+				if(promoCodeApplied <> "") {
+					promoCodeApplied = promoCodeApplied + "#^#";
+					promoCodePromoCategoryStr = promoCodePromoCategoryStr + "#^#";
+				}
+				promoCodeApplied = promoCodeApplied  + tempPromoCode; 
+				promoCodePromoCategoryStr = promoCodePromoCategoryStr + tempPromoCode + "$^$" + tempPromoCategory;
+			}
+		} else { 
+		// Applicable promotions to include only the applicable promotions which are NOT auto apply - This is being used to dynamically display Available Promotions menu; IESCNQRCPQ-231: Adding isProfPromos(Commenting as of now)
+			if(NOT(containskey(stringsDict, promoPI + stringsDictDelimiter + "partNumberNotValidForPromo")) OR tempPromoCode == "RENEWALOFFER90DAYS" /* AND isProfPromos == false */){
+				append(allApplicablePromosArr, tempPromoCode);
+			}
+			//append(allApplicablePromosArr, tempPromoCode);
+			if(findinarray(applicablePromosArr, tempPromoCode) == -1 /* AND isProfPromos == false */){ 
+			//Detect if the PI on this row is an edition or core change line OR prod family create terminate line on the quote. If yes and NetNew lines are true then exclude the promo
+				append(applicablePromosArr, tempPromoCode);
+
+				if(NOT(containskey(stringsDict, promoPI + stringsDictDelimiter + "partNumberNotValidForPromo")) OR tempPromoCode == "RENEWALOFFER90DAYS" /* AND isProfPromos == false */){
+					append(applicablePromosArr, tempPromoCode);
+				}
+			}
+		}
+	}
+}
+
+//CSYS-101913 (TT. 02/01/2021): Remove promocodes from applicable promocodes arr if it is not a Digital Commerce Transaction
+if(NOT(isempty(isDigitalCommerceTransARR)) AND _user_login <> "hybris" ){
+	i = 0;
+	for promo in isDigitalCommerceTransARR{
+		promoToRemove = isDigitalCommerceTransARR[i];
+		promoToRemoveIndex = findinarray(allApplicablePromosArr, promoToRemove);
+		if(findinarray(allApplicablePromosArr, promoToRemove) <> -1){
+			remove(allApplicablePromosArr, promoToRemoveIndex);
+		}
+
+	i = i + 1;
+	}
+	promoToRemove = "";
+}
+
+//The next loop is for CSYS-53200. We need to remove invalid core specific promos mainly for multi core quotes. 
+//This fixes the issue of being able to select a promo that doesn't get applied to anything. KA. 10-21-2015
+for docNum in docNumList{
+	piKey = docNum + stringsDictDelimiter + PART_NUM;
+	itemTypeKey = docNum + stringsDictDelimiter + ITEM_TYPE;
+	coreOfferingKey = docNum + stringsDictDelimiter + CORE_OFFERING;
+	skipCoreLine = "";
+	skipExtSvcLine = "";
+	if(containskey(stringsDict, piKey) AND containskey(stringsDict, itemTypeKey) AND containskey(stringsDict, coreOfferingKey)) {
+		pi = get(stringsDict, piKey);
+		itemType = get(stringsDict, itemTypeKey);
+		coreOffering = get(stringsDict, coreOfferingKey);
+		if(itemType == "Base" AND findinarray(promoPiArr, pi) <> -1){ //core specific promo found
+			loc = findinarray(promoPiArr, pi); //index of partnumber
+			if(coreOffering <> promoCoreArr[loc]){
+				promoToRemove = coreApplicablePromoArr[loc];
+				promoToRemoveIndex = findinarray(applicablePromosArr, promoToRemove);
+				if(findinarray(applicablePromosArr, promoToRemove) <> -1){
+					remove(applicablePromosArr, promoToRemoveIndex); //remove invalid core specific promos from the applicablePromosArr
+				}
+			}
+		}
+	}
+	//CSYS-92211
+	skipCoreKey = docNum + stringsDictDelimiter + "skipCoreService";
+	if(containskey(stringsDict, skipCoreKey)) {
+		skipCoreLine = get(stringsDict, skipCoreKey);
+	}
+
+	skipExtSvcKey = docNum + stringsDictDelimiter + "skipExtendedService";
+	if(containskey(stringsDict, skipExtSvcKey)) {
+		skipExtSvcLine = get(stringsDict, skipExtSvcKey);
+	}
+	piNum = get(stringsDict, piKey);
+	promoToRemove = "";
+	i = 0;
+	if (skipCoreLine <> ""){
+		for piNumber in netNewCorePiArr{
+			if (piNumber == piNum){
+				promoToRemove = netNewCorePromoArr[i];
+				promoToRemoveIndex = findinarray(allApplicablePromosArr, promoToRemove);
+				if(findinarray(allApplicablePromosArr, promoToRemove) <> -1){
+					remove(allApplicablePromosArr, promoToRemoveIndex);
+				}
+			}
+			i = i + 1;
+		}
+		promoToRemove = "";
+	}
+	j = 0;
+	if (skipExtSvcLine <> ""){
+		for piNumber in netNewExtServPiArr{
+			if (piNumber == piNum){
+				promoToRemove = netNewExtServPromoArr[j];
+				promoToRemoveIndex = findinarray(allApplicablePromosArr, promoToRemove);
+				if(findinarray(allApplicablePromosArr, promoToRemove) <> -1){
+					remove(allApplicablePromosArr, promoToRemoveIndex);
+				}
+			}
+			j = j + 1;
+		}
+	}
+}
+
+for tempPromoCode in allApplicablePromosArr{
+	if(findinarray(applicablePromosArr, tempPromoCode) <> -1 AND findinarray(uniquePromosArr, tempPromoCode) == -1){
+		append(uniquePromosArr, tempPromoCode);		
+	}
+}
+applicablePromosArr = uniquePromosArr;
+
+//CSYS-99074
+//CSYS-99236 If the we are within term, do not display the RENEWALOFFER90DAYS promo - only display when out of term (renewalPromoValidation set in Pricing)
+if (NOT(containskey(stringsDict, "renewalPromoValidation")) AND findinarray(applicablePromosArr, "RENEWALOFFER90DAYS") <> -1){
+	
+	promoToRemoveIndex = findinarray(applicablePromosArr, "RENEWALOFFER90DAYS");
+	remove(applicablePromosArr, promoToRemoveIndex);
+}
+
+/*CSYS-106955 (OK. 8-19-2022) Comment out the code related to "INVACHMIGRATEWAIVER" promotion
+//CSYS-103355 (OK. 7-26-2021) Start: Do not display the INVACHMIGRATEWAIVER promo - only display when the "INVACHMIGRATEWAIVERPromoCheck" flag is true. setting this flag value in pricing function
+if (NOT(containskey(stringsDict, "INVACHMIGRATEWAIVERPromoCheck")) AND findinarray(applicablePromosArr, "INVACHMIGRATEWAIVER") <> -1){
+	promoIndexToRemove = findinarray(applicablePromosArr, "INVACHMIGRATEWAIVER");
+	remove(applicablePromosArr, promoIndexToRemove);
+}
+//CSYS-103355 - End
+*/
+
+//CSYS-107751 (OK. 1-6-2023) Start: When SAP CoE Approved, display the new MOVE23 promotions. otherwise hide the promos. Setting "SAPCoENotApproved" flag value in pricing function
+//IESCNQRCPQ-1383 (SV. 4-1-2023) Added MOVEBASE9MOWAIVER
+MOVE23PromoArr = string[] {"MOVE23CONINT", "MOVE23EXPIT", "MOVE23MRA", "MOVE23CARE", "MOVE23SCOPE", "MOVE23T&MFEES", "MOVEBASE9MOWAIVER"};
+if (containskey(stringsDict, "SAPCoENotApproved")) {
+	for promo in MOVE23PromoArr {
+		if(findinarray(applicablePromosArr, promo) <> -1) {
+			promoIndexToRemove = findinarray(applicablePromosArr, promo);
+			remove(applicablePromosArr, promoIndexToRemove);
+		}
+	}
+}
+//CSYS-107751- End
+
+if(NOT(isempty(applicablePromosArr))) {
+	applicablePromotions = join(applicablePromosArr, "#^#");
+}
+
+// Promotion Applied from secret code
+if(promotionSecretCode <> "") {
+	tempPromoCodeArr = split(promotionSecretCode, ",");
+	count = false;
+	for promo in tempPromoCodeArr {
+		//CSYS-98999
+		//tableResSet = bmql("SELECT startDate, endDate, promotionCategory FROM PromoCodeDetails WHERE promotionCode=$promo AND (coreActionCode IS NULL OR promotionCode IN $coreActionCodeBasedPromosToShow) AND (ownerRegion IS NULL OR ownerRegion=$ownerRegion) AND (businessUnit IS NULL OR businessUnit=$ownerBU) AND (accountSegment IS NULL OR accountSegment=$segment)  AND (ownerMarket IS NULL OR ownerMarket=$ownerMarket) AND (ownerRevenueGroup IS NULL OR ownerRevenueGroup=$ownerRevenueGroup) AND (ownerTheater IS NULL OR ownerTheater=$ownerTheater) AND (ownerTeam IS NULL OR ownerTeam=$ownerTeam) AND (accountVertical IS NULL OR accountVertical=$accountVertical) AND (customerType IS NULL OR customerType=$customerType) AND (quoteType IS NULL OR quoteType=$quoteType) AND (implementationMethod IS NULL OR implementationMethod IN $implementationMethodArr) AND (serviceModel IS NULL OR serviceModel IN $serviceModelArr) AND (coreOffering IS NULL OR coreOffering IN $coreOfferingArr) AND (requiredPO IS NULL OR requiredPO IN $poIdArr) AND promoPI IN $partNumArr");
+		for item in applicablePromoResSet {
+			promoFromTable = get(item, "promotionCode");
+			if (promo == promoFromTable){
+				count = true;
+				startDate = get(item, "startDate");
+				endDate = get(item, "endDate");
+				tempPromoCategory = get(item, "promotionCategory");
+				if(find(currentDate, "/") <> -1) {
+				currentDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+				} else {
+				currentDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+				}
+				if(find(startDate, "/") <> -1) {
+				startDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+				} else {
+				startDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+				}
+				if(find(endDate, "/") <> -1) {
+				endDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+				} else {
+				endDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+				}
+				// Do the date comparison here
+				if(comparedates(strtojavadate(currentDate, currentDateFormat), strtojavadate(startDate, "yyyy-MM-dd")) >= 0 AND comparedates(strtojavadate(currentDate, currentDateFormat), strtojavadate(endDate, "yyyy-MM-dd")) <= 0) {
+				if(promoCodeApplied <> "") {
+				  promoCodeApplied = promoCodeApplied + "#^#";
+				  promoCodePromoCategoryStr = promoCodePromoCategoryStr + "#^#";
+				}
+				promoCodeApplied = promoCodeApplied + promo; 
+				promoCodePromoCategoryStr = promoCodePromoCategoryStr + promo + "$^$" + tempPromoCategory;
+				} else {
+				invalidPromoMessage = "Entered Promotion is invalid!";
+				}
+			}
+		}
+	}
+	if(NOT(count)) {
+		invalidPromoMessage = "Entered Promotion is invalid!";
+	}
+}
+
+// Promotion Applied from Multi-select menu
+if(NOT(isnull(externalPromo)) AND len(externalPromo) > 0) {
+	externalPromoApplied = split(externalPromo, "~");
+	for item in externalPromoApplied {
+		if ( findinarray( applicablePromosArr, item ) == -1 ){
+			continue;
+		}
+		tempPromoCategory = "";
+		//CSYS-98999
+		//promoCategoryResSet = bmql("SELECT promotionCode, promotionCategory FROM PromoCodeDetails WHERE promotionCode=$item"); // under the assumption that each promo code can have only one promotion category, no need to use other conditions in the query
+		/*
+		for promoCategoryRes in promoCategoryResSet {
+			tempPromoCategory = get(promoCategoryRes, "promotionCategory");
+		}*/
+		if (containskey(promoCategoryDict, item)){
+			tempPromoCategory = get(promoCategoryDict, item);
+		}
+		if( /* CSYS-98218 find(promoCodeApplied, item) == -1 */ findinarray(promoCodeAppliedArr, item) == -1) {
+			append(promoCodeAppliedArr, item); //CSYS-98218
+			if(promoCodeApplied <> "") {
+    			promoCodeApplied = promoCodeApplied + "#^#";
+				promoCodePromoCategoryStr = promoCodePromoCategoryStr + "#^#";
+			}
+			promoCodeApplied = promoCodeApplied  + item; 
+			promoCodePromoCategoryStr = promoCodePromoCategoryStr + item + "$^$" + tempPromoCategory + "#^#";
+		}
+	}
+}
+
+//Auto apply promotions
+if(NOT(isempty(autoAppliedPromosArr))) {
+	autoAppliedPromos = join(autoAppliedPromosArr, ",");
+}
+
+// Promotion Execution Order
+promoExecOrderResSet = bmql("SELECT promotionCategory FROM PromotionExecOrder ORDER BY orderNum");
+for promoExecOrderRes in promoExecOrderResSet {
+	append(promoCategoryExecList, get(promoExecOrderRes, "promotionCategory"));
+}
+promoCodePromoCategoryArr = split(promoCodePromoCategoryStr, "#^#");
+for promoCategory in promoCategoryExecList {
+	for promoCodePromoCategory in promoCodePromoCategoryArr {
+		if(find(promoCodePromoCategory, "$^$" + promoCategory) <> -1) {
+			promoCodeArr = split(promoCodePromoCategory, "$^$");
+			if(orderedPromoCodeApplied <> "") {
+				orderedPromoCodeApplied = orderedPromoCodeApplied + "#^#";
+			} 
+			orderedPromoCodeApplied = orderedPromoCodeApplied + promoCodeArr[0];
+		}
+	}	
+}
+// If orderedPromoCodeApplied is set, promotion execution order exists and applied
+if(orderedPromoCodeApplied <> "") {
+	promoCodeApplied = orderedPromoCodeApplied;
+}
+put(promoResultsDict, "promoCodeApplied", promoCodeApplied);
+put(promoResultsDict, "applicablePromotions", applicablePromotions);
+put(promoResultsDict, "invalidPromoMessage", invalidPromoMessage);
+put(promoResultsDict, "autoAppliedPromotions", autoAppliedPromos);
+
+if(containskey(promoResultsDict, "promoCodeApplied")) {
+	promoCodeApplied = get(promoResultsDict, "promoCodeApplied");
+}
+
+if(containskey(promoResultsDict, "applicablePromotions")) {
+	applicablePromotions = get(promoResultsDict, "applicablePromotions");
+}
+if(containskey(promoResultsDict, "invalidPromoMessage")) {
+	invalidPromoMessage = get(promoResultsDict, "invalidPromoMessage");
+}
+if(containskey(promoResultsDict, "autoAppliedPromotions")) {
+	autoAppliedPromotions = get(promoResultsDict, "autoAppliedPromotions");
+}
+// Get the promotion Code Description (used to display the table at the quote level)  and Promo Code Details  (XML format)
+tempPromoCodeAppliedArr = split(promoCodeApplied, "#^#"); 
+
+if(applicablePromotions <> "") {
+	applicablePromosArr = split(applicablePromotions, "#^#");
+}
+autoAppliedPromosArr = split(autoAppliedPromotions, ",");
+for item in autoAppliedPromosArr {
+	append(applicablePromosArr, item);
+}
+
+promoCodeDetails = "<promoDesc>";
+//CSYS-98999
+promoMessageDict = dict("string");
+promoCodeDescResSet = bmql("SELECT promotionCode, description, descriptionType, orderNum FROM PromoMessage WHERE promotionCode IN $applicablePromosArr ORDER BY promotionCode, descriptionType, orderNum");
+
+for promo in applicablePromosArr {
+	internalDesc = "";
+	externalDesc = "";
+	customerFriendlyDesc = "";
+	legalDesc = "";
+	internalDescOrder = 1;
+	externalDescOrder = 1;
+	customerFriendlyDescOrder = 1;
+	legalDescOrder = 1;
+	// Get Promo Code Description
+	//CSYS-98999
+	//promoCodeDescResSet = bmql("SELECT description, descriptionType, orderNum FROM PromoMessage WHERE promotionCode=$promo");
+	for resSet in promoCodeDescResSet {
+		//CSYS-98999
+		promoNameFromTable = get(resSet, "promotionCode");
+		if(promoNameFromTable == promo){
+			descType = get(resSet, "descriptionType");
+			if(descType == "INTERNAL_NAME" AND get(resSet, "orderNum") == string(internalDescOrder)) {
+				internalDesc = internalDesc + get(resSet, "description");
+				internalDescOrder = internalDescOrder + 1;
+			}
+			if(descType == "INTERNAL_DESC" AND get(resSet, "orderNum") == string(externalDescOrder)) {
+				externalDesc = externalDesc + get(resSet, "description");
+				externalDescOrder = externalDescOrder + 1;
+			}
+			if(descType == "CUSTOMER_FRIENDLY" AND get(resSet, "orderNum") == string(customerFriendlyDescOrder)) {
+				customerFriendlyDesc = customerFriendlyDesc + get(resSet, "description");
+				customerFriendlyDescOrder = customerFriendlyDescOrder + 1;
+			}
+			if(descType == "LEGAL" AND get(resSet, "orderNum") == string(legalDescOrder)) {
+				legalDesc = legalDesc + get(resSet, "description");
+				legalDescOrder = legalDescOrder + 1;
+			}
+			if(len(internalDesc) > 0) {
+				put(internalPromoDescDict, promo, internalDesc);
+			}
+			if(len(externalDesc) > 0) {
+				put(externalPromoDescDict, promo, externalDesc);
+			}
+			if(len(customerFriendlyDesc) > 0) {
+				put(customerFriendlyPromoDescDict, promo, customerFriendlyDesc);
+			}
+			if(len(legalDesc) > 0) {
+				put(legalPromoDescDict, promo, legalDesc);	
+			}
+		}
+	}
+}
+
+for promo in applicablePromosArr {
+	internalDesc = "";
+	externalDesc = "";
+	customerFriendlyDesc = "";
+	legalDesc = "";
+	startDate = "";
+	endDate = "";
+	promotionCategory = "";
+	if(containskey(internalPromoDescDict, promo))  {
+		internalDesc = get(internalPromoDescDict, promo);
+	}
+	if(containskey(externalPromoDescDict, promo))  {
+		externalDesc = get(externalPromoDescDict, promo);
+	}
+	if(containskey(customerFriendlyPromoDescDict, promo))  {
+		customerFriendlyDesc = get(customerFriendlyPromoDescDict, promo);
+	}
+	if(containskey(legalPromoDescDict, promo))  {
+		legalDesc = get(legalPromoDescDict, promo);
+	}
+	// Get the start and end date for the promo to display in the quote
+	//promoDatesResSet = bmql("SELECT promotionCategory, startDate, endDate FROM PromoCodeDetails WHERE promotionCode = $promo");
+	/*for promoDatesRes in promoDatesResSet {
+		promotionCategory = get(promoDatesRes, "promotionCategory");
+		startDate = get(promoDatesRes, "startDate");
+		endDate = get(promoDatesRes, "endDate");
+	}*/
+	//CSYS-98999
+	for promoDatesRes in applicablePromoResSet {
+		promoFromTable = get(promoDatesRes, "promotionCode");
+		if (promo == promoFromTable){
+			promotionCategory = get(promoDatesRes, "promotionCategory");
+			startDate = get(promoDatesRes, "startDate");
+			endDate = get(promoDatesRes, "endDate");
+		}
+	}
+	
+	if(len(promo) > 0) {
+		promoCodeDetails = promoCodeDetails + "<code>" + "<id>" + promo + "</id>" + "<startDate>" + startDate + "</startDate>" + "<endDate>" + endDate + "</endDate>" + "<applied>";
+		if(findinarray(tempPromoCodeAppliedArr, promo)  <> -1) {
+			promoCodeDetails = promoCodeDetails + "TRUE";
+		} else {
+			promoCodeDetails = promoCodeDetails + "FALSE";
+		}
+		promoCodeDetails = promoCodeDetails + "</applied>" + "<promoCat>" + promotionCategory + "</promoCat>";
+		if(len(internalDesc) > 0) {
+			promoCodeDetails = promoCodeDetails + "<INTERNAL_NAME>" + internalDesc + "</INTERNAL_NAME>";
+		}
+		if(len(externalDesc) > 0) {
+			promoCodeDetails = promoCodeDetails + "<INTERNAL_DESC>" + externalDesc + "</INTERNAL_DESC>";
+		}
+		if(len(customerFriendlyDesc) > 0) {
+			promoCodeDetails = promoCodeDetails + "<CUSTOMER_FRIENDLY>" + customerFriendlyDesc + "</CUSTOMER_FRIENDLY>";
+		}
+		if(len(legalDesc) > 0) {
+			promoCodeDetails = promoCodeDetails + "<LEGAL>" + legalDesc + "</LEGAL>";
+		}
+		promoCodeDetails = promoCodeDetails + "</code>";
+	}
+}
+promoCodeDetails = promoCodeDetails + "</promoDesc>";
+put(promoCodeDescAndDetailsDict, "promoCodeDetails", promoCodeDetails); 
+//return promoCodeDescAndDetailsDict;
+
+if(containskey(promoCodeDescAndDetailsDict, "promoCodeDetails")) {
+	promoCodeDetails = get(promoCodeDescAndDetailsDict, "promoCodeDetails");
+}
+// Populate the promotionsDataDict to be used to calculate line level promotions
+//promotionsDataResSet = bmql("SELECT promotionCode, requiredPO, businessUnit, ownerMarket, accountSegment, ownerRevenueGroup, ownerRegion, coreOffering, coreActionCode, implementationMethod, customerType, quoteType, serviceModel, autoApply, startDate, endDate, promotionCategory, promoPI, promoType, promoValue, addlDiscDisallowed, promoStartPeriod, promoEndPeriod, ownerTheater, ownerTeam, accountVertical, netNewExtServ, netNewCore from PromoCodeDetails");
+//promoArr = string []; // temporary array used to find repeated promo rows
+promoArr = dict("string"); //NS Case 144381 had to change the array to a dictionary due to size limitations
+//CSYS-98999
+//for promotionsDataRes in promotionsDataResSet {
+for promotionsDataRes in applicablePromoResSet {
+	promoCodeRes = get(promotionsDataRes, "promotionCode");
+	requiredPORes = get(promotionsDataRes, "requiredPO");
+	businessUnitRes = get(promotionsDataRes, "businessUnit");
+	marketRes = get(promotionsDataRes, "ownerMarket");
+	segmentRes = get(promotionsDataRes, "accountSegment");
+	revenueGroupRes = get(promotionsDataRes, "ownerRevenueGroup");
+	regionRes = get(promotionsDataRes, "ownerRegion");
+	coreOfferingRes = get(promotionsDataRes, "coreOffering");
+	implementationMethodRes = get(promotionsDataRes, "implementationMethod");
+	customerTypeRes = get(promotionsDataRes, "customerType");
+	quoteTypeRes = get(promotionsDataRes, "quoteType");
+	serviceModelRes = get(promotionsDataRes, "serviceModel");
+	autoApplyRes = get(promotionsDataRes, "autoApply");
+	startDateRes = get(promotionsDataRes, "startDate");
+	endDateRes = get(promotionsDataRes, "endDate");
+	promotionCategoryRes = get(promotionsDataRes, "promotionCategory");	
+	promoPI = get(promotionsDataRes, "promoPI");
+	promoType = get(promotionsDataRes, "promoType");
+	promoValue = get(promotionsDataRes, "promoValue");
+	addlDiscDisAllowed = get(promotionsDataRes, "addlDiscDisallowed");
+	promoStartPeriod = get(promotionsDataRes, "promoStartPeriod");
+	promoEndPeriod = get(promotionsDataRes, "promoEndPeriod");
+	ownerTheaterRes = get(promotionsDataRes, "ownerTheater");
+	ownerTeamRes = get(promotionsDataRes, "ownerTeam");
+	accountVerticalRes = get(promotionsDataRes, "accountVertical");
+	coreActionCode = get(promotionsDataRes, "coreActionCode"); //CSYS-77853
+	netNewExtServ = get(promotionsDataRes, "netNewExtServ");//CSYS-88388
+	netNewCore = get(promotionsDataRes, "netNewCore");//CSYS-88388	
+	
+	promoDataKey = promoCodeRes + DELIMITER + promoPI;
+	promoDataValue = requiredPORes + DELIMITER + businessUnitRes + DELIMITER + marketRes + DELIMITER + segmentRes + DELIMITER + revenueGroupRes + DELIMITER + regionRes + DELIMITER + coreOfferingRes +DELIMITER + implementationMethodRes +DELIMITER + customerTypeRes + DELIMITER + quoteTypeRes + DELIMITER + serviceModelRes + DELIMITER + autoApplyRes + DELIMITER + startDateRes +DELIMITER + endDateRes + DELIMITER + promotionCategoryRes  + DELIMITER + promoType + DELIMITER + promoValue + DELIMITER + addlDiscDisAllowed + DELIMITER + promoStartPeriod + DELIMITER + promoEndPeriod + DELIMITER + ownerTheater + DELIMITER + ownerTeam + DELIMITER + accountVertical + DELIMITER + coreActionCode + DELIMITER + netNewExtServ + DELIMITER + netNewCore;
+	promoValueArr = string[];			
+						
+	if(containskey(promoArr, promoDataKey) == false) { //This means no such key exists until now in the dictionary
+		put(promoArr, promoDataKey, promoDataKey);
+		append(promoValueArr, promoDataValue);
+		put(promotionsDataDict, promoDataKey, promoValueArr);
+	} else  {
+		if(containskey(promotionsDataDict, promoDataKey)) {
+			promoValueArr = get(promotionsDataDict, promoDataKey);
+			append(promoValueArr, promoDataValue);
+			put(promotionsDataDict, promoDataKey, promoValueArr);
+		}
+	}
+} 
+
+return true;

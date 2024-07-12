@@ -1,0 +1,11 @@
+{
+  "name" : "Set Cross Model Attr Selected",
+  "variableName" : "setIsBIselected",
+  "description" : "CSYS-99036, 99240, 99164",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_part_number", "_document_number", "_config_attr_info" ],
+  "mainDocAttributes" : [ "quoteType_quote", "assetsString_quote" ],
+  "systemAttributes" : [ ]
+}

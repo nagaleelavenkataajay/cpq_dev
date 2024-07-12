@@ -1,0 +1,14 @@
+{
+  "name" : "Populate Attachment Name",
+  "variableName" : "populateAttachmentName",
+  "description" : "This function generates the name for the attachment document that is exported to Salesforce",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "actionName",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "account_quote", "quoteNumber_quote", "revisionNumber_quote", "partnerBillingQuote_quote", "includeConcurCounterSignature_quote" ],
+  "systemAttributes" : [ ]
+}

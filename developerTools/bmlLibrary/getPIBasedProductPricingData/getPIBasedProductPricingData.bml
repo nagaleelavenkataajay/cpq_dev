@@ -1,0 +1,41 @@
+/*
+	BML Utility Library
+	getPIBasedProductPricingData
+	----------------------------
+	Params:
+		String[] partNumList
+		String[]Dict piBasedProductPricingDict
+	Returns:
+		StringDict result
+			rowCount => number of records returned
+	
+	Description:
+		For a given list of Part Numbers, return all Product Based Pricing
+		conditions within the list of Part Numbers. condPI1, condPI2 and
+		discountPI must all exist within the list of part numbers (otherwise
+		there is no point!).
+*/
+result = dict("string");
+
+productBasedDiscountConditions = bmql("select condPI1, condPI2, discountPI, discountVal, discountType, listPricePI from productBasedDisc where condPI1 in $piList and condPI2 in $piList and discountPI in $piList and listPricePI in $piList");
+
+index = 0;
+for record in productBasedDiscountConditions {
+	
+	row = string[];
+	
+	append(row, get(record, "condPI1"));
+	append(row, get(record, "condPI2"));
+	append(row, get(record, "discountPI"));
+	append(row, get(record, "discountVal"));
+	append(row, get(record, "discountType"));
+	append(row, get(record, "listPricePI"));
+	
+	put(piBasedProductPricingDict, index, row);
+	
+	index = index + 1;
+}
+
+put(result, "rowCount", string(index));
+
+return result;

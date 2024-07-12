@@ -1,0 +1,50 @@
+//CSYS-94167 & CSYS-94755 & CSYS-97827 & CSYS-97864
+//LN and PS, 01/24/2020
+INCREMENTAL_FEE = "Incremental";
+allowedProductsArray = String[];
+result = false;
+primeEligability = true;
+productsPresent = false;
+partsCheckRequired = false;
+transactionMinimum = 0;
+transactionMaximum = 0;
+
+//Query the primeBUcheck table to see if the Opportunity Owner Information is eligable to be considered for the Prime Package:
+resultSet = BMQL("SELECT TcMin, TcMax FROM primeBUcheck WHERE quoteType = $quoteType_quote AND ownerBU = $ownerBU_quote AND ownerMarket = $ownerMarket_quote and (ownerDivision=$ownerDivision_quote or ownerDivision='N/A') and (ownerTeam=$ownerTeam_quote or ownerTeam='N/A')");
+
+for response in resultSet {
+	if(NOT(isnull(response))){
+		transactionMinimum = util.customAtoi(get(response, "TcMin"), 0);
+		transactionMaximum = util.customAtoi(get(response, "TcMax"), 0);
+		partsCheckRequired = true;
+	}
+}
+
+if (partsCheckRequired){
+
+	resultSet = bmql("SELECT poID FROM primeAllowedProducts WHERE ownerBU = $ownerBU_quote AND ownerMarket = $ownerMarket_quote and (ownerDivision=$ownerDivision_quote or ownerDivision='N/A') and (ownerTeam=$ownerTeam_quote or ownerTeam='N/A')");
+
+	for response in resultSet {
+		poId = get(response, "poID");
+		append(allowedProductsArray, poID);
+	}
+
+	for line in line_process {
+		poID = line.poId_line;
+		piItemType = line.piItemType_line;
+		trxns = line.numCommittedTransaction_line;
+		pi = line._part_number;
+		productsPresent = true;
+		
+		if( pi <> "" AND piItemType <> INCREMENTAL_FEE AND (findinarray(allowedProductsArray, poID) == -1 OR (trxns < transactionMinimum OR trxns > transactionMaximum)) ){
+			primeEligability = false;
+			break;
+		}
+	}
+
+	if(primeEligability AND productsPresent){
+		result = true;
+	}
+}
+
+return result;

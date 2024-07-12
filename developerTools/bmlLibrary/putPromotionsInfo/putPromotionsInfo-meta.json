@@ -1,0 +1,42 @@
+{
+  "name" : "Put Promotions Info",
+  "variableName" : "putPromotionsInfo",
+  "description" : "This util is for replacing the utils \"getPromoInfo\" and \"getPromoDetails\" and have the entire promotions logic in this one util",
+  "libraryFunctions" : [ "util.getStringAttribute" ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "promoResultsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "promotionsDataDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "promoCodeDescAndDetailsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "internalPromoDescDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "externalPromoDescDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "customerFriendlyPromoDescDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "legalPromoDescDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "docNumList",
+    "type" : "String[]"
+  }, {
+    "name" : "implementationMethodArr",
+    "type" : "String[]"
+  }, {
+    "name" : "partNumArr",
+    "type" : "String[]"
+  } ],
+  "attributes" : [ "_user_login" ]
+}

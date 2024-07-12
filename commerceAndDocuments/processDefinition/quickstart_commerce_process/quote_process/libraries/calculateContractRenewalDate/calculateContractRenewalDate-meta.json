@@ -1,0 +1,14 @@
+{
+  "name" : "Calculate Contract Renewal Date",
+  "variableName" : "calculateContractRenewalDate",
+  "description" : "Per CSYS-16186. Moved CRD section out of Pricing into its own library, so that it can be called from the Save W/O Pricing action. It will also place less stress on the Pricing Function.",
+  "libraryFunctions" : [ "util.addMonthsToDate", "util.formAttrValueStr", "util.setDateToLastDayOfMonth" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "contractRenewalDateText_quote", "contractRenewalDateAcc_quote", "quoteType_quote", "termNumMonths_quote", "orderEffectiveDate_quote" ],
+  "systemAttributes" : [ ]
+}

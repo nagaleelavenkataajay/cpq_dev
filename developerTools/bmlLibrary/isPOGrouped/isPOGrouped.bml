@@ -1,0 +1,10 @@
+/* util -> getDefaultBasedOnBUAndMarket
+None. This returns all distinct POs which have to be grouped. The calling function will always search for ~POID~
+*/
+retStr = "~";				//Initialize Return String
+results = bmql("select DISTINCT PO from poToBeGrouped"); // Query the table for the POs
+for result in results {			
+	poNum= get(result, "PO");//If found
+	retStr = retStr + poNum + "~";//Add to the return string separated by ~
+}
+return retStr; // Return

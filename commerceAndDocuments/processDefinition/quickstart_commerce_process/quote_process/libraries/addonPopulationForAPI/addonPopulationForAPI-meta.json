@@ -1,0 +1,11 @@
+{
+  "name" : "Add-on Population For API",
+  "variableName" : "addonPopulationForAPI",
+  "description" : "Used to bring in assets with the configure API and updateTransaction API.",
+  "libraryFunctions" : [ "util.customAtof" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_sequence_number", "lineDescription_line" ],
+  "mainDocAttributes" : [ "transactionID_quote", "ownerBU_quote", "ownerTheater_quote", "assetsString_quote", "quoteType_quote", "quoteCurrency_quote" ],
+  "systemAttributes" : [ "_system_user_session_id", "_system_supplier_company_name", "_system_user_login", "_system_company_name" ]
+}

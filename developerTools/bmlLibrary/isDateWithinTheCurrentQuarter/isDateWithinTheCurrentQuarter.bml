@@ -1,0 +1,87 @@
+//CSYS-99026 (OK. 5-14-2020) to check the input date is within current quarter or not
+//DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd";
+result = false;
+dateDelimiter = "-";
+monthvalue = "";
+dashString = "";
+dateSplit = string[];
+timezone = util.getUserTimeZone();
+currentDate = datetostr(getdate());
+currentDateText = substring(currentDate, 0, 10);
+yearVal = "";
+startDate = "";
+endDate = "";
+inputDateStr = substring(inputDate, 0, 10);
+dashString1 = "";
+dateSplit1 = string[];
+dateValue = getdate();
+currentQuarterStartDate = getdate();
+currentQuarterEndDate = getdate();
+
+
+if(inputDate <> "" AND NOT(isnull(inputDate)))
+{
+	if(find(inputDateStr,"-") <> -1 ){
+		dashString1 = inputDateStr;
+	}
+	elif(find(inputDateStr,"/") <> -1 ){ 
+		dateSplit1 = split(inputDateStr,"/");
+		dashString1 = dateSplit1[2] + "-" + dateSplit1[0] + "-" + dateSplit1[1];
+	}
+
+	if(find(currentDateText,"-") <> -1 ){
+		dateSplit = split(currentDateText,"-");
+		monthvalue = dateSplit[1];
+		yearVal = dateSplit[0];
+	}
+	elif( find(currentDateText,"/") <> -1 ){ 
+		dateSplit = split(currentDateText,"/");
+		dashString = dateSplit[2] + "-" + dateSplit[0] + "-" + dateSplit[1];
+		dateSplit = split(dashString,"-");
+		monthvalue = dateSplit[1];
+		yearVal = dateSplit[0];
+	}				
+	
+	//Calculating the Quarters based on Calendar date.
+	if( sizeofarray(dateSplit) > 0 AND isnumber(monthvalue))
+	{	
+		month = atoi(monthvalue);		
+		if (month > 0 AND month <=3){		
+			StartDate = yearVal + "-01-01";
+			endDate = yearVal + "-03-31";
+		}
+		if (month >= 4 AND month <=6){
+			StartDate = yearVal + "-04-01";
+			endDate = yearVal + "-06-30";
+			}
+		if (month >= 7 AND month <=9){
+			StartDate = yearVal + "-07-01";
+			endDate = yearVal + "-09-30";		
+		}
+		if (month >= 10 AND month <=12){
+			StartDate = yearVal + "-10-01";
+			endDate = yearVal + "-12-31";		
+		}	
+	}
+	if(timezone <> ""){
+		dateValue = strtojavadate(dashString1, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+		currentQuarterStartDate = strtojavadate(StartDate, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+		currentQuarterEndDate = strtojavadate(endDate, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+	}
+	else{
+		dateValue = strtojavadate(dashString1, DATE_FORMAT_PREFERENCE_HYPHEN);
+		currentQuarterStartDate = strtojavadate(StartDate, DATE_FORMAT_PREFERENCE_HYPHEN);
+		currentQuarterEndDate = strtojavadate(endDate, DATE_FORMAT_PREFERENCE_HYPHEN);
+	}
+	
+	withinCurrentQuarter1 = comparedates(dateValue,currentQuarterStartDate);
+	withinCurrentQuarter2 = comparedates(dateValue,currentQuarterEndDate);
+
+	if(withinCurrentQuarter1 <> -1 AND withinCurrentQuarter2 <> 1){	
+		result = true;
+	}
+}
+
+return result;

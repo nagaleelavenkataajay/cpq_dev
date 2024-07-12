@@ -1,0 +1,11 @@
+{
+  "name" : "Reset Integration IDs for SFDC",
+  "variableName" : "resetIntegrationIDsForSFDC",
+  "description" : "resetting the Integration Id's for SFDC",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_document_number", "syncId_line", "_part_number" ],
+  "mainDocAttributes" : [ "crmOpportunityId_quote" ],
+  "systemAttributes" : [ "_system_buyside_id" ]
+}

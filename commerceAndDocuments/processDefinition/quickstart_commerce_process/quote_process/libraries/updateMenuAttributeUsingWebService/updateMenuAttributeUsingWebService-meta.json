@@ -1,0 +1,11 @@
+{
+  "name" : "Update Menu Attribute Using WebService",
+  "variableName" : "updateMenuAttributeUsingWebService",
+  "description" : "CSYS-104972 - To save the selected promo",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "externalPromotion_quote", "transactionID_quote" ],
+  "systemAttributes" : [ "_system_user_session_id", "_system_company_name", "_system_supplier_company_name", "_system_user_login" ]
+}

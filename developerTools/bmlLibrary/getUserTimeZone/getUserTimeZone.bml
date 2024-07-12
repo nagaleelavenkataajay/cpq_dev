@@ -1,0 +1,10 @@
+timezone = "";
+userTimezone = _user_timezone;
+
+rez = bmql("SELECT TimezoneValue FROM timezoneTable WHERE SystemUserTimezone = $userTimezone");
+for entry in rez{
+	
+	timezone = get(entry, "TimezoneValue");
+}
+
+return timezone;

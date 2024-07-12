@@ -1,0 +1,37 @@
+/* util - Get Hiding Status
+
+coreOffering - String
+implementationMethod - String
+serviceAttr - String
+*/
+availibilityArray = String[];
+//ownerBusUnit = "%"+ ownerBusinessUnit +"%";
+//theater = "%"+ ownerTheater +"%";
+//market = "%"+ ownerMarket +"%";
+type = "%"+ quoteType +"%";
+partnerType = "";
+
+//(AP 22-09-2022) CSYS-107019 BMI:  Update util.getHidingStatusForServicePartnerType to use ServicePartnerTypeCIP
+if(accntSvcPartnerType == ""){
+	partnerType = "FALSE";
+}
+else{
+	partnerType = "TRUE";
+}
+
+recordSet = bmql("select availability from serviceCompatibility where coreOffering = $coreOffering and serviceAttr = $serviceAttr and accntServPrtnrTypCIP = $partnerType and (quoteType like $type or quoteType = '' or quoteType is null)");
+
+
+for rec in recordSet
+{
+	append(availibilityArray, get(rec,"availability"));
+}
+
+if((findinarray(availibilityArray,"TRUE")>-1)) //or(isempty(availibilityArray)==True))
+{
+	return false;
+}
+else
+{
+	return true;
+}

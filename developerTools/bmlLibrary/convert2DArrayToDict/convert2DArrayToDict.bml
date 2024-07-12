@@ -1,0 +1,15 @@
+/* BML Utilities Libraries (convert2DArrayToDict)
+   - Convert a string array into dictionary 
+   
+   @param: array - String[][]
+   @return: String Dictionary
+   
+*/
+
+resultDict = dict("string");
+
+for row in array {
+  put(resultDict, row[0], row[1]);
+} 
+
+return resultDict;

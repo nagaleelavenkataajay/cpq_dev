@@ -1,0 +1,9 @@
+{
+  "name" : "Get Product Based Recurring Services PO",
+  "variableName" : "getProductBasedRecurringServicesPO",
+  "description" : "This script is leveraged to determine the parent/child extended services that must force the same ramp plan on the child poID to match that of the parent poID (CSYS-94381 LN. 1-31-2019)",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ ],
+  "attributes" : [ ]
+}

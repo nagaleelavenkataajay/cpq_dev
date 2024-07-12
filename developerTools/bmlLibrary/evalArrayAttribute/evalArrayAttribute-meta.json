@@ -1,0 +1,15 @@
+{
+  "name" : "evalArrayAttribute",
+  "variableName" : "evalArrayAttribute",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "expression",
+    "type" : "String"
+  }, {
+    "name" : "arrayAttrDict",
+    "type" : "String[] Dictionary"
+  } ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,83 @@
+BUSINESS_UNIT = ownerBU_quote;
+THEATER = ownerTheater_quote;
+MARKET = ownerMarket_quote;
+nBQuoteWithSAPOtherContractingEntity = false; 
+CREATE_ACTION = "CREATE";
+BASE_FEE = "Base";
+DELIMITER = "@.@";
+newOrderDate = "";
+dateString = string[];
+dateDelim = "-";
+months = "";
+
+if(contractingEntity_quote == "SAP Other" AND quoteType_quote == "New Business"){
+	nBQuoteWithSAPOtherContractingEntity = true;
+}
+
+dateText = substring((orderEffectiveDate_quote),0,10);
+
+if (find(dateText,"-") <> -1){
+	dateString = split(dateText, dateDelim);
+}
+
+if(sizeofarray(dateString) > 0 AND isnumber(dateString[2])){
+	dateString[2] = "01";
+	newOrderDate = join(dateString,dateDelim);
+}
+
+for line in line_process{
+	
+assetAction = line.assetAction_line;
+itemType = line.piItemType_line;
+lineDescription = line.lineDescription_line;
+pid = line._part_number;
+lineNum = line._document_number;
+coreOffering = line.coreOffering_line;	
+edition = line.implementationMethod_line;
+
+// BMQL to select the monthly offset from the newProductStartDate Table based on Owner BU, Owner Theater, Core Product and Edition (added the market check to the query for CSYS-83703. KA. 9-19-2017)
+lineOffset = bmql("select monthlyOffset, market from newProductStartDate where bu = $BUSINESS_UNIT and theater = $THEATER and coreProduct = $coreOffering and edition = $edition and (market = $MARKET or market is null or market = '')");
+	
+
+	if(nBQuoteWithSAPOtherContractingEntity == true)
+	{
+		if (assetAction == CREATE_ACTION AND itemType == BASE_FEE ){  // set Monthly Offset value 1
+			utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffSetBeforeSubmit_line", lineNum, "1");
+		}
+	}
+	
+	if(quoteType_quote == "New Business" AND referralStatus_quote == "Accept" AND referringPartnerCategory_quote == "VAR") {
+		if (itemType == BASE_FEE) { 
+			//CSYS-105925 (PG 4-21-2022) Changing monthly offset from 2 to 3
+			//utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffSetBeforeSubmit_line", lineNum, "2");
+			//CSYS-106979 (PG 9-2-2022) Changing monthly offset from 3 to 4
+			utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffSetBeforeSubmit_line", lineNum, "4");
+		}
+	}
+	
+	for offset in lineOffset {
+		months = get(offset, "monthlyOffset");
+	}
+	monthlyOffsetFromDataTable = util.customAtoi(months, 0);
+
+	//CSYS-95793 SN. 7-2019; BMQL to get the monthly offset when the extended services is populated
+	extendedLineOffset = bmql("select monthlyOffset from newProductStartDate where extendedService = $lineDescription");
+
+	for offset in extendedLineOffset {
+		extendedMonthlyOffset = util.customAtoi(get(offset, "monthlyOffset"), 0);
+
+		if(extendedMonthlyOffset <> 0){
+			months = string(extendedMonthlyOffset);
+		}
+	}
+	if(assetAction == CREATE_ACTION AND itemType == BASE_FEE){
+		if(newOrderDate <> "") {
+			if(months <> "") { 
+
+				utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffSetBeforeSubmit_line", lineNum, months);
+			}
+		}
+	}
+}
+
+return "";

@@ -1,0 +1,15 @@
+{
+  "name" : "getNewTransactionValues",
+  "variableName" : "getNewTransactionValues",
+  "description" : "RAMP PLANS: Given the ratio of transaction counts on the Quote level ramp plan, determines the default transaction values for a Line level ramp plan based upon the line item's transaction count. RETURNS: String[]",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "quoteRampPlanTransactionRatios",
+    "type" : "Float[]"
+  }, {
+    "name" : "currentLineItemTransactionCount",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

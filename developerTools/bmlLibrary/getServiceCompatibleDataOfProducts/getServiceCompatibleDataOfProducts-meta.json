@@ -1,0 +1,21 @@
+{
+  "name" : "Get Service Compatible Data Of Products",
+  "variableName" : "getServiceCompatibleDataOfProducts",
+  "description" : "Copy of Get Service Compatible Data for CSYS-101361",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "serviceAttr",
+    "type" : "String"
+  }, {
+    "name" : "coreOffer",
+    "type" : "String"
+  }, {
+    "name" : "implementationMethod",
+    "type" : "String"
+  }, {
+    "name" : "configAttribs",
+    "type" : "Anytype Dictionary"
+  } ],
+  "attributes" : [ ]
+}

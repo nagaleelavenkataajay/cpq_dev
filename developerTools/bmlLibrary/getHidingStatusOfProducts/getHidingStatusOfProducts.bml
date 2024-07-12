@@ -1,0 +1,75 @@
+/* util - Get Hiding Status
+coreOffering - String
+implementationMethod - String
+serviceAttr - String
+*/
+availibilityArray = String[];
+//BM_VT. Business unit is required as additional filter. Getting the business unit from the commerce process
+ownerBusUnit = "%"+ ownerBusinessUnit +"%";
+theater = "%"+ ownerTheater +"%";
+market = "%"+ ownerMarket +"%";
+type = "%"+ quoteType +"%";
+
+// Add Business unit filter
+recordSet = bmql("select availability from serviceCompatibility where coreOffering = $coreOffering and implementationMethod = $implementationMethod and serviceAttr = $serviceAttr and (businessUnit like $ownerBusUnit or businessUnit = '' or businessUnit is null) and (ownerTheater like $theater or ownerTheater = '' or ownerTheater is null) and (ownerMarket like $market or ownerMarket = '' or ownerMarket is null) AND (quoteType like $type or quoteType = '' or quoteType is null)");
+
+for rec in recordSet
+{
+	append(availibilityArray, get(rec,"availability"));
+}
+
+//New Changes Start
+selectAssetArray = get(configAttribs, "selectAssetArray","string[]");
+assetsImport = get(configAttribs, "assetsImport","string");
+poID = get(configAttribs, "poID","string");
+assetAccountServiceIDArray = get(configAttribs, "assetAccountServiceIDArray","string[]");
+hasAsset = false;
+
+
+if(quoteType == "Add-On Business"){
+	YES = "Yes";
+	loc = findinarray(selectAssetArray,YES); //current selected core in config		
+	
+	ASSET_DELIMITER = "@@";
+	INTERNAL_DELIMITER = "$$";
+	
+	assetsArray = split(assetsImport,ASSET_DELIMITER);//split the entire assets delimited string
+	size = range(sizeofarray(assetsArray));	
+	
+	for i in size {
+		assetDetail = split(assetsArray[i],INTERNAL_DELIMITER);//split each asset
+	
+		if (assetDetail[1] == poID AND assetDetail[16] == assetAccountServiceIDArray[loc]) {
+			hasAsset = true;  // Set to TRUE if any of the above declared PO's are found in the Asset string, relevant to the core we're dealing with in the current config trip
+			break;
+		}
+	}
+}
+//New Changes end
+
+//CSYS-100182 (BS 07/31/2020): Added below statements to remove Historical Data Services as an Extended Service, but support it on existing quotes which has this product
+//Start
+//CSYS-100982 (BS 10/27/2020): Added below condition to make all grandfathered services unavailable when Historical Data Services is selected as core service.
+if(coreOffering == "Historical Data Services"){
+	return true;
+}
+else{
+	if(poID == "5005"){
+		if((findinarray(availibilityArray,"TRUE")>-1) AND hasAsset AND quoteType == "Add-On Business"){
+			return false;
+		}
+		else{
+			return true;
+		}
+	}
+	//CSYS-100182 End
+
+	if((findinarray(availibilityArray,"TRUE")>-1) OR (hasAsset AND quoteType == "Add-On Business")) 
+	{ 
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}

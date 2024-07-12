@@ -1,0 +1,2182 @@
+/* util -> manageAssetAndTrxnInfo
+stringsDict - dict("string")
+integersDict - dict("integer")
+floatsDict - dict("float")
+.............................................
+*/
+RAMP_FLAG = "rampFlag_line";
+CUSTOM_LIST_PRICE = "customListPrice_line";
+QUOTE_HAS_PREPROD_FEE = "quoteHasPreProductionFees_quote";
+concurFAVRExistInQuote = false;//CSYS-93973 (LN. 11-9-2018)
+highestDiscountItemType = "";
+displayARRCommissionsAlert = false;//CSYS-97861
+billingCycleNumber = util.getBillingCycleNumber(billingCycle_quote);//CSYS-100257
+RAMP_FLAG_MULTIPLIER = 12;
+TRIG_KEY_VALUE_DELIM = "$,$";
+MODEL_NEW_TRANSACTIONS = "modelNewTransactions";
+MODEL_TRANSACTIONS = "modelTransactions";
+INCREMENTAL_FEE_FOR_PO = "incrementalFeeForPO";
+acctPartnerDiscount = partnerDiscount_quote; //CSYS-68345
+TILDE_DELIMITER = "~";
+DELIMITER = "@.@";
+MODIFY_ACTION = "MODIFY";
+NONE_ACTION = "NONE";
+TERMINATE_ACTION = "TERMINATE";
+CREATE_ACTION = "CREATE";
+ASSET_ACTION = "assetAction_line";
+ASSET_STRING = "assetString_line";
+CORE_SERVICE = "Core Service";
+EXT_SERVICE = "Extended Service";
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";
+SETUP_FEE = "Setup";
+PRE_PRODUCTION = "Pre Prod";
+USE_CUSTOM_PRICE = "useCustomPrice_line";
+PO_CATEGORY = "poCategory_line";
+CORE_HAS_SETUP = "coreHasSetup_line";
+BASE_GROUPING_REQUIRED = "baseGroupedRequired";
+NEW_BIZ = "New Business";
+ADD_ON = "Add-On Business";
+SMB_BU = "SMB BU";//CSYS-94167
+PARENT_PRODUCT_POID_INDEX = "parentProductPOIDIndex";//CSYS-94381
+PARENT_INDEX_DOC_NUM = "parentIndexDocNum";//CSYS-94381
+IS_PRODUCTBASED = "productBasedTransaction_line";//CSYS-94381
+UQG = "usageQualificationGroup_line";//CSYS-106761	
+BillingCounterAddOn = "billingCounter_line";//CSYS-106563																										
+QUOTE_DOC_NUM = "1";
+INTERNAL_DELIMITER = "$$";
+ASSET_DELIMITER = "@@";
+addOnNumOfTrans = "-1";
+ASSET_PID = 0;
+ASSET_IS_BUNDLE = 2;
+ASSET_EDITION = 3;
+ASSET_SUBSCRIP_ID = 5; //CASE 121961 - 1/4/13
+ASSET_COMMITED_TRNS = 7;
+ASSET_EXT_NET_PRICE = 8;
+ASSET_NET_PRICE = 9;
+ASSET_CUSTOMER_CURRENCY_REV_REC = 10;
+ASSET_EXT_LIST_PRICE = 11;
+ASSET_LIST_PRICE = 12;
+ASSET_DISCOUNT = 13;
+ASSET_ORG_BUNDLE_ID = 14;
+ASSET_NEXT_BILLING_DATE = 15;
+ASSET_ADJUSTED_ARR = 17;
+ASSET_SERVICE_ACCT_ID = 16;
+ASSET_BILLING_ID = 19;
+ASSET_TIER_PRICE = 20;//CSYS-95251
+ASSET_LAST_TIER_DEC_DATE = 21;//CSYS-97861
+ASSET_UQG = 22;//CSYS-106761									   
+TERMINATED_CORE_ASSET_EDITION = "TERMINATED_CORE_ASSET_EDITION";//CSYS-95591
+PRODUCT_FAMILY = "productFamily_line";//CSYS-95591
+LINE_COMMENT_ASSET_STRING = "lineItemComment_line";//CSYS-95591
+EXISTING_ARR_CURRENCY_LINE = "existingARRCurrency_line";
+//CSYS-93247 (LN. 9-11-2018) Establishing constants for work related to defaulting transactions for Audit products when sold with Detect
+POLICY_AUDIT_PO = "644";
+CONCUR_DETECT_PO = "3780125";
+AUDIT_ELITE_PO = "34954";
+POLICY_RECEIPT_AUDIT_TRXN_COUNT = "POLICY_RECEIPT_AUDIT_TRXN_COUNT";
+RECEIPT_AUDIT_PO = "997";
+CONCUR_VATBOX_PO = "7218533"; //CSYS-100418
+CONCUR_VATBOX_TRXN_COUNT = "CONCUR_VATBOX_TRXN_COUNT"; //CSYS-100418
+JAPAN_PUBLIC_TRANSPORT_PO = "6355"; //CSYS-100552
+JAPAN_PUBLIC_TRANSPORT_TRXN_COUNT = "JAPAN_PUBLIC_TRANSPORT_TRXN_COUNT"; //CSYS-100552
+INTELLIGENT_AUDIT_ESSENTIALS_PO = "8224086"; //CSYS-104811 
+INTELLIGENT_AUDIT_ESSENTIALS_TRXN_COUNT = "INTELLIGENT_AUDIT_ESSENTIALS_TRXN_COUNT"; //CSYS-104811
+INTELLIGENT_AUDIT_ADVANCED_PO = "8224070"; //CSYS-104818 
+INTELLIGENT_AUDIT_ADVANCED_TRXN_COUNT = "INTELLIGENT_AUDIT_ADVANCED_TRXN_COUNT"; //CSYS-104818
+PO_ID = "poId_line";
+PI_ITEM_TYPE = "piItemType_line";
+PART_NUM = "_part_number";
+// DESCRIPTION = "lineDescription_line";
+SEQ_NUM = "_sequence_number";
+// DOC_NUM = "_document_number";
+PARENT_DOC_NUM = "_parent_doc_number";
+IMPLEMENTATION_METHOD = "implementationMethod_line";
+CORE_OFFERING = "coreOffering_line";
+EDITION_LINE = "edition_line";
+ADV_LEARNING_SERVICES_REQUIRED = "advLearningSvcsReqd_line";
+// APPROVAL_LINE_TRIGGER = "approval_line";//Nov 6- Move this to Approval Lib
+// ADDL_DISC_DISALLOWED = "addlDiscDisallowed_line";
+
+QTY = "_price_quantity";
+TRANSACTIONS = "numCommittedTransaction_line";
+ORIGINAL_TRANSACTIONS = "originalNumCommittedTransaction_line";
+IS_TRANS_OVERRIDDEN = "numTransOverride_line";
+IS_GROUPED = "isPartOfPackage_line"; //This form field is checked if the user wishes to DYNAMICALLY GROUP this line item
+//TRANS_VALIDATION_APPLIES = "transValidationApplies"; //CSYS-70683
+DISCOUNT = "discount_line";
+// DISCOUNTHIDDEN = "discountHidden_line";
+DISCOUNT_TYPE = "discountType_line";
+PERCENTAGE_DISCOUNT_TYPE = "%";
+LONG_DISCOUNT = "longDiscount_line";
+//add on related
+// ASSETS_NUM_OF_TRANSACTIONS = "assetOriginalOfCommittedMonthlyTransactions_line";
+ASSETS_ORIGINAL_DISCOUNT = "assetsOriginalDiscount_line";
+ASSETS_ADJUSTED_ARR = "assetAdjustedArr_line";
+ASSETS_ORIGINAL_PI = "assetOriginalPI_line";
+ASSETS_ORIGINAL_PO = "assetOriginalPO_line";
+ASSETS_ORIGINAL_NET_PRICE = "assetOriginalNetPrice_list";
+ASSETS_ORIGINAL_LIST_PRICE = "assetOriginalListPrice_list";
+ASSETS_ORIGINAL_EXT_NET_PRICE = "assetOriginalExtendedNetPrice_list";
+ASSETS_ORIGINAL_EXT_LIST_PRICE = "assetOriginalExtendedListPrice_list";
+ASSETS_ORIGINAL_BUNDLE_ID = "originalBundleID_line";
+ASSETS_ORIGINAL_IS_GROUPED = "assetOriginalGroupCheck_line";
+ASSETS_ORIGINAL_TIER_PRICE = "assetOriginalTierPrice_line";//CSYS-95251
+CORE_ASSET_SERVICEID = "coreAssetServiceId";
+
+
+MODEL_FORCE_GROUPING = "modelForceGrouping";
+//Ramp plan attribute variable names
+RAMP_PLAN_OVERRIDE = "overrideDefaultRampPlan_line";
+RAMP_PLAN_DETAIL = "rampPlanDetails_line";
+
+RAMP_DELIMITER = "-_**_-";
+PO_DELIMITER = "***";
+PO_GROUPS_TRANS = "poGroupsInModelTrans";
+PO_GROUPS_DYNAMIC_GROUPING = "poGroupsDynamicGrouping";
+PO_RAMP_OVERRIDE = "poRampOverride";
+PRIMARY_BASE_FEE = "primaryBaseFee";
+ROLLUP_DOC_NUM = "rollupDocNum";
+
+PACKAGE_ID = "package_line";
+SUBSCRIP_ID = "subscriptionID_line";
+
+// RAMP_PLAN_MESSAGE = "rampPlanMessageText_line";
+TIER_CHANGE = "tierChange_line";
+CUSTOM_PRICING_HAS_OCCURED = "customPricingHasOccured_line";//CSYS-85811 (LN. 9/27/2017)
+
+AUDIT_TRANSACTION_DEFAULTED = "auditTransactionsDefaulted_line";
+ROLL_UP = "rollUp_line";
+QUOTE_TOTAL_EXISTING_ARR = 0.0;
+QUOTE_TRANSACTIONS = numCommittedTransaction_quote;
+PAST_QUOTE_TRANSACTIONS = previousOfMonthlyTransactions_quote;
+QUOTE_LEVEL_RAMP_PLAN = rampPlanDetails_quote;
+TRAVEL_DIRECT = false; //CSYS-100495 NT
+
+/*
+###### CSYS-94381 (LN. 1-3-2018) ######
+
+New logic for those FIXED priced Extended Services that need to match the Ramp Plan of their designated 'Parent' Extended Service
+
+Example:
+    1. The Audit 48 Hour SLA for Policy Audit Ramps MUST match Policy Audit's Ramp Plan
+    2. The 'Parent/Child Product' relationship is stored in the ProductBasedRecServs table in BMI.
+    3. This table is called via the utility library getProductBasedRecurringServicesPO() & returns a delimited String[]
+        a. Example Return Statement: [977~4388615, ...] - [parentPoID~childPoID, ...]
+*/
+parentProductPOArr = String[];//Initialize a new array to store the Parent PO ID
+childProductPOArr = String[];//Initialize a new array to store the Child PO ID
+
+productBasedPOArr = util.getProductBasedRecurringServicesPO();
+
+for eachEntry in productBasedPOArr {
+    productBasedPO = split(eachEntry, TILDE_DELIMITER);
+    //Append the Parent PO ID's to its corresponding array - the relationship between the data in the two arrays is associated with their matching index number
+    append(parentProductPOArr, productBasedPO[0]);
+    //Append the Child PO ID's to its corresponding array
+    append(childProductPOArr, productBasedPO[1]);
+}
+
+quoteType = quoteType_quote;
+currencyCode = quoteCurrency_quote;
+
+/* ======================================================================== */
+/*                      Read all Line Item information                      */
+/* ======================================================================== */
+
+baseDiscountVal = 0.0;
+incrementalDiscountVal = 0.0;
+setupDiscountVal = 0.0;
+preProdDiscountVal = 0.0;
+baseDiscountFlag = true;
+incrementalDiscountFlag = true;
+setupDiscountFlag = true;
+preProdDiscountFlag = true;
+
+/* CSYS-6723: Bundle Core Service if other items are bundled
+ * This loop: added flags to store true/false value on parent for whether the core service needs to be bundled.
+ */
+//Add the parent doc nums of each service
+parentDocNumDict = dict("string");
+baseDiscountValDict = dict("float");
+baseDiscountTypeDict = dict("string");
+incrementalDiscountValDict = dict("float");
+incrementalDiscountTypeDict = dict("string");
+setupDiscountValDict = dict("float");
+setupDiscountTypeDict = dict("string");
+preProdDiscountValDict = dict("float");
+preProdDiscountTypeDict = dict("string");
+assetCoreServiceTerminatedOrModified = false;
+
+//for addons
+hasPreprodFeeForAddons = false;
+
+hasIncDict = dict("string"); //For Unique PI Keys (CSYS-37711) part 1
+
+//CSYS-85811 (LN. 9/27/2017) If submit for custom pricing is ran (therefore setting customPricingFlag_quote to 'true') put the value of 1 into the piQtyAndImplementationMethodToPriceDict dictionary to use for evaluation in the util.getStandTierPricing
+if(customPricingFlag_quote){
+    utilResultFlag = util.putFloatAttribute( piQtyAndImplementationMethodToPriceDict, "customPricingExecuted", DELIMITER, "customPricingExecuted", 1);
+}
+//CSYS-88388 - Start
+coreTerminatesDict = dict("string");
+familyCreateDict = dict("string");
+familyTerminateDict = dict("string");
+//CSYS-88388 - End
+
+rampPriceOverrideArray = string[];//CSYS-89211 (LN. 2/22/2018) Initializing an array to be leveraged below to store how many line items are using the rampPriceOverride functionality
+//CSYS-94164
+//debugLogStr = debugLog_quote;
+coreTerminateTrxnDict = dict("integer");
+greatestLineDisc = 0.0;
+TRUE_STR = "true";
+FALSE_STR = "false";
+
+//CSYS-103850 (OK. 8-23-2021) - Start
+familyNameArr = String []; 
+piArray = String []; 
+familyCreatePiDict = dict("string");
+familyTerminatePiDict = dict("string");
+piDescriptionDict = dict("string");
+//CSYS-103850 (OK. 8-23-2021) - End
+poIDArrayList = String []; //CSYS-105113 (OK. 12-28-2021)
+
+for line in line_process {
+    docNum = line._document_number;
+    //Added by Andre Must be able to deal with multiple models @ALFIX00126236
+    parentDocNum = line._parent_doc_number;
+	poID = line.poId_line; //CSYS-100495 NT 
+    poCategory = line._part_custom_field20;
+    assetAction = line.assetAction_line;
+    familyName = line._part_custom_field23;
+    numTrans = line.numCommittedTransaction_line;
+    piItemType = line._part_custom_field8;
+    pi = line._part_number;
+	lineDescription = line.lineDescription_line; //CSYS-103850 (OK. 8-23-2021)
+	
+	//CSYS-105113 (OK. 12-28-2021) Create new POID array
+	if (findinarray(poIDArrayList, poID) == -1) {
+		append(poIDArrayList, poID); 
+	}
+	
+	//CSYS-100495 NT START 
+	if(pi == "7220551" AND assetAction <> TERMINATE_ACTION)
+	{
+	 TRAVEL_DIRECT = true; 
+	}
+	//CSYS-100495 END
+	
+    //CSYS-88388 - Start
+    isCoreChanged = get(isCoreChangedDict, parentDocNum);
+    isEditionChanged = get(isEditionChangedDict, parentDocNum);
+    if (poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION AND (isCoreChanged == TRUE_STR OR isEditionChanged == TRUE_STR)){
+        put(coreTerminatesDict, parentDocNum, TERMINATE_ACTION); //core has TERMINATE's and CREATE's. original core is getting replaced with another since there's a core/edition change.
+        //CSYS-94164
+        if (piItemType == BASE_FEE){
+            put(coreTerminateTrxnDict, parentDocNum, numTrans);
+        }
+    }
+    if (isnull(get(coreTerminatesDict, parentDocNum))){
+        put(coreTerminatesDict, parentDocNum, "BLANK");
+    }
+    if (assetAction == CREATE_ACTION){ //if we run into a CREATE line
+        put(familyCreateDict, familyName, assetAction); //family has CREATEs
+		//CSYS-103850 (OK. 8-23-2021) - Start
+		put(familyCreatePiDict, pi, familyName); 
+		put(piDescriptionDict, pi, lineDescription); 
+		append(piArray, pi); 
+		//CSYS-103850 - End
+    }
+    if (assetAction == TERMINATE_ACTION){ //if we run into a TERMINATE line
+        put(familyTerminateDict, familyName, assetAction); //Family has TERMINATEs
+		//CSYS-103850 (OK. 8-23-2021) - Start
+		put(familyTerminatePiDict, pi, familyName); 
+		put(piDescriptionDict, pi, lineDescription); 
+		append(piArray, pi); 
+		//CSYS-103850 - End
+    }
+    //CSYS-88388 - End
+	
+	//CSYS-103850 (OK. 8-23-2021) 
+	if (findinarray(familyNameArr, familyName) == -1) {
+		append(familyNameArr, familyName);
+	}
+	
+    //next 4 lines added for CSYS-75571 (KA. 1-19-2017):
+    seqNum = line._sequence_number;
+    seqNumStr = string(seqNum);
+    put(seqNumAttributeMappingDict, seqNumStr + DELIMITER + "DOC_NUM", docNum);
+    put(seqNumAttributeMappingDict, seqNumStr + DELIMITER + "PARENT_DOC_NUM", parentDocNum);
+    append(seqNumArray, seqNum);
+
+    reconfig = util.getConfigValue(line._config_attr_info, "reconfigure");
+    //CSYS-99884 (BS 07/29/2020) Added code to test when reconfigure=true for old asset import
+    //reconfig = "true";
+    //CSYS-99884 Ends
+    if (reconfig <> ""){
+        put( stringsDict, "reconfigure", reconfig );
+    }
+    //Store PO category at a dictionary key that won't get overwritten
+    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, "_part_custom_field20" + "***", line._part_custom_field20);
+
+
+    pi = line._part_number;
+    po = line._part_custom_field1;
+    poCat = line.poCategory_line;
+	
+    customPricingHasOccured = line.customPricingHasOccured_line;//CSYS-85811 (LN. 9/27/2017)
+    customListPrice = line.customListPrice_line;//CSYS-85811 (LN. 9/27/2017)
+
+    put(stringsDict, docNum + DELIMITER + PO_CATEGORY, poCat);
+	
+	
+    if (piItemType == INCREMENTAL_FEE){
+        put(hasIncDict, po, TRUE_STR);
+    }
+
+    isPartOfPackage = line.isPartOfPackage_line;
+    assetActionFromGrid = line.assetAction_line;
+    longDiscount = line.longDiscount_line;
+    discountType = line.discountType_line;
+
+    if (piItemType == ""){
+        baseDiscountFlag = true;
+        incrementalDiscountFlag = true;
+        setupDiscountflag = true;
+        preProdDiscountFlag = true;
+    }
+
+    poCategory = line._part_custom_field20;
+    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, CORE_HAS_SETUP, FALSE_STR); //@RC set core has setup to false by default for each model in case of reconfiguration from a service with setup to one without
+    if(piItemType == BASE_FEE AND isPartOfPackage AND baseDiscountFlag AND poCategory == CORE_SERVICE){//Added 'AND poCategory == CORE_SERVICE' Case 119146 -AL
+
+        baseDiscountVal = 1;
+        put(baseDiscountValDict, parentDocNum, longDiscount);
+        put(baseDiscountTypeDict, parentDocNum, discountType);
+        baseDiscountFlag = false;
+    }
+    elif(piItemType == INCREMENTAL_FEE AND isPartOfPackage and incrementalDiscountFlag AND poCategory == CORE_SERVICE ){ //Added 'AND poCategory == CORE_SERVICE' Case 119146 -AL
+
+        incrementalDiscountVal = 1;
+        put(incrementalDiscountValDict, parentDocNum, longDiscount);
+        put(incrementalDiscountTypeDict, parentDocNum, discountType);
+        incrementalDiscountFlag = false;
+    }
+    elif(piItemType == SETUP_FEE AND isPartOfPackage and setupDiscountFlag AND poCategory == CORE_SERVICE){//Added 'AND poCategory == CORE_SERVICE' Case 119146 -AL
+
+        setupDiscountVal = 1;
+        put(setupDiscountValDict, parentDocNum, longDiscount);
+        put(setupDiscountTypeDict, parentDocNum, discountType);
+        setupDiscountFlag = false;
+    }
+    elif(piItemType == PRE_PRODUCTION AND isPartOfPackage and preProdDiscountFlag AND poCategory == CORE_SERVICE){//Added 'AND poCategory == CORE_SERVICE' Case 119146 -AL
+
+        preProdDiscountVal = 1;
+        put(preProdDiscountValDict, parentDocNum, longDiscount);
+        put(preProdDiscountTypeDict, parentDocNum, discountType);
+        preProdDiscountFlag = false;
+    }
+
+    if(isPartOfPackage){
+        utilResultFlag = util.putStringAttribute(stringsDict, parentDocNum, DELIMITER, BASE_GROUPING_REQUIRED, TRUE_STR);
+    }
+    //Setting Core Service terminate flag for addons (core service first item in loop) Added by Andre Lancour @ALFIX00154530
+    if(quoteType_quote == ADD_ON AND poCategory == CORE_SERVICE AND (assetActionFromGrid == TERMINATE_ACTION OR assetActionFromGrid == MODIFY_ACTION)) {
+        assetCoreServiceTerminatedOrModified = true;
+    }//Done adding By Andre Lancour @ALFIX00154530
+
+    //CSYS-64174 part 1. KA. 5-26-2016. Update: commenting out until further notice due to biz requirement change.
+    /*if(containskey(TandM_Dict, po + "attrKey") AND poCat == CORE_SERVICE AND piItemType == SETUP_FEE AND assetActionFromGrid <> TERMINATE_ACTION){
+        put(stringsDict, parentDocNum + DELIMITER + "TandM_Flag", get(TandM_Dict, po + "attrKey"));
+    }*/
+
+
+    if(pi <> ""){
+        //CSYS-69701:
+        if(assetActionFromGrid == TERMINATE_ACTION AND line.isPartOfPackage_line <> line.assetOriginalGroupCheck_line AND line.assetOriginalGroupCheck_line)    {
+            //original asset was manually terminated from grouping, so mark the core it was terminated from:
+            put(stringsDict, parentDocNum + DELIMITER + "groupedAssetTerminatedFromCore", TRUE_STR);
+        }
+        //CSYS-71641 part 1: map transactions and create/terminate info (KA. 1-6-2017):
+        if(poCategory == CORE_SERVICE AND piItemType == BASE_FEE AND assetActionFromGrid <> TERMINATE_ACTION){
+            put(integersDict, parentDocNum + DELIMITER + "AddOnCoreTrans", numTrans);
+        }
+        if(poCategory == CORE_SERVICE AND piItemType == BASE_FEE AND assetActionFromGrid == CREATE_ACTION){
+            put(stringsDict, parentDocNum + DELIMITER + "coreCreateWithinModel", TRUE_STR);
+        }
+        if(poCategory == CORE_SERVICE AND piItemType == BASE_FEE AND assetActionFromGrid == TERMINATE_ACTION){
+            put(stringsDict, parentDocNum + DELIMITER + "coreTerminateWithinModel", TRUE_STR);
+        }
+
+        //CSYS-77853: map core action code to the model:
+        if(poCategory == CORE_SERVICE AND assetActionFromGrid <> TERMINATE_ACTION){
+            put(stringsDict, parentDocNum + DELIMITER + "coreActionCode", assetActionFromGrid);
+
+            //CSYS-93247 (LN. 9-12-2018) Store the Core Service Base Fee Transaction amount
+            if(piItemType == BASE_FEE){
+                put(integersDict, parentDocNum + DELIMITER + "defaultAuditTrxn", numTrans);
+            }
+        }
+	
+        /*********capture all POs - sorted by parent doc number (add-on)***************/
+        append(fullPOlist,po);//capture all POs, with no sorting
+
+        if(customPricingHasOccured){//CSYS-85811 (LN. 9/27/2017) If pi <> "" (not a model) AND only when Custom Pricing has occured on a singular product put the customListPrice into the piQtyAndImplementationMethodToPriceDict dictionary to be used by util.getStandTierPricing
+            utilResultFlag = util.putFloatAttribute( piQtyAndImplementationMethodToPriceDict, pi, DELIMITER, "customListPriceStdTierPricing", customListPrice );
+        }
+
+        //CSYS-86115 (put in the stringsDict the value of Override Price at the line ramp level. KA. 10-16-2017):
+        utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, "overrideRampPrice", line.overrideRampPrice_line);
+
+        //CSYS-89211 (LN. 2/22/2018)
+        overrideRampPrice = util.getStringAttribute( stringsDict, docNum, DELIMITER, "overrideRampPrice");
+
+        //If the Override Ramp Price functionality is used on any line item, append the docNum to the rampPriceOverrideArray for later assessment
+        if(overrideRampPrice == TRUE_STR){
+            append(rampPriceOverrideArray, TRUE_STR);
+        }
+
+        //CSYS-86857 (KA. 11-9-2017):
+        if(line.overrideDefaultRampPlan_line == TRUE_STR){
+            if((poCategory == CORE_SERVICE AND line._part_custom_field21 == "Y") OR poCategory <> CORE_SERVICE){
+                put(stringsDict, po + DELIMITER + "overrideDefaultRampPlanForPoID", TRUE_STR);
+            }
+        }
+
+        //CSYS-93828 (LN. 2-24-2019) Set the outputSetupFee_line back to zero in Pricing to ensure language in Set Output Values script is set correctly
+        utilResultString = util.formAttrValueStr(attributesDict, "outputSetupFee_line", docNum, string(0.0));
+
+    }
+}
+
+//CSYS-103850 (OK. 8-23-2021) - Start: When we have TERMINATE/CREATE lines in same Product Family then populate new field Product Replacement 
+createPIFamily = "";
+terminatePIFamily = "";
+familyCreateLineDict = dict("string");
+familyTerminateLineDict = dict("string");
+for rec in familyNameArr {
+	familyName = rec;
+	createDescriptionArr = String [];
+	terminateDescriptionArr = String [];
+	createDescription = "";
+	terminateDescription = "";
+	
+	for res in piArray {
+		pi = res;
+		if (containskey(familyCreatePiDict, pi)) {
+			family = get(familyCreatePiDict, pi);
+			if (family == familyName) {
+				piCreateDescription = get(piDescriptionDict, pi);
+				if (findinarray(createDescriptionArr, piCreateDescription) == -1) {
+					append(createDescriptionArr, piCreateDescription);	
+				}
+			}
+		}
+		if (containskey(familyTerminatePiDict, pi)) {
+			family = get(familyTerminatePiDict, pi);
+			if (family == familyName) {
+				piTerminateDescription = get(piDescriptionDict, pi);
+				if (findinarray(terminateDescriptionArr, piTerminateDescription) == -1) {
+					append(terminateDescriptionArr, piTerminateDescription);
+				}
+			}
+		}
+	}
+	createDescription = join(createDescriptionArr, ", ");
+	terminateDescription = join(terminateDescriptionArr, ", ");
+	put(familyCreateLineDict, familyName, createDescription);
+	put(familyTerminateLineDict, familyName, terminateDescription);
+}
+//CSYS-103850 - End
+
+//CSYS-89211 If the rampPriceOverrideArray has values, set the rampPriceOverride_quote attribute to TRUE
+if(sizeofarray(rampPriceOverrideArray) > 0 ){
+    utilResultString = util.formAttrValueStr(attributesDict, "rampPriceOverride_quote", QUOTE_DOC_NUM, TRUE_STR);
+}
+else {//Else, set this attribute to false
+    utilResultString = util.formAttrValueStr(attributesDict, "rampPriceOverride_quote", QUOTE_DOC_NUM, FALSE_STR);
+}
+
+//CSYS-94033
+coreTerminatesTrxnDict = dict("integer");
+
+policyAuditExists = false;
+detectExists = false;
+auditEliteExists = false;
+triggerAuditDefaultTrxn = false;
+auditTrxnDefaulted = false;
+
+//CSYS-95591
+for line in line_process{
+    pi = line._part_number;
+    piItemType = line._part_custom_field8;
+    assetAction = line.assetAction_line;
+    lineItemComment = line._line_item_comment;
+    poID = line.poId_line;//CSYS-93247 (LN. 9-11-2018)
+    parentDocNum = line._parent_doc_number;
+    poCategory = line._part_custom_field20;
+    reconfig = get(stringsDict, "reconfigure");
+    docNum = line._document_number;
+    productFamily = line._part_custom_field23;
+	
+    //CSYS-94033
+    if (piItemType == BASE_FEE AND poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION){
+        if (get(coreTerminatesDict, parentDocNum) == TERMINATE_ACTION){
+            comment = split(lineItemComment,ASSET_DELIMITER);
+            if(sizeofarray(comment)>1){
+
+                assetString = comment[2];
+
+                if(assetString <> ""){
+                    currentAssetString = split(assetString,INTERNAL_DELIMITER);
+		    //CSYS-101275, BS. 12/01/2020, Added below code to check for blank values before performing string to float conversion
+		    if( isnumber(currentAssetString[ASSET_COMMITED_TRNS]) ) {
+			originalTrxns = integer(atof(currentAssetString[ASSET_COMMITED_TRNS]));
+		    }
+		    else{
+			originalTrxns = 0;
+		    }
+		    //End CSYS-101275
+                    assetEdition = currentAssetString[3];//CSYS-95225 (LN. 3-28-2019)
+
+                    /* CSYS-95225 (LN. 3-28-2019)
+                        In the event that there is a TERMINATE on a Core Edition Change with a Tier DECREASE,
+                        We need to retain the original Core's Edition to pass into stdTierPricing, otherwise the pricing retrieved
+                        is incorrect since the pi on the new Edition doesn't exist.
+                    */
+                    put(coreTerminateEditionDict, pi + DELIMITER + TERMINATED_CORE_ASSET_EDITION, assetEdition);
+                    put(coreTerminatesTrxnDict, parentDocNum, originalTrxns);
+                }
+            }
+        }
+    }
+    //CSYS-93247 (LN. 9-11-2018)
+    if(poID == POLICY_AUDIT_PO AND assetAction == CREATE_ACTION){
+        policyAuditExists = true;
+    }
+
+    //CSYS-93247 (LN. 9-11-2018)
+    if(poID == AUDIT_ELITE_PO AND assetAction == CREATE_ACTION){
+        auditEliteExists = true;
+    }
+
+    //CSYS-93247 (LN. 9-11-2018)
+    if(poID == CONCUR_DETECT_PO AND assetAction <> TERMINATE_ACTION){
+        detectExists = true;
+    }
+    //CSYS-94164
+    //CSYS-99884 (BS 07/29/2020) Added below code to test behaviour on reconfig inbound
+    //put(triggerDict, "customActionName", "Reconfigure Inbound"); // to detect when Reconfigure Inbound is executed
+    //put(triggerDict, "reconfiguredDocNum", _system_selected_document_number); //the doc number of the model being reconfigured
+    //CSYS-99884 Ends
+    
+    if ( quoteType == ADD_ON AND (assetAction == CREATE_ACTION) AND poCategory == CORE_SERVICE AND containskey(coreTerminateTrxnDict, parentDocNum) AND reconfig == TRUE_STR AND containskey(triggerDict, "customActionName") AND containskey(triggerDict, "reconfiguredDocNum")){
+        if (get(triggerDict, "customActionName") == "Reconfigure Inbound" AND get(triggerDict, "reconfiguredDocNum") == parentDocNum){
+            put(integersDict, parentDocNum + DELIMITER + "AddOnCoreTrans", get(coreTerminateTrxnDict, parentDocNum));
+        }
+    }
+	
+    //CSYS-94381 (LN. 1-3-2019)
+    if(findinarray(parentProductPOArr, poID) <> -1 AND assetAction <> TERMINATE_ACTION){//If a Parent POID is found on the quote, continue
+		index = 0;
+		for eachPO in parentProductPOArr {
+
+            if(eachPO == poID AND piItemType == BASE_FEE){
+                /*Store the index number of the Parent POID found in the parentProductPOArr.
+                The index is how we will associate the corresponding Child PO below.
+                If both the Parent POID & corresponding Child POID is found, ensure the Child's ramps match the Parent.*/
+                put(integersDict, PARENT_PRODUCT_POID_INDEX + DELIMITER + string(index), index);
+                put(stringsDict, childProductPOArr[index] + DELIMITER + PARENT_INDEX_DOC_NUM, docNum);
+            }
+
+            index = index + 1;
+        }
+    }
+    //CSYS-95591
+    utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, LINE_COMMENT_ASSET_STRING, lineItemComment);
+    utilResultFlag = util.putStringAttribute(stringsDict, pi, DELIMITER, PRODUCT_FAMILY, productFamily);
+	
+	//CSYS-103850 (OK. 8-23-2021) - Start: When we have TERMINATE/CREATE lines in same Product Family then populate new field Product Replacement
+	if (assetAction == CREATE_ACTION) {
+		productReplacement = get(familyTerminateLineDict, productFamily);
+		utilResultString = util.formAttrValueStr(attributesDict, "productReplacement_line", docNum, productReplacement);
+	}
+	if (assetAction == TERMINATE_ACTION) {
+		productReplacement = get(familyCreateLineDict, productFamily);
+		utilResultString = util.formAttrValueStr(attributesDict, "productReplacement_line", docNum, productReplacement);
+	}
+	//CSYS-103850 - End
+	
+	//CSYS-105113 (OK. 12-28-2021) Start - set "overrideDefaultRampPlanForPoID" flag to true for SLA SKU's based on parent SKU's value
+	parentPOID = "";
+	childPOID = "";
+	parentPoValuesFromTable = bmql("SELECT parentPoID, childPoID FROM ProductBasedRecServs WHERE childPoID = $poID");
+	for rec in parentPoValuesFromTable {
+		childPO = get(rec, "childPoID");
+		parentPO = get(rec, "parentPoID");
+		if (findinarray(poIDArrayList, parentPO) <> -1) {
+			parentPOID = parentPO;
+			childPOID = childPO;
+		}
+	}
+	
+	if ((childPOID == poID) AND containskey(stringsDict, parentPOID + DELIMITER + "overrideDefaultRampPlanForPoID")) {
+		put(stringsDict, poID + DELIMITER + "overrideDefaultRampPlanForPoID", TRUE_STR);
+	}
+	//CSYS-105113 - End
+}
+
+//CSYS-93247 (LN. 9-11-2018)
+if( (policyAuditExists OR (policyAuditExists AND auditEliteExists)) AND detectExists){
+    triggerAuditDefaultTrxn = true;
+    auditTrxnDefaulted = true;
+}
+
+//CSYS-95591
+for line in line_process{
+    pi = line._part_number;
+    docNum = line._document_number;
+    piItemType = line._part_custom_field8;
+    assetAction = line.assetAction_line;
+    docNum = line._document_number;
+    //CSYS-94164
+    poCategory = line._part_custom_field20;
+    reconfig = get(stringsDict, "reconfigure");
+    parentDocNum = line._parent_doc_number;
+    poID = line.poId_line;//CSYS-94381 (LN. 1-3-2019)
+
+    if( piItemType == BASE_FEE AND assetAction == TERMINATE_ACTION ){
+
+        //CSYS-94164
+        //CSYS-94682
+        if (poCategory == CORE_SERVICE AND containskey(coreTerminateTrxnDict, parentDocNum) AND reconfig == TRUE_STR AND containskey(triggerDict, "customActionName") AND containskey(triggerDict, "reconfiguredDocNum") AND get(triggerDict, "reconfiguredDocNum") == parentDocNum){
+            continue;
+        }
+    }
+
+    //CSYS-94381 (LN. 1-3-2019)
+    if(findinarray(childProductPOArr, poID) <> -1 AND assetAction <> TERMINATE_ACTION){//If a Child POID is found on the quote, continue
+
+        index = 0;
+
+        for eachPO in childProductPOArr {
+			if(containskey(integersDict, PARENT_PRODUCT_POID_INDEX + DELIMITER + string(index))){ //CSYS-104050 NT 23092021
+             if(eachPO == poID AND get(integersDict, PARENT_PRODUCT_POID_INDEX + DELIMITER + string(index)) == index){
+                /* If the Child POID's index matches the index of the Parent POID in the parentProductPOArr that is also on the quote,
+                write to the productBasedTransaction_line attribute to indicate this Child Product POID will need to match the Parent Product Ramp Plan.*/
+                utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, IS_PRODUCTBASED, TRUE_STR);
+				break;//CSYS-104050 NT 23092021
+             }
+			}
+            index = index + 1;
+        }
+    }
+}
+
+sort(seqNumArray, "asc");
+
+//CSYS-93675 (LN. 11-7-2018) Query this table only when the Edition; Establishing Constants/Arrays to be leveraged;
+usOfferProfessionalOnlyArr = String[];
+createProfessionalUniversalArr = String[];
+
+usOfferProfessionalOnlyArr = util.getProfOnlyPOsForUniversal(implementationMethods_quote);//CSYS-100258
+
+//CSYS-92516 (LN. 8-27-2018) Flag to check if there are any MODIFYs in an Add-On bundle
+bundleIsModify = false;
+//94033
+quoteTierChange = FALSE_STR;
+//CSYS-97101 SN. 09-2019
+permanentTestEnvironmentApprovalMessage = "";
+posToBeGrouped = util.isPOGrouped();
+strImpMethod = "";
+parentDocNumBC = ""; //CSYS-106563																  
+
+for line in line_process {
+    seqNumber = line._sequence_number;
+    docNum = line._document_number;
+    piItemType = line._part_custom_field8;
+    itemType = line.piItemType_line;
+    isFirstIteration = line.isFirstIteration_line;
+    isTransOverridden = string(line.numTransOverride_line);
+    isTransOverriddenFromGrid = line.numTransOverride_line;
+    tierChange = string(line.tierChange_line);
+    prevTrxns = line.prevNumCommittedTransaction_line;
+    itemType = piItemType;
+    originalTrxns = line.originalNumCommittedTransaction_line;
+    parentDocNum = line._parent_doc_number;
+    pi = line._part_number;
+    isEditionChanged = "";
+    isCoreChanged = "";
+    assetArr = 0.0;
+    poID = line._part_custom_field1;
+    //append(piList, pi);
+    utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, PO_ID, poID );
+    //append(docNumList, docNum);
+    //put(piDict, docNum, pi);
+    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, PART_NUM, pi);
+    utilResultFlag = util.putIntegerAttribute(integersDict, docNum, DELIMITER, SEQ_NUM, seqNumber);
+    utilResultFlag = util.putStringAttribute(StringsDict, docNum, DELIMITER, "isFirstIteration_line", string(isFirstIteration));
+    assetActionFromGrid = line.assetAction_line;
+    disc = line.longDiscount_line;
+    discountType = line.discountType_line;
+    poCategory = line._part_custom_field20;
+    prodFamilyName = line._part_custom_field23;
+    baseDiscountType = get(baseDiscountTypeDict, parentDocNum); //@RC - discount types tracked since bundled items should not get the core discount if it is "Amt"
+    incrementalDiscountType = get(incrementalDiscountTypeDict, parentDocNum);
+    setupDiscountType = get(setupDiscountTypeDict, parentDocNum);
+    preProdDiscountType = get(preProdDiscountTypeDict, parentDocNum);
+    partNumber = line.partNumber_line;
+    lineItemComment = line._line_item_comment;
+    assetOriginalNetPrice = line.assetOriginalNetPrice_list;
+    assetOriginalDiscount = line.assetsOriginalDiscount_line;
+    assetOriginalListPrice = line.assetOriginalListPrice_list;
+    originalBundleID = line.originalBundleID_line;
+    assetOriginalGroupCheck = line.assetOriginalGroupCheck_line;
+    assetAdjustedArr = line.assetAdjustedArr_line;
+    discountFromGrid = line.discount_line;
+    overrideDefaultRampPlan = line.overrideDefaultRampPlan_line;
+    salesARRCurrency = line.salesARRCurrency_line;
+    netNewARRCurrency = line.netNewARRCurrency_line;
+    priceQuantityFromGrid = line._price_quantity;
+    customListPriceFromGrid = line.customListPrice_line;
+    customQuantityFromGrid = line.customQuantity_line; //CSYS-96366 SN. 07-2019
+    editQuantityFromGrid = line.editQuantity_line; //CSYS-97422 SN. 01-2020
+    useCustomPriceFromGrid = line.useCustomPrice_line;
+    implementationMethodFromGrid = line.implementationMethod_line;
+    coreOfferingFromGrid = line.coreOffering_line;
+    editionFromGrid = line.edition_line;
+    advLearningSvcsReqd = line.advLearningSvcsReqd_line;
+    rampPlanDetailsFromGrid = line.rampPlanDetails_line;
+    uomTypeFromGrid = line.uomType_line;
+    poCategoryFromGrid = line.poCategory_line;
+    rampFlagFromGrid = line._part_custom_field13;
+    configAttrInfo = line._config_attr_info;
+    
+    discountPercentFromGrid = line.discountPercent_line;
+    numOfTransactionsFromGrid = line.numCommittedTransaction_line;
+    isPartOfPackage = line.isPartOfPackage_line;
+    lineDescription = line.lineDescription_line;
+    customPricingHasOccured = line.customPricingHasOccured_line;//CSYS-85811 (LN. 9/28/2017)
+    auditTransactionsDefaulted = line.auditTransactionsDefaulted_line;//CSYS-93247 (LN. 11-27-2018)
+    unitBasedProductCanBeRamped = line.unitBasedProductCanBeRamped_line; //CSYS-95500 (LN. 4-27-2019)
+    unitBasedProductCanUseOverridePrice = line.unitBasedProductCanUseOverridePrice_line; //CSYS-95500 (LN. 4-27-2019)
+    pricebookChange = line.pricebookChange_line; //CSYS-95251 (LN. 5-1-2019)
+    pricebookChangeUpdatedDiscount = line.pricebookChangeUpdatedDiscount_line; //CSYS-95251 (LN. 5-1-2019)
+    pricebookChangeWithinBundle = line.pricebookChangeWithinBundle_line;//CSYS-97680 LN. 11-05-2019
+    reconfig = get(stringsDict, "reconfigure");
+	assetAction = line.assetAction_line;// CSYS-100495 NT 
+    
+	isGrouped = string(isPartOfPackage);
+ 	
+	//CSYS-107446 (SV. 16-11-2022) Start 
+	ist4C = line.isT4C_line;
+	if(quoteType_quote == ADD_ON AND assetActionFromGrid == NONE_ACTION AND ist4C == true){
+		put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, MODIFY_ACTION);
+	}
+	//CSYS-107446 End
+	
+	//CSYS-88388 - Start
+    if (poCategory == CORE_SERVICE AND assetActionFromGrid == CREATE_ACTION){
+        if (get(coreTerminatesDict, parentDocNum) == TERMINATE_ACTION){ //3. core is being replaced with another (has edition or core change)
+            utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, "skipCoreService", "TRUE" );
+        }
+    }
+    if (poCategory == EXT_SERVICE AND assetActionFromGrid == CREATE_ACTION){
+        if (get(familyCreateDict, prodFamilyName) == CREATE_ACTION AND get(familyTerminateDict, prodFamilyName) == TERMINATE_ACTION){
+            utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, "skipExtendedService", "TRUE" );
+        }
+    }
+    //CSYS-88388 - End
+
+    if (piItemType == BASE_FEE AND get(hasIncDict, poID) == TRUE_STR){ //for CSYS-37711 part 2
+        append(baseArray, pi);
+    }
+
+    if (piItemType == INCREMENTAL_FEE AND get(hasIncDict, poID) == TRUE_STR){ //for CSYS-37711 part 2
+        append(incArray, pi);
+    }
+
+	//CSYS-106563 - pulling flag if billing counter has been changed.
+	isBillingCounterChanged = util.getConfigValue(line._config_attr_info, "isBillingCounterChanged_concur");
+	if(isBillingCounterChanged == TRUE_STR){
+		parentDocNumBC = line._document_number;
+		put(triggerDict, "billingCounter", TRUE_STR);
+	}
+	//CSYS-106563 - End
+	//IESCNQRCPQ-1251 (LBN.31/10/2023) - Misc Approval for Referring partner category = PS
+	if((piItemType == BASE_FEE OR piItemType == INCREMENTAL_FEE) AND (assetActionFromGrid == CREATE_ACTION OR assetActionFromGrid == MODIFY_ACTION) AND referralStatus_quote == "Accept" AND referringPartnerCategory_quote == "PS" AND (discountFromGrid > 15 OR monthlyWaivePeriod_quote > "1 month"  )) { 
+		put(triggerDict, "referringPartnerPSExists", TRUE_STR);
+	}
+	//IESCNQRCPQ-1251 END	
+	
+	//IESCNQRCPQ - 1658 (Akash. 04/03/2024) - BMI: Update SMB Negative Discounting Approval workflow (BE-1331)
+	
+	if (piItemType == BASE_FEE AND ((assetActionFromGrid == CREATE_ACTION AND discountFromGrid <= -20 AND discountFromGrid < 0) OR (assetActionFromGrid == MODIFY_ACTION AND ownerBU_quote == "Enterprise BU" AND discountFromGrid <= -20 AND discountFromGrid < 0)))
+	 {
+    		put(triggerDict, "negativeDiscount", TRUE_STR);
+	 }
+
+	//IESCNQRCPQ - 1658 END																							 
+				
+    //CSYS-91348 Evaluate if the Config Attribute "requiresProfessionalProductsAndorServices_concur" is set to true, if yes trigger approvals
+    requiresProfessionalServices = util.getConfigValue(line._config_attr_info, "requiresProfessionalProductsAndorServices_concur");
+    if(pi == "" AND requiresProfessionalServices == "true"){
+        put(triggerDict, "requiresProfessionalServices", TRUE_STR);
+    }
+	
+    /* case 85005 May 14 2012*/
+    //Changed 'baseDiscountVal < 0' to 'baseDiscountVal <> 0' on lines 819, 825, 831, 837 (next line + 6 for 4 times) per case 119146 -Andre Lancour
+    if(piItemType == BASE_FEE AND isPartOfPackage AND baseDiscountVal <> 0){
+        if(baseDiscountType == PERCENTAGE_DISCOUNT_TYPE){
+            discountType = get(baseDiscountTypeDict, parentDocNum);
+            disc = get(baseDiscountValDict, parentDocNum);
+        }
+    }
+    elif(piItemType == INCREMENTAL_FEE AND isPartOfPackage AND incrementalDiscountVal <> 0){
+        if(incrementalDiscountType == PERCENTAGE_DISCOUNT_TYPE){
+            discountType = get(incrementalDiscountTypeDict, parentDocNum);
+            disc =  get(incrementalDiscountValDict, parentDocNum);
+        }
+    }
+    elif(piItemType == SETUP_FEE AND isPartOfPackage AND setupDiscountVal <> 0){
+        if(setupDiscountType == PERCENTAGE_DISCOUNT_TYPE){
+            discountType = get(setupDiscountTypeDict, parentDocNum);
+            disc = get(setupDiscountValDict, parentDocNum);
+        }
+    }
+    elif(piItemType == PRE_PRODUCTION AND isPartOfPackage AND preProdDiscountVal <> 0){
+        if(preProdDiscountType == PERCENTAGE_DISCOUNT_TYPE){
+            discountType =  get(preProdDiscountTypeDict, parentDocNum);
+            disc =  get(preProdDiscountValDict, parentDocNum);
+        }
+    }
+
+    //Setting preprodfee flag for addons
+    if( quoteType_quote == ADD_ON AND piItemType == PRE_PRODUCTION ){
+        hasPreprodFeeForAddons = true;
+    }
+
+    /*BM_VT. Implementation Method is require at the quote level. */
+    if (poCategoryFromGrid == CORE_SERVICE AND assetActionFromGrid <> TERMINATE_ACTION){ //rather than checking models, we need to check the actual core products so that we can ignore terminated cores. fix for CSYS-42777 as part of SC Phase 5 (ATG)
+        strImpMethod = getconfigattrvalue(/*docNum*/parentDocNum, "implementationMethods_concur");
+    }
+    /*End BM_VT*/
+
+    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, DISCOUNT_TYPE, discountType);
+    rollup = line._part_custom_field21;
+    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, ROLL_UP, rollup );
+    lastTierDecreaseDate = "";
+    if (pi <> "") { //If the line item is a Product, and not a Model
+		baseGroupRequired = util.getStringAttribute(stringsDict, parentDocNum, DELIMITER, BASE_GROUPING_REQUIRED);
+        orgSubID = "";
+        //add on related - start
+        comment = split(lineItemComment,ASSET_DELIMITER);
+        packageID = comment[0];
+        numOfTransactions = line.numCommittedTransaction_line;
+        /* Code for Asset Action implemented by Zak Kampmann for case 153261 on 6/21/13 */
+        assetAction = assetActionFromGrid;
+                if(NOT isnull(comment[1]) OR isnull(assetActionFromGrid)) {
+                                assetAction = comment[1];
+                }
+                if(isnull(assetAction) AND quoteType_quote <> NEW_BIZ) {
+                                assetAction = NONE_ACTION;
+                }
+                if(quoteType_quote == NEW_BIZ) {
+                                assetAction = CREATE_ACTION;
+                }
+
+        isGrouped = string(isPartOfPackage);
+        tempSwitch = "";
+        if(NOT (assetAction <> "")){ //setting logic like this for existing quotes.
+            assetAction = CREATE_ACTION;
+        }
+        //CSYS-68345: On first iteration, assign any Partner Discount to CREATE line items:
+        //if( line.isFirstIteration_line AND assetAction == CREATE_ACTION AND acctPartnerDiscount <> 0 AND NOT isnull(acctPartnerDiscount) ){
+        //  disc = acctPartnerDiscount;
+        //}
+        latestDisc = disc;
+        utilResultFlag = util.putFloatAttribute( floatsDict, docNum, DELIMITER, "latestDisc", latestDisc);
+        /* End of code for Asset Action change for case 153261- ZK */
+        assetString = "";
+        utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, PACKAGE_ID, packageID );
+        //CSYS-87125: added the next line to store packageID at part number key (wrap in tilda delimiters to prevent conflicts with other keys):
+        utilResultFlag = util.putStringAttribute( stringsDict, TILDE_DELIMITER + pi + TILDE_DELIMITER, DELIMITER, PACKAGE_ID, packageID );
+        currentAssetString = string[];
+
+        //CSYS-97722, PhilS 12/12/2019
+        assetStringQuoteIntegration = split(assetsString_quote, ASSET_DELIMITER );
+
+        for item in assetStringQuoteIntegration {
+            eachAsset = split(item, INTERNAL_DELIMITER);
+
+            if(pi == eachAsset[ASSET_PID]){
+                orgSubID = eachAsset[ASSET_SUBSCRIP_ID]; ////CASE 121961 - 1/4/13
+                utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, SUBSCRIP_ID, orgSubID );
+
+                utilResultString = util.formAttrValueStr(attributesDict, SUBSCRIP_ID, docNum, orgSubID);
+                lastTierDecreaseDate = eachAsset[ASSET_LAST_TIER_DEC_DATE]; //CSYS-97861
+                utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, "LastTierDecreaseDate", lastTierDecreaseDate );
+				//CSYS-106761 - Start
+				uqgField = eachAsset[ASSET_UQG]; 
+				if(quoteType_quote <> NEW_BIZ){
+					utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, UQG, uqgField );
+					//CSYS-106563 - Setting Billing Counter for Add On when no configuration is done
+					if(uqgField == "ConcurDistinctExpense" and poCategory == CORE_SERVICE){
+						billingCoutAddon = "Expense User Based";
+						utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum, DELIMITER, BillingCounterAddOn, billingCoutAddon);
+					}	
+				}
+				//CSYS-106761 - End			 																																												   
+            }
+        }
+        //end of CSYS-97722
+		if(sizeofarray(comment)>1){ //If an existing asset
+            assetString = comment[2];
+            adjustedArr = "0";
+            assetDisc = 0.0;//to void run time error  - By Sai Krishna
+            if(assetString<>""){
+				
+				isTransOverridden = TRUE_STR;
+
+                if( quoteType_quote == ADD_ON AND itemType == BASE_FEE AND assetAction == MODIFY_ACTION){
+                    tierChange = TRUE_STR;
+                } //Added for ARR Enhancement - Ronald Mendoza
+
+                assetIsGrouped = FALSE_STR;
+                currentAssetString = split(assetString,INTERNAL_DELIMITER);
+				//AH 181910 2014/02/20 (1 of 4)
+                originalTrxns = integer(atof("0"+ currentAssetString[ASSET_COMMITED_TRNS]));  //CSYS-100398 (BS, 09/07/2020) Concatenated extra "0" to avoid atof invalid literal error when converting blank string to float
+                utilResultString = util.formAttrValueStr(attributesDict, ORIGINAL_TRANSACTIONS, docNum, string(originalTrxns));
+                //End (1 of 4)
+
+				put(stringsDict, docNum + "currentAssetTrxns", string(originalTrxns));
+
+                isCoreChanged = get(isCoreChangedDict, parentDocNum); //grab the result of core change detection
+                isEditionChanged = get(isEditionChangedDict, parentDocNum); //grab the result of edition change detection
+                //end modify fix(1 of 3)
+
+                // Write core and edition change to strings dict for use in NPSD Function
+                put(triggerDict, parentDocNum + DELIMITER + "coreFlip", isCoreChanged);
+                put(triggerDict, parentDocNum + DELIMITER + "editionFlip", isEditionChanged);
+
+                /*CSYS-98097 (LN. 1-14-2020)
+                    Pushing this logic further up to be assessed before assigning NONE/MODIFY action codes.
+                    If there have been a pricebook change detected, set the 'assetDic' accordingly.
+                */
+                if(pricebookChange OR pricebookChangeWithinBundle){
+                    //If there was no updated discount (no pricebook change detected),
+                    if(pricebookChangeUpdatedDiscount == 0.0){
+
+                	//CSYS-101275, BS. 12/01/2020, Added below code to check for blank values before performing string to float conversion
+                        if( isnumber(currentAssetString[ASSET_DISCOUNT]) ) {
+				currentAssetDisc = atof(currentAssetString[ASSET_DISCOUNT]);//Current discount on the SFDC Asset String
+			}
+			else{
+				currentAssetDisc = 0.0;
+			}
+			//End CSYS-101275
+
+                        if(currentAssetDisc == discountFromGrid){
+                            assetDisc = currentAssetDisc;
+                        }
+                    }
+                    else {//Else, if there was an updated discount, set the assetDisc to the newly calculated discount
+                        assetDisc = pricebookChangeUpdatedDiscount;
+                    }
+                }
+                else {//Otherwise, business as usual
+                    if( isnumber(currentAssetString[ASSET_DISCOUNT]) ) {
+                        assetDisc = atof(currentAssetString[ASSET_DISCOUNT]);
+                    } else {
+                        assetDisc = 0.0;
+                    }
+                }
+
+                if( isnumber(currentAssetString[ASSET_LIST_PRICE]) ) {
+                    listPrice = atof(currentAssetString[ASSET_LIST_PRICE]);
+				}
+                else {
+                    listPrice = 0.0;
+				}
+                //CSYS-95251 (LN. 5-2-2019) Pulling in the Asset Tier Price from SFDC, this is the non-unified Price
+                if( isnumber(currentAssetString[ASSET_TIER_PRICE]) ) {
+                    if(currencyCode == "USD"){
+                        tierPrice = atof(currentAssetString[ASSET_TIER_PRICE]);
+                    }
+                    else {
+                        //CSYS-95956 (LN. 6-5-2019) For non-USD currency quotes, we need to find the Tier Price in USD (Tier Price/Conversion Rate)
+                        convertedTierPrice = atof(currentAssetString[ASSET_TIER_PRICE]);
+                        tierPrice = round((convertedTierPrice/conversionRate), 2);
+                    }
+                }
+                else {
+                    tierPrice = 0.0;
+                }
+				
+                utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_TIER_PRICE, docNum, string(tierPrice));//CSYS-95251 (LN. 5-2-2019)
+                utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_TIER_PRICE, tierPrice);//CSYS-95251 (LN. 5-2-2019)
+
+                if( isnumber(currentAssetString[ASSET_EXT_LIST_PRICE]) ) {  // TEMPORARY FIX BY MMARTIN 08/09
+                    extListPrice = atof(currentAssetString[ASSET_EXT_LIST_PRICE]);
+
+
+                    //CSYS-82292:
+                    if( piItemType == INCREMENTAL_FEE AND NOT containskey(floatsDict, poID + DELIMITER + "assetIncExtListPrice") ){
+                        utilResultFlag = util.putFloatAttribute( floatsDict, poID, DELIMITER, "assetIncExtListPrice", extListPrice );
+                    }
+                    elif(piItemType == BASE_FEE AND NOT containskey(floatsDict, poID + DELIMITER + "assetBaseExtListPrice")){
+                        utilResultFlag = util.putFloatAttribute( floatsDict, poID, DELIMITER, "assetBaseExtListPrice", extListPrice );
+                        utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, "firstBaseofPoId", TRUE_STR );
+					}
+                }
+                else {
+                    extListPrice = 0.0;
+                }
+                if( isnumber(currentAssetString[ASSET_NET_PRICE]) ) {
+                    netPriceEach = atof(currentAssetString[ASSET_NET_PRICE]);
+
+                }
+                else {
+                    netPriceEach = 0.0;
+                }
+                if( isnumber(currentAssetString[ASSET_EXT_NET_PRICE]) ) {
+                    extendedNetPrice = atof(currentAssetString[ASSET_EXT_NET_PRICE]);
+
+
+                    //CSYS-82292:
+                    if( piItemType == INCREMENTAL_FEE AND NOT containskey(floatsDict, poID + DELIMITER + "assetIncExtNetPrice") ){
+                        utilResultFlag = util.putFloatAttribute( floatsDict, poID, DELIMITER, "assetIncExtNetPrice", extendedNetPrice );
+                    }
+                }
+                else {
+                    extendedNetPrice = 0.0;
+                }
+
+                if(assetIsGrouped == FALSE_STR){ // @RC: Modified as systematized-forced grouping should overwrite add-ons
+                    assetIsGrouped = currentAssetString[ASSET_IS_BUNDLE];
+                }
+
+                //CSYS-70966 part 2: fix assetOriginalGroupCheck_line for line items terminated via
+                //'Select Core and Related products' on the first config trip. KA. 9-30-2016
+                if(containskey(assetBillingDict, pi + "assetIsBundleKey") AND NOT isnull(get(assetBillingDict, pi + "assetIsBundleKey"))){
+                    assetIsGrouped = get(assetBillingDict, pi + "assetIsBundleKey");
+                }
+
+                if((isEditionChanged <> TRUE_STR AND isCoreChanged <> TRUE_STR) AND assetAction == MODIFY_ACTION){
+                    assetAction = NONE_ACTION;
+                    utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION, assetAction );
+                }
+
+                //add-on related By Sai Krishna Case:105868
+                if( assetAction <> MODIFY_ACTION){
+					numOfTransactions = util.customAtof(currentAssetString[ASSET_COMMITED_TRNS], 0.0);
+					//Added by Andre to throw the Action and Transactions of a Modify line to equal its entered transactions @ALFIX00154530
+					if(assetActionFromGrid == MODIFY_ACTION AND assetCoreServiceTerminatedOrModified == true AND piItemType <> INCREMENTAL_FEE) {
+
+						numOfTransactions = line.numCommittedTransaction_line;
+					}
+					// End adding by Andre @ALFIX00154530
+					//Next elif block added by KA for CSYS-63285 to maintain integrity of numOfTransactions for cores whose asset transactions don't match the original global tier:
+					elif(NOT isFirstIteration AND assetActionFromGrid == NONE_ACTION AND
+					util.customAtoi(currentAssetString[ASSET_COMMITED_TRNS], 0) <> oRGNumberOfComittedTransactions_quote AND
+					util.customAtoi(currentAssetString[ASSET_COMMITED_TRNS], 0) <> numOfTransactionsFromGrid){
+						numOfTransactions = line.numCommittedTransaction_line;
+					}
+					//Modding transactions when it's allowed:
+					elif(NOT isFirstIteration AND numCommittedTransaction_quote == oRGNumberOfComittedTransactions_quote /*AND findinarray(listOfNumOfTransPOs, poID) == -1*/ AND assetActionFromGrid == MODIFY_ACTION AND util.customAtoi(currentAssetString[ASSET_COMMITED_TRNS], 0) <> numOfTransactionsFromGrid AND piItemType <> INCREMENTAL_FEE){
+						numOfTransactions = line.numCommittedTransaction_line;
+					}
+                }
+
+                //added by Ronald Mendoza for ARR Enhancement
+                if( currentAssetString[ASSET_CUSTOMER_CURRENCY_REV_REC] <> "" and isnumber(currentAssetString[ASSET_CUSTOMER_CURRENCY_REV_REC]) ){
+                    extNetPriceNonUnified = atof(currentAssetString[ASSET_CUSTOMER_CURRENCY_REV_REC]);
+															 
+												
+                }
+                 else {
+                    extNetPriceNonUnified = 0.0;
+                }
+
+                orgBundleID = currentAssetString[ASSET_ORG_BUNDLE_ID];
+
+                //CSYS-97722, PhilS 12/12/2019, comment out following two lines since subscription ID has been taking care in front of this loop
+                // orgSubID = currentAssetString[ASSET_SUBSCRIP_ID]; ////CASE 121961 - 1/4/13
+                // utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, SUBSCRIP_ID, orgSubID );
+
+                if( orgBundleID <> ""){
+                    utilResultFlag = util.putStringAttribute(stringsDict, parentDocNum, DELIMITER, CORE_ASSET_SERVICEID,orgBundleID);
+                }
+                if( piItemType == BASE_FEE ){
+                    assetArr = extNetPriceNonUnified * RAMP_FLAG_MULTIPLIER; //Modified by Ronald Mendoza - Changed Calculation from extendedNetprice to Customer Currency Rev Rec Monthly
+				   
+					  
+					
+								 
+								
+                }
+
+                if(currentAssetString[ASSET_ADJUSTED_ARR]<> ""){
+                    adjustedArr = currentAssetString[ASSET_ADJUSTED_ARR];
+                }
+
+                //Adding the condition below to update Adjustment to ARR on Save/Submit CSYS-46906 Part 2
+                if ( containskey( assetAdjArrDict, pi )){
+                    adjustedArr = get( assetAdjArrDict, pi );
+                }
+
+                QUOTE_TOTAL_EXISTING_ARR = QUOTE_TOTAL_EXISTING_ARR + assetArr;
+                nxtBillingDate = currentAssetString[ASSET_NEXT_BILLING_DATE];
+				
+				// CSYS-100331 (OK. 8-25-2020) Start: Set Next billing Date value to Order effective date for Add on quotes in SAP Other
+				if (SAPSellsConcurFromAccount_quote == "Shadow Harmony Quote" AND quoteType_quote == "Add-On Business") {
+					nxtBillingDate = orderEffectiveDate_quote;
+				}
+				//CSYS-100331 -End
+			
+                if(isFirstIteration){ //Asset Action will ALWAYS be what was pulled in from config
+                    assetAction = comment[1];
+
+						 
+                    if(addOnNumOfTrans == "-1" AND integer(numOfTransactions) > 0 AND piItemType == BASE_FEE){
+                        addOnNumOfTrans = string(integer(numOfTransactions));
+                        if( assetAction <> TERMINATE_ACTION ){
+                            if(QUOTE_TRANSACTIONS < 1){
+                                QUOTE_TRANSACTIONS = atoi(addOnNumOfTrans);
+                            }
+                        }
+                        if( currentAssetString[ASSET_COMMITED_TRNS] <> "" AND atof(currentAssetString[ASSET_COMMITED_TRNS]) > 1 ){
+                            oRGNumCommittedTrans = integer(atof(currentAssetString[ASSET_COMMITED_TRNS]));
+                            //Nov 6 - This line will be modified as follows:
+
+                            if(isnull(oRGNumberOfComittedTransactions_quote) OR oRGNumberOfComittedTransactions_quote == 0){ //CSYS-63285: added this condition so oRGNumberOfComittedTransactions_quote doesn't get overwritten by 2nd and subsequent cores whose asset transactions are different than the original global tier. KA. 5-9-2016.
+                                utilResultString = util.formAttrValueStr(attributesDict, "oRGNumberOfComittedTransactions_quote", QUOTE_DOC_NUM, string(oRGNumCommittedTrans));
+                            }
+
+                            put(stringsDict, "originalTrans", string(oRGNumCommittedTrans));
+                        }
+                    }
+
+                    sizeOfAssetString = sizeofarray( currentAssetString );
+                    assetOriginalGroup = currentAssetString[sizeOfAssetString - 1];
+
+                    tempSwitch = "none";
+                    tempSwitch_dictVal = util.getStringAttribute( stringsDict, parentDocNum, DELIMITER, "assetGroupMappingDict" ); //This will always be null the first item in a configuration
+
+                    if(tempSwitch_dictVal<>""){
+                        tempSwitch = tempSwitch_dictVal;
+                    }
+                    if(assetOriginalGroup == TRUE_STR AND assetAction == TERMINATE_ACTION) {
+                        if(tempSwitch == "none"){ tempSwitch = "group";}
+                    }
+
+                    if( oRGRampPlanInformation_quote == "" ){
+                        utilResultString = util.formAttrValueStr(attributesDict, "oRGRampPlanInformation_quote", QUOTE_DOC_NUM, rampPlanDetails_quote);
+                    }
+                    disc = assetDisc;
+					
+                    isGrouped = assetIsGrouped;
+									
+                    if(poCategory == CORE_SERVICE AND baseGroupRequired == TRUE_STR AND assetAction <> TERMINATE_ACTION){
+                        isGrouped = TRUE_STR;
+                    }
+                    if (isGrouped == FALSE_STR) { // If it is not Grouped.
+                        if(find(posToBeGrouped,TILDE_DELIMITER+poID+TILDE_DELIMITER) > -1) {        // If PO needs to be grouped
+                            isGrouped = TRUE_STR;           // Set to true.
+                        }
+                    }
+                    if(assetIsGrouped <> isGrouped AND assetAction == NONE_ACTION){
+                        assetAction = MODIFY_ACTION;
+                    }
+
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_PO, docNum, currentAssetString[1]);
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_PI, docNum, currentAssetString[0]);
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_NET_PRICE, docNum, string(netPriceEach));
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_EXT_NET_PRICE, docNum, string(extendedNetPrice)); //added for CSYS-36627
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_DISCOUNT, docNum, string(assetDisc));
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_LIST_PRICE, docNum, string(listPrice));
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_EXT_LIST_PRICE, docNum, string(extListPrice)); //added for CSYS-36627
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_IS_GROUPED, docNum, assetIsGrouped);
+                    utilResultString = util.formAttrValueStr(attributesDict, "nextBillingDate_line", docNum, nxtBillingDate);
+                    utilResultString = util.formAttrValueStr(attributesDict, "assetExistingARR_line", docNum, string(assetArr));
+                    utilResultString = util.formAttrValueStr(attributesDict, EXISTING_ARR_CURRENCY_LINE, docNum, string(assetArr));
+									
+				  
+					
+					utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ADJUSTED_ARR, docNum, adjustedArr);
+					utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ADJUSTED_ARR,atof(adjustedArr));
+                    utilResultString = util.formAttrValueStr(attributesDict, "serviceAccountID_line", docNum, currentAssetString[ASSET_SERVICE_ACCT_ID]);
+                    utilResultString = util.formAttrValueStr(attributesDict, "billingID_line", docNum, currentAssetString[ASSET_BILLING_ID]);
+                    utilResultString = util.formAttrValueStr(attributesDict, "isFirstIteration_line", docNum, FALSE_STR);
+
+                    if(orgBundleID<>""){
+                        utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_BUNDLE_ID, docNum, orgBundleID);
+                    }
+                    utilResultString = util.formAttrValueStr(attributesDict, "isPartOfPackage_line", docNum, isGrouped);
+
+                    utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_NET_PRICE, netPriceEach);
+                    utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_DISCOUNT, assetDisc);
+                    utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_LIST_PRICE, listPrice);
+                    utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_EXT_LIST_PRICE, extListPrice); //added for CSYS-70755
+                    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, ASSETS_ORIGINAL_BUNDLE_ID,orgBundleID);
+                    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, ASSETS_ORIGINAL_IS_GROUPED,assetIsGrouped);
+                    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, IS_GROUPED, isGrouped);
+                    
+                    utilResultString = util.formAttrValueStr(attributesDict, "assetAction_line", docNum, assetAction);
+
+                    if (currentAssetString[ASSET_SERVICE_ACCT_ID] <> ""){ //prevent null value population
+                        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, "serviceAccountID_line", currentAssetString[ASSET_SERVICE_ACCT_ID]); //for Service Acct ID fix 8-20-2014
+                    }
+                }
+				if(assetAction == NONE_ACTION){ //populate line attributes
+					utilResultString = util.formAttrValueStr(attributesDict, "listPrice_line", docNum, string(round(listPrice,2)));
+                    utilResultString = util.formAttrValueStr(attributesDict, "extendedList_line", docNum, string(round(extListPrice,2)));
+                    utilResultString = util.formAttrValueStr(attributesDict, "discount_line", docNum, string(round(assetDisc,2)));
+                    utilResultString = util.formAttrValueStr(attributesDict, LONG_DISCOUNT, docNum, string(round(assetDisc,2))); //for ext net price fix (ATG)
+                    utilResultString = util.formAttrValueStr(attributesDict, "prevDiscount_line", docNum, string(round(assetDisc,2))); //for CSYS-36981 (ATG)
+                    utilResultString = util.formAttrValueStr(attributesDict, "prevDiscountStatic_line", docNum, string(round(assetDisc,2)));
+                    utilResultString = util.formAttrValueStr(attributesDict, "netPriceEach_line", docNum, string(round(netPriceEach,2)));
+                    utilResultString = util.formAttrValueStr(attributesDict, "extendedNetPrice_line", docNum, string(round(extendedNetPrice,2)));
+					utilResultString = util.formAttrValueStr(attributesDict, "arrNet_line", docNum, adjustedArr);
+                    utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_EXT_LIST_PRICE, extListPrice); //added for CSYS-70755
+                }
+					utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ADJUSTED_ARR, docNum, adjustedArr); //iteration independent, added for CSYS-46906 Part 3
+
+            }   //End field population from assets string
+
+
+            if(NOT isFirstIteration){//assess if this line/model require a change from NONE to MODIFY
+
+                utilResultString = util.formAttrValueStr(attributesDict, "prevDiscount_line", docNum, string(line.prevDiscount_line)); //for CSYS-59630. Make sure Prev Discount stays what it was set to by the Auto-Update script after Saving (applies to NONE/MODIFY action codes) KA. 4-14-2016
+                // If line trans matches quote trans, it needs to continue matching the quote trans
+                if (isTransOverriddenFromGrid <> true OR numOfTransactionsFromGrid == PAST_QUOTE_TRANSACTIONS OR piItemType == INCREMENTAL_FEE){
+                                //Above comment forgot to check if the attribute was actually set to true, so we don't clear it out. Andre Case 00127175
+
+                    if ( numOfTransactionsFromGrid == PAST_QUOTE_TRANSACTIONS OR poCategory == CORE_SERVICE OR piItemType == INCREMENTAL_FEE){
+
+                        isTransOverridden = FALSE_STR;
+                        tierChange = FALSE_STR; //Added by Ronald Mendoza
+                    }
+                }
+                utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_NET_PRICE, assetOriginalNetPrice);
+                utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_DISCOUNT, assetOriginalDiscount);
+                utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_LIST_PRICE, assetOriginalListPrice);
+                utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, ASSETS_ORIGINAL_BUNDLE_ID,originalBundleID);
+                utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, ASSETS_ORIGINAL_IS_GROUPED,string(assetOriginalGroupCheck));
+                //CSYS-98067 (KW & SA 1-22-2020) Prevent Adjustment to ARR to being set to $0
+                if ( containskey( assetAdjArrDict, pi )){
+                    utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ADJUSTED_ARR,atof(adjustedArr)); //use the asset updated adjustment to arr value
+                }
+                else{ utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ADJUSTED_ARR,assetAdjustedArr); } //keep the line value
+
+                if (currentAssetString[ASSET_SERVICE_ACCT_ID] <> ""){ //prevent null value population
+                    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, "serviceAccountID_line", currentAssetString[ASSET_SERVICE_ACCT_ID]); //for Service Acct ID fix 8-20-2014
+                }
+                //Do not group Terminated Line Items  -- By Sai Krishna (Validation Error on Grouping Terminated Line items)
+                if(poCategory == CORE_SERVICE AND baseGroupRequired == TRUE_STR AND assetAction <> TERMINATE_ACTION ){
+                    isGrouped = TRUE_STR;
+                }
+
+                if (isGrouped == FALSE_STR) { // If it is not Grouped.
+                    if(find(posToBeGrouped,TILDE_DELIMITER+poID+TILDE_DELIMITER) > -1) {        // If PO needs to be grouped
+                        isGrouped = TRUE_STR;           // Set to true.
+                    }
+                }
+                // Remove terminated line items from the group when the line item is TERMINATED during reconfigure
+                assetIsGroupedReconfig = FALSE_STR;
+
+                if(assetIsGroupedReconfig == FALSE_STR){
+                    assetIsGroupedReconfig = currentAssetString[ASSET_IS_BUNDLE];
+                }
+
+                tempSwitch = "none";
+                tempSwitch_dictVal = util.getStringAttribute( stringsDict, parentDocNum, DELIMITER, "assetGroupMappingDict" ); //This will always be null the first item in a configuration
+
+                if(tempSwitch_dictVal<>""){
+                    tempSwitch = tempSwitch_dictVal;
+                }
+                if(isGrouped == TRUE_STR AND assetIsGroupedReconfig == FALSE_STR AND assetAction == TERMINATE_ACTION) {
+                    if(tempSwitch == "none"){ tempSwitch = "group";}
+                    isGrouped = FALSE_STR;
+                }
+
+                /*//M.A. 04/28/2014 - SR 2-9333372
+                // set action to MODIFY if item is grouped, reconfigured, and the action is currently NONE
+                if(isGrouped == TRUE_STR AND assetIsGroupedReconfig == TRUE_STR AND assetAction == NONE_ACTION) {
+                        if(tempSwitch == "none"){ tempSwitch = "group";}
+                    assetAction = MODIFY_ACTION;
+                }
+                //end of action change - M.A. */
+
+                if(tempSwitch <> "all"){
+
+                    //next two only affect the lines that belong to a group
+                    if(isGrouped <> string(assetOriginalGroupCheck)){
+                        if(tempSwitch == "none"){
+                        tempSwitch = "group";
+                        }
+                        if(assetAction == NONE_ACTION){//make sure that lines that have been removed from the group will be tagged as modify
+                            assetAction = MODIFY_ACTION;
+                            put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, MODIFY_ACTION);
+                        }
+                    }//if the grouping status has changed
+
+                    if((assetAction == TERMINATE_ACTION OR assetAction == CREATE_ACTION) AND isGrouped == TRUE_STR){
+                        if(tempSwitch == "none"){
+                            tempSwitch = "group";
+                        }
+                    }//if manually terminated from group
+
+                }
+
+                //##########################################################//
+                //#####    Action Code NONE VS MODIFY main section     #####//
+                //##########################################################//
+
+                //CSYS-57212: check if the action code should stay at NONE, else change from NONE to MODIFY. KA. Most recent update: 9-30-2016
+                if(
+                /*=== dealing with a NONE or MODIFY action ===*/
+                (assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION) AND
+                /*=== Core and Edition change detection ===*/
+                (isCoreChanged <> TRUE_STR AND isEditionChanged <> TRUE_STR) AND
+                /*=== assetString is not blank ===*/
+                assetString <> "" AND
+                /*=== line discount = asset discount ===*/
+                discountFromGrid == assetDisc AND
+                /*=== line ramp is not overridden ===*/
+                //overrideDefaultRampPlan <> TRUE_STR AND
+                NOT containskey(stringsDict, poID + DELIMITER + "overrideDefaultRampPlanForPoID") AND
+                /*=== quote ramp is not overridden ===*/
+                NOT sizeofarray(quoteRampTransactionStrings) > 1 AND
+                /*=== line trans equals asset trans ===*/
+                numOfTransactionsFromGrid == util.customAtoi(currentAssetString[ASSET_COMMITED_TRNS], 0) AND
+                /*=== original term months is blank. Commenting out for now until CSYS-70421 is done ===*/
+                //oRGTermNumMonths_quote == "" AND
+                /*=== billing cycle is original ===*/
+                //currentBillingCycle_quote == billingCycle_quote AND //CSYS-99043
+                /*=== asset was not terminated from the core bundle
+                OR any asset was terminated from the bundle but
+                the product that we're currently processing in the
+                loop was not part of the original bundle ===*/
+                ((NOT containskey(stringsDict, parentDocNum + DELIMITER + "groupedAssetTerminatedFromCore")) OR (containskey(stringsDict,parentDocNum + DELIMITER + "groupedAssetTerminatedFromCore") AND NOT assetOriginalGroupCheck)) AND
+                /*=== line bundle flag equals the asset bundle flag ===*/
+                isGrouped == string(assetOriginalGroupCheck) AND ist4C == false){//CSYS-107446 SV 16-11-2022 included ist4c == false so as to revert to NONE when ist4c is revertd to N
+                        //CSYS-99043
+                        if (currentBillingCycle_quote == billingCycle_quote){
+                            put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, NONE_ACTION);
+                        }
+                        else{
+                            put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, MODIFY_ACTION);
+                            if (containskey(stringsDict, QUOTE_DOC_NUM + DELIMITER + "billingCycleChangeOnly")){
+                                billCycleChangeOnlyCheck = get(stringsDict,QUOTE_DOC_NUM + DELIMITER + "billingCycleChangeOnly");
+                                if (billCycleChangeOnlyCheck <> TRUE_STR){
+                                    put(stringsDict, QUOTE_DOC_NUM + DELIMITER + "billingCycleChangeOnly", "");
+                                }
+                            }
+                            else{
+                                put(stringsDict, QUOTE_DOC_NUM + DELIMITER + "billingCycleChangeOnly", TRUE_STR);
+                            }
+                            //CSYS-92516 (LN. 8-27-2018) If this is an existing bundled asset that has been altered (set to MODIFY), set the bundleIsModify flag to true to be leveraged below to set all other NONEs in the bundle to MODIFY
+                            if( isGrouped == string(assetOriginalGroupCheck) AND isPartOfPackage ){
+                                bundleIsModify = true;
+                                put(stringsDict, parentDocNum + DELIMITER + "bundleIsModify", parentDocNum);
+                            }
+
+                            if( assetAction <> TERMINATE_ACTION ){
+                                numOfTransactions = numOfTransactionsFromGrid;
+                            }
+                        }
+                }
+
+                else{
+                    put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, MODIFY_ACTION);
+                    //CSYS-99043
+                    if(assetAction <> CREATE_ACTION){
+                        put(stringsDict, QUOTE_DOC_NUM + DELIMITER + "billingCycleChangeOnly", "");
+                    }
+                    //CSYS-92516 (LN. 8-27-2018) If this is an existing bundled asset that has been altered (set to MODIFY), set the bundleIsModify flag to true to be leveraged below to set all other NONEs in the bundle to MODIFY
+                    if( isGrouped == string(assetOriginalGroupCheck) AND isPartOfPackage ){
+                        bundleIsModify = true;
+                        put(stringsDict, parentDocNum + DELIMITER + "bundleIsModify", parentDocNum);
+                    }
+
+                    if( assetAction <> TERMINATE_ACTION ){
+
+                        numOfTransactions = numOfTransactionsFromGrid;
+                    }
+                }
+
+
+                //CSYS-86113:
+                // if((assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION) AND rollup == "Y" AND overrideDefaultRampPlan == TRUE_STR){
+                //  put(stringsDict, poID + DELIMITER + "overrideRampPlanForPoID", TRUE_STR);
+                // }
+
+                //Process the Invoice Check Payments action code (inc and base): analyze if a switch back to NONE is needed. CSYS-65212. KA. 8-30-2016
+                if(poID == "566" OR poID == "416635") {
+                    if(currentBillingCycle_quote == billingCycle_quote AND
+                        assetString <> "" AND
+                        assetDisc == discountFromGrid AND
+                        (isCoreChanged <> TRUE_STR AND isEditionChanged <> TRUE_STR)
+                        //ignore transaction checks since transactions for ICP are always 0
+                        //ignore ramp checks since ICP has a static 1 ramp
+                        //ignore group checks since ICP can't be dynamically grouped
+                        ){
+
+                        put(stringsDict, poID + DELIMITER + "InvoiceCheckPaymentsActionSync" + DELIMITER + piItemType, NONE_ACTION);
+                    }
+                    else{
+                        put(stringsDict, poID + DELIMITER + "InvoiceCheckPaymentsActionSync" + DELIMITER + piItemType, MODIFY_ACTION);
+                    }
+                }
+				
+				//IESCNQRCPQ-493 (PG 28/3/2023) On Custom Pricing, if Action Code=NONE, and the price is changed, change Action Code to MODIFY
+				if ((poID == "6406" OR poID == "8910" OR poID == "8917" OR poID == "8924" OR poID == "8931" OR poID == "5983963") AND updateCustomPriceForAdvantageServices_quote == true){
+					put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, MODIFY_ACTION);
+				}
+				
+                /*//CSYS-98054
+                if(poID == "36309"){//CSYS-85237 (LN. 10/20/2017)
+                    if(currentBillingCycle_quote == billingCycle_quote AND assetString <> "" AND isCoreChanged <> TRUE_STR AND isEditionChanged <> TRUE_STR AND
+                    numOfTransactionsFromGrid == util.customAtoi(currentAssetString[ASSET_COMMITED_TRNS], 0)){
+
+                        put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, NONE_ACTION);
+
+                    }
+                    else{
+
+                        put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, MODIFY_ACTION);
+
+                    }
+                }*/
+            }
+        }//End existing assets logic.
+            
+	    //CSYS-100495 NT START
+		if(TRAVEL_DIRECT)
+		{
+			 if((poId == "421" OR poId == "346197" OR poId == "7220546" ) AND assetAction <> TERMINATE_ACTION)
+			 {
+					 isGrouped = TRUE_STR;
+			 }	  
+		}					
+		//CSYS-100495 NT END
+		
+		utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, IS_GROUPED, isGrouped);
+		utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION, assetAction );
+		utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, ASSET_STRING, assetString );
+		utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, "isFirstIteration_line", string(isFirstIteration) );
+		utilResultFlag = util.putStringAttribute(stringsDict, parentDocNum, DELIMITER, "assetGroupMappingDict", tempSwitch);
+		utilResultFlag = util.putFloatAttribute( floatsDict, docNum, DELIMITER, "salesARRCurrency_line", salesARRCurrency);
+		utilResultFlag = util.putFloatAttribute( floatsDict, docNum, DELIMITER, "netNewARRCurrency_line", netNewARRCurrency);
+								 
+						  
+		utilResultFlag = util.putFloatAttribute( floatsDict, docNum, DELIMITER, EXISTING_ARR_CURRENCY_LINE, assetArr);
+								 
+			   
+				 
+		//CSYS-107773 - Existing Arr was not getting set on UI , we were only putting it in float dict which is setting Net new arr
+		utilResultString = util.formAttrValueStr(attributesDict, EXISTING_ARR_CURRENCY_LINE, docNum, string(assetArr));
+														  
+			   
+				 
+
+		//Moving the following line further down so that assetAction is accurate for the triggerDict. KA. 10-24-2016:
+		//put(triggerDict, docNum + "~" + "assetAction", docNum + "~" + "assetAction" + TRIG_KEY_VALUE_DELIM + assetAction);
+
+        //Moved the next line higher:
+        //append(fullPOlist,poID);//capture all POs, with no sorting
+
+        /* Store line items that may need to have their transactions changed */
+        append( overWriteTransactionArr, docNum );
+        /* --- Store the state of this line item's non-calculated fields -- */
+        quantity = priceQuantityFromGrid;
+        customListPrice = customListPriceFromGrid;
+        customQuantity = customQuantityFromGrid;//CSYS-96366 SN. 07-2019
+        editQuantity = editQuantityFromGrid;//CSYS-97422 SN. 01-2020
+        useCustomPrice = useCustomPriceFromGrid;
+
+        utilResultFlag = util.putIntegerAttribute(integersDict, docNum, DELIMITER, QTY, quantity);
+        utilResultFlag = util.putFloatAttribute( floatsDict, docNum, DELIMITER, CUSTOM_LIST_PRICE, customListPrice );
+        utilResultFlag = util.putIntegerAttribute( integersDict, docNum, DELIMITER, "customQuantity_line", customQuantity );//CSYS-96366 SN. 07-2019
+        utilResultFlag = util.putIntegerAttribute( integersDict, docNum, DELIMITER, "editQuantity_line", editQuantity );//CSYS-97422 SN. 01-2020
+        utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, USE_CUSTOM_PRICE, useCustomPrice );
+        utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, PI_ITEM_TYPE, piItemType );
+        utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, IS_TRANS_OVERRIDDEN, isTransOverridden );
+        utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, CUSTOM_PRICING_HAS_OCCURED, string(customPricingHasOccured));//CSYS-85811 (LN. 9/27/2017) To be used below by Custom Pricing workflow
+
+        /* BM_VT. 07/05/2012. Added for Systematized Contracts Project */
+        /* BM_VT. 07/05/2012. POs for travel expense must always be grouped. List of pos are maintained in the data table */
+        isGrouped = util.getStringAttribute(stringsDict, docNum, DELIMITER, IS_GROUPED );
+
+        // @RC 08/06/2012: set core service flag to true;
+        if(poCategory == CORE_SERVICE AND piItemType == SETUP_FEE){
+            utilResultFlag = util.putStringAttribute(stringsDict, parentDocNum, DELIMITER, CORE_HAS_SETUP, TRUE_STR);
+        }
+        /* @RC 07/23/2012: If core service is forced to be grouped, do so.*/
+        //Do not group Terminated Line Items  -- By Sai Krishna (Validation Error on Grouping Terminated Line items)
+        if(poCategory == CORE_SERVICE AND baseGroupRequired == TRUE_STR AND assetAction <> TERMINATE_ACTION ){
+            isGrouped = TRUE_STR;
+        }
+        if (isGrouped == FALSE_STR) { // If it is not Grouped.
+            // If PO needs to be grouped
+            if(find(posToBeGrouped,TILDE_DELIMITER+poID+TILDE_DELIMITER) > -1 AND assetAction <> TERMINATE_ACTION) {// If PO needs to be grouped//@ALFIX156008 Do not group T&E when terminated.
+                isGrouped = TRUE_STR;           // Set to true.
+            }
+        }
+        /* End BM_VT 07/05/2012 */
+        
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, IS_GROUPED, isGrouped);
+
+        if ( isGrouped == TRUE_STR ){
+            dynamicGroupingPo = util.getStringAttribute( stringsDict, parentDocNum, DELIMITER, PO_GROUPS_DYNAMIC_GROUPING );
+            dynamicGroupingPo = dynamicGroupingPo + poID + PO_DELIMITER;
+            utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum, DELIMITER, PO_GROUPS_DYNAMIC_GROUPING, dynamicGroupingPo );
+            utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum, DELIMITER, MODEL_FORCE_GROUPING, TRUE_STR );
+        }
+        implementationMethod = implementationMethodFromGrid;
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, IMPLEMENTATION_METHOD, implementationMethod);
+        coreOffering = coreOfferingFromGrid;
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, CORE_OFFERING, coreOffering);
+        editionVal = editionFromGrid;
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, EDITION_LINE, editionVal);
+        advLearningServicesRequired = advLearningSvcsReqd;
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, ADV_LEARNING_SERVICES_REQUIRED, advLearningServicesRequired);
+        put(triggerDict, docNum + DELIMITER + ADV_LEARNING_SERVICES_REQUIRED, advLearningServicesRequired);
+
+        //CSYS-97934 SN. 01/2020, Rolled back as per CSYS-99246
+        /*
+        if ((poID == "6210737" OR poID == "6210772") AND assetAction == CREATE_ACTION ){
+            put(triggerDict, "xeroAccountingIntegrationExistsCREATE", TRUE_STR);
+        }*/
+	//CSYS-106586 LBN. 13/09/2022 - Commenting the below code to remove Misc Approval for Concur Integration with ADP 
+        /*//CSYS-98316 SN. 01/2020
+        if ((poID == "5793980") AND assetAction == CREATE_ACTION ){
+            put(triggerDict, "ADPIntegrationExistsCREATE", TRUE_STR);
+        }*/
+		
+        //CSYS-98407 SN. 02/2020
+        if ((poID == "3780125") AND assetAction == CREATE_ACTION AND ownerBU_quote == "Enterprise BU" AND ownerMarket_quote == "Australia"){
+            put(triggerDict, "concurDetectAustraliaExistsCREATE", TRUE_STR);
+        }
+        //CSYS-98725 SN. 01/2020
+        //CSYS-99594 SV 08/06/2020 Modified the logic below to include the poId = 6891736
+        //if ((poID == "6583098" OR poID == "6583498" OR poID == "6891736") AND assetAction == CREATE_ACTION ){
+        //    put(triggerDict, "advancedCareExistsCREATE", TRUE_STR);
+        //}
+        
+        //CSYS-101551 TT 01/07/2021 Add Misc Approvers by APA & AMA theaters
+        if ((poID == "6583098" OR poID == "6583498" OR poID == "6891736") AND assetAction == CREATE_ACTION AND ownerTheater_quote == "Americas"){
+            put(triggerDict, "advancedCareAMAExistsCREATE", TRUE_STR);
+        }
+        
+        if ((poID == "6583098" OR poID == "6583498" OR poID == "6891736") AND assetAction == CREATE_ACTION AND ownerTheater_quote == "APAC"){
+            put(triggerDict, "advancedCareAPAExistsCREATE", TRUE_STR);
+        }
+
+        if ( poID == "2648653") {   /* CSYS-67244*/
+            put(triggerDict, docNum + "~" + "onsiteDeliveryTrigger", docNum + "~" + "onsiteDeliveryTrigger" + TRIG_KEY_VALUE_DELIM + "TRUE");
+        }
+
+	//CSYS-99500 (TT. 9/21/2020)
+	if ((poID == "7220530") AND assetAction == CREATE_ACTION ){
+            put(triggerDict, "concurExperienceOptimizerExistsCREATE", TRUE_STR);
+        }
+        
+        //CSYS-100219 (TT. 10/2/2020)
+	if ((poID == "7218533") AND assetAction == CREATE_ACTION ){
+            put(triggerDict, "concurTaxAssurancebyVATBoxExistCREATE", TRUE_STR);
+        }
+        
+        //CSYS-100360 (TT. 10/2/2020)
+	if ((poID == "7218602") AND assetAction == CREATE_ACTION ){
+            put(triggerDict, "addonAdditionalEntityConfigurationMessageExistCREATE", TRUE_STR);
+        }
+        
+        //CSYS-100220 (SV. 06-10-2020) 
+	if((poID == "7218555") AND assetAction == CREATE_ACTION){
+		put(triggerDict, "addonReclaimAndOptimizationExistCREATE", TRUE_STR);
+	}
+	//CSYS-100221 (SV. 06-10-2020) 
+	if((poID == "7218583") AND assetAction == CREATE_ACTION){
+		put(triggerDict, "addonHistoricalTaxReclaimExistCREATE", TRUE_STR);
+	}
+	
+	//CSYS-101071 (TT. 11/20/2020)
+	if((poID == "7526941") AND assetAction == CREATE_ACTION){
+		put(triggerDict, "parachute1ExistCREATE", TRUE_STR);
+	}
+	
+	//CSYS-101376 (TT. 12/21/2020)
+	ownerBU_parachute2 = string[]{"United Kingdom", "Germany", "Australia"};
+	if((poID == "7526957") AND assetAction == CREATE_ACTION AND (ownerBU_quote == "Enterprise BU" OR (ownerBU_quote == SMB_BU AND findinarray(ownerBU_parachute2,ownerMarket_quote)<>-1))){
+		put(triggerDict, "parachute2ExistCREATE", TRUE_STR);
+	}
+	
+	//CSYS-101779 (TT. 1/28/2021): Parachute2 is Concur Detect by Oversight with Enhanced Implementation
+	//CSYS-102710 Changes to MISC approver(s)
+	//ownerBU_EMEA = string[]{"United Kingdom", "Germany"};
+	//CSYS-106693 (AP 11-08-2022) BMI: Remove ALL MISC Approval for Detect by Oversight
+	//Commenting out all Misc Approvals for Concur Detect By Oversight
+	/*
+	ownerBU_EMEA = string[]{"Africa", "France", "Spain", "Italy", "Middle East"};
+	if((poID == "7526957") AND assetAction == CREATE_ACTION AND findinarray(ownerBU_EMEA,ownerMarket_quote)<>-1){
+		put(triggerDict, "concurDetectOversightwithEnhancedImplementationEMEAExistCREATE", TRUE_STR);
+	}
+	ownerBU_APAC = string[]{"Australia", "India", "Korea"};
+	if((poID == "7526957") AND assetAction == CREATE_ACTION AND findinarray(ownerBU_APAC,ownerMarket_quote)<>-1){
+		put(triggerDict, "concurDetectOversightwithEnhancedImplementationAPACExistCREATE", TRUE_STR);
+	}
+	
+	//CSYS-106694 (AP 14/07/2022): BMI: Change MISC Approver Names for Concur Detect by Oversight with Enhancement Implementation
+	ownerBU_AMAS = string[]{"Brazil", "Canada", "LATAM", "Mexico", "United States", "US Government"};
+	if((poID == "7526957") AND assetAction == CREATE_ACTION AND findinarray(ownerBU_AMAS,ownerMarket_quote)<>-1){		
+		put(triggerDict, "concurDetectOversightwithEnhancedImplementationAMASExistCREATE", TRUE_STR);
+	}*/
+	
+/*      CSYS-102283 (TT. 04/21/2021):
+	if((poID == "7877689") AND assetAction == CREATE_ACTION){
+		put(triggerDict, "verifyExistCREATE", TRUE_STR);
+	}
+*/	
+    	//CSYS-106585 (TJG. 07/12/2022):
+	//CSYS-103652 (TJG. 07/27/2021):
+	//CSYS-102283 (TT. 04/21/2021):
+	//IESCNQRCPQ-965 Commented the below condition to stop Misc approvals from getting triggered to Dan barker for Verify SKU
+	/*if((poID == "7877689") AND assetAction == CREATE_ACTION  AND (ownerBU_quote == "SMB BU")){
+		if(ownerMarket_quote == "Australia" or ownerMarket_quote == "United Kingdom") {
+			put(triggerDict, "UKANZverifyExistCREATE", TRUE_STR);
+		}
+		else { put(triggerDict, "SMBverifyExistCREATE", TRUE_STR); }
+	}*/
+
+
+    	//CSYS-103652 (TJG. 07/27/2021):
+	//IESCNQRCPQ-858 VK(07/07/2023): Added the condition to exclude United states and Canada from the condition
+	if((poID == "7877689") AND assetAction == CREATE_ACTION  AND (ownerBU_quote == "Enterprise BU") AND NOT(ownerMarket_quote == "United States" OR ownerMarket_quote == "Canada")){
+		put(triggerDict, "ENTverifyExistCREATE", TRUE_STR);
+	}
+	
+	//CSYS-105146 (OK. 01-24-2022) Add Misc approval for Implementation Service for Concur TripLink - Edition for JTB
+	//IESCNQRCPQ-1096 (PG 18-09-2023) Remove the Restricted Release approval that exists for Japan: MISC approver Yohei Sato
+	//if (poID == "8857881" AND assetAction == CREATE_ACTION) {
+		//put(triggerDict, "concurTripLinkEditionForJTBExistCREATE", TRUE_STR);
+	//}
+	
+	//IESCNQRCPQ-981 (OK. 8-21-2023) Add Misc approval for Concur Detect by Oversight with Professional Implementation
+	if (poID == "7526941" AND assetAction == CREATE_ACTION) {
+		put(triggerDict, "concurDetectByOversightProfessionalMisc", TRUE_STR);
+	}
+	
+																												   
+														  
+																		
+  
+ 
+																																						 
+																																								
+																
+  
+ 
+	/*CSYS-105158 (OK. 01-21-2022) Add Misc approval for Implementation Service for Concur TripLink - Edition for TravelSky
+	if (poID == "8963536" AND assetAction == CREATE_ACTION) {
+		put(triggerDict, "concurTripLinkEditionForTravelSkyExistCREATE", TRUE_STR);
+	}*/
+	
+																												  
+						  
+																																		  
+	
+ 
+	//CSYS-106334 (AP 21-07-2022) BMI: New SKU - Financial Integration Program (Project & Asset Creation Only) 
+	//IESCNQRCPQ-725 VK added the condition to trigger the approval for only NONE action code
+	//IESCNQRCPQ-1301 (LIK 12-06-2023) - To fix the Misc Approval issue for Financial Integration Program - Updated the condition to use correct assetAction variable.
+	//if (poID == "9469017" AND assetAction == NONE_ACTION) {
+	if (poID == "9469017" AND assetActionFromGrid == NONE_ACTION) {	
+		put(triggerDict, "financialIntegrationProgramExistsNONE", TRUE_STR);
+	}
+	
+	//CSYS-106923 (AP, 22-08-2022) Start - BMI:  FAVR requires MISC approval
+	if (poID == "4722310" AND assetAction == CREATE_ACTION) {
+		put(triggerDict, "concurFavrCREATE", TRUE_STR);
+	}
+	//End CSYS-106923
+	
+	//IESCNQRCPQ-1124 Start (PG 16-10-2023) Triggering the MISC Approvals for Cloud Choice Flex(CCF) 
+	if (referralStatus_quote == "Accept" AND referringPartnerCategory_quote == "CCF"){
+		put(triggerDict, "CCFExists", TRUE_STR);
+	}
+	//IESCNQRCPQ-1124 End																							  
+																				   
+	//IESCNQRCPQ-1122 (LBN. 22-09-2023) Restricted release approval for All ENT non-U.S. markets and All SMB markets (including U.S.)
+	if(poId == "11096798" AND assetAction == CREATE_ACTION AND ownerBU_quote == "Enterprise BU"){
+		if(ownerTheater_quote == "APAC"){
+			put(triggerDict, "sAPIntegrationInvoiceAPAC", TRUE_STR);
+		}
+		if(ownerTheater_quote == "EMEA"){
+			put(triggerDict, "sAPIntegrationInvoiceEMEA", TRUE_STR);
+		}	
+		if(ownerMarket_quote == "Mexico"){
+			put(triggerDict, "sAPIntegrationInvoiceMexico", TRUE_STR);
+		}
+		if(ownerMarket_quote == "Canada"){
+			put(triggerDict, "sAPIntegrationInvoiceCanada", TRUE_STR);
+		}
+	}
+	if(poId == "11096798" AND assetAction == CREATE_ACTION AND ownerBU_quote == "SMB BU"){
+		if(ownerTheater_quote == "APAC"){
+			put(triggerDict, "sAPIntegrationInvoiceSMBAPAC", TRUE_STR);
+		}
+		if(ownerTheater_quote == "EMEA"){
+			put(triggerDict, "sAPIntegrationInvoiceSMBEMEA", TRUE_STR);
+		}
+		if(ownerMarket_quote == "Canada"){
+			put(triggerDict, "sAPIntegrationInvoiceSMBCanada", TRUE_STR);
+		}		
+		if(ownerMarket_quote == "United States"){
+			put(triggerDict, "sAPIntegrationInvoiceSMBUS", TRUE_STR);
+		}
+	}
+	//IESCNQRCPQ-1122 END																  
+ 
+        rampPlanOverride = overrideDefaultRampPlan;
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_OVERRIDE, rampPlanOverride);
+
+        lineItemRampPlan = rampPlanDetailsFromGrid;
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_DETAIL, lineItemRampPlan);
+
+        /* -------------- Determine the number of transactions ------------ */
+        //add on related - if numOfTransactions was given a value - use it.
+        trxns = integer(numOfTransactions);
+        
+        if(trxns <> prevTrxns AND prevTrxns > 0){
+
+            isTransOverridden = TRUE_STR;
+            utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, IS_TRANS_OVERRIDDEN, isTransOverridden);
+
+            //Setting to Tier Change to True if prevTrxns has been changed - Ronald Mendoza
+            if( quoteType_quote == ADD_ON AND itemType == BASE_FEE AND assetAction == MODIFY_ACTION){
+                tierChange = TRUE_STR;
+            }
+            else{
+                tierChange = FALSE_STR;
+            }
+
+            utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, TIER_CHANGE, tierChange);
+
+            // Store the new transactions for this model
+            if ( itemType <> INCREMENTAL_FEE ){
+                utilResultFlag = util.putIntegerAttribute( integersDict, docNum /*parentDocNum*/, DELIMITER, MODEL_NEW_TRANSACTIONS, trxns);
+                currentPoGroupsForTrans = util.getStringAttribute( stringsDict, docNum /*parentDocNum*/, DELIMITER, PO_GROUPS_TRANS );
+                currentPoGroupsForTrans = currentPoGroupsForTrans + poID + PO_DELIMITER;
+                utilResultFlag = util.putStringAttribute( stringsDict, docNum /*parentDocNum*/, DELIMITER, PO_GROUPS_TRANS, currentPoGroupsForTrans );
+                //CSYS-96788
+                put( incrementalFeeTransactionDict, parentDocNum + DELIMITER + poID, trxns );
+            }
+
+        }
+        // Store the standard transactions for the line
+        elif ( itemType <> INCREMENTAL_FEE ){
+            utilResultFlag = util.putIntegerAttribute( integersDict, parentDocNum, DELIMITER, MODEL_TRANSACTIONS, trxns );
+            // Store the number of transactions for the incremental line items to access
+            if ( isTransOverridden == TRUE_STR ){
+                put( incrementalFeeTransactionDict, parentDocNum + DELIMITER + poID, trxns );
+            }
+
+            if ( trxns == originalTrxns AND quoteType_quote == ADD_ON AND itemType == BASE_FEE AND assetAction == MODIFY_ACTION){
+                tierChange = FALSE_STR;
+                utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, TIER_CHANGE, tierChange);
+            }
+        }
+        //CSYS-95701 SN. Remove temp fix and check in new variable
+        if(findinarray(travelAndExpenseWithTriplinkProductArr, pi) <> -1){
+            rollup = "No";
+        }
+        incKey = parentDocNum + RAMP_DELIMITER + poID + RAMP_DELIMITER + rollup;
+        // Save the incremental fee for this PO/model
+        if ( itemType == INCREMENTAL_FEE ){
+            utilResultFlag = util.putStringAttribute( stringsDict, incKey, DELIMITER, INCREMENTAL_FEE_FOR_PO, docNum );
+        }
+
+        if (isTransOverridden <> TRUE_STR AND assetAction <> TERMINATE_ACTION ) {
+
+            //CSYS-71641 part 2: fix addon transaction issues. KA. 1-3-2017.
+            //trxns = QUOTE_TRANSACTIONS; (old logic)
+            //New logic:
+            if(quoteType == ADD_ON AND assetAction == CREATE_ACTION AND poCategory <> CORE_SERVICE AND containskey(integersDict, parentDocNum + DELIMITER + "AddOnCoreTrans")){
+                //Match non-core products' transactions to that of their core:
+                trxns = get(integersDict, parentDocNum + DELIMITER + "AddOnCoreTrans");
+            }
+            else{
+                //CSYS-94164
+                if ( quoteType == ADD_ON AND (assetAction == CREATE_ACTION) AND poCategory == CORE_SERVICE AND containskey(coreTerminateTrxnDict, parentDocNum) AND reconfig == TRUE_STR){
+                    if ( containskey(triggerDict, "customActionName") AND get(triggerDict, "customActionName") == "Reconfigure Inbound" AND containskey(triggerDict, "reconfiguredDocNum") AND get(triggerDict, "reconfiguredDocNum") == parentDocNum){
+                        trxns = get(coreTerminateTrxnDict, parentDocNum);                       
+                    }
+                    else{
+                        trxns = numOfTransactionsFromGrid;
+                    }
+                }
+                else{
+                    trxns = QUOTE_TRANSACTIONS;
+                }
+            }
+
+            //For products whose transactions do not have to match that of their core, retain line transactions if the line item already exists:
+            if(quoteType == ADD_ON AND assetAction == CREATE_ACTION AND poCategory <> CORE_SERVICE AND findinarray(listOfNumOfTransPOs,poID) == -1 AND NOT isFirstIteration){
+				trxns = numOfTransactionsFromGrid;
+            }
+
+            //if trxns is ever 0 on the first iteration (excluding Invoice Check Payments), set trxns to quote transactions:
+            if(quoteType == ADD_ON AND assetAction == CREATE_ACTION AND poCategory <> CORE_SERVICE AND
+                isFirstIteration AND trxns == 0 AND poID <> "566" AND poID <> "416635"){
+                trxns = QUOTE_TRANSACTIONS;
+            }
+            //CSYS-71641 part 2 END.
+		}
+
+        //CSYS-91026 (LN. 10-9-2018) - CSYS-93886 (LN. 12-10-2018)
+        if(poID == CONCUR_DETECT_PO AND itemType <> INCREMENTAL_FEE AND ( (assetAction == CREATE_ACTION and trxns >= 25000) OR (assetAction <> TERMINATE_ACTION AND assetAction <> CREATE_ACTION AND originalTrxns < 25000 AND trxns >= 25000))){
+            put(triggerDict, "concurDetectTransactionGreaterEqual25K", TRUE_STR);
+        }
+		
+	//IESCNQRCPQ-482 (PG 20-3-2023) WHEN the one of these SKUs has a discount of more than 30% on BASE and/or INCREMENTAL, trigger MISC approval
+	//IESCNQRCPQ-658 - VK (25-05-2023) Changed the Discount Validation to greater than 40% from 30% and excluded Japan from the validation
+	if(ownerMarket_quote <> "Japan" AND (poID == "6583098" OR poID == "6583498" OR poID == "6891736" OR poID == "6888096" OR poID == "8806668" OR poID == "8806708" OR poID == "8806739" OR poID == "9045917" OR poID == "9102457" OR poID == "3311130" OR poID == "3311150" OR poID == "6879020" OR poID == "9451097") AND ownerBU_quote == "Enterprise BU" AND assetAction == CREATE_ACTION AND discountFromGrid > 40){
+			put(triggerDict, "DiscountExistsCARE", TRUE_STR);
+	}
+
+        //CSYS-98981 SN. 04/2020
+        if(editionlessUniversal_quote AND ownerBU_quote == SMB_BU AND quoteType == ADD_ON AND poID == "36309" AND assetAction == CREATE_ACTION AND implementationPlatform_quote == "Standard"){
+            put(triggerDict, "permanentTestEnvironmentPlatformChange", TRUE_STR);
+        }
+
+        //UNCOMMENTING OUT CSYS-97101 SN. 09-2019, adding citeria for conditions
+        //CSYS-93607 (LN. 10-25-2018) If Permanent Test Environment is added Net New (CREATE), trigger approvals up and through CFO
+        //COMMENTING OUT (LN. 12-21-2018)
+        if(poID == "36309" AND assetAction == CREATE_ACTION AND (trxns < 1000 OR discountFromGrid > 20)){
+            if (discountFromGrid > 20 AND discountFromGrid <> acctPartnerDiscount){
+                put(triggerDict, "permanentTestEnvironmentExistsCREATE", TRUE_STR);
+                permanentTestEnvironmentApprovalMessage = permanentTestEnvironmentApprovalMessage + " Please ensure Permanent Test Environment is not discounted more than 20%.";
+            }
+        }
+        //CSYS-93735 (LN. 10-28-2018) If Concur FAVR (driveFAVR_concur) is added Net New (CREATE), trigger approvals up and through MGR
+        if (poID == "4722310"){
+            if(assetAction == CREATE_ACTION){
+                put(triggerDict, "concurFavrExistsCREATE", TRUE_STR);
+            }
+
+            //CSYS-93973 If Concur FAVR is present on the Quote, set this flag to true and write to the attribute further down.
+            if(assetAction <> TERMINATE_ACTION){
+                concurFAVRExistInQuote = true;
+            }
+        }
+        //CSYS-95230
+        if (poID == "4999040" AND assetAction == CREATE_ACTION AND itemType == BASE_FEE){
+            put(triggerDict, "procurementNetworkIntExistsCREATE", TRUE_STR);
+        }
+
+        //CSYS-93675 (LN. 11-07-2018) Universal Edition, if CREATE Professional Products exists on the Quote, append the poID (only once) to the 'createProfessionalUniversalArr'
+        if(assetAction == CREATE_ACTION AND findinarray(usOfferProfessionalOnlyArr, poID) <> -1){
+            if(findinarray(createProfessionalUniversalArr, poID) == -1){
+                append(createProfessionalUniversalArr, poID);
+            }
+        }
+
+		//CSYS-71641 part 3: make sure core service transactions stay intact if core or edition is changed and not reconfiguring:
+        //Scenario: add-on business, core/edition change upon adding the core for the first time (not reconfiguring)
+        if(quoteType == ADD_ON AND assetAction <> TERMINATE_ACTION AND poCategory == CORE_SERVICE AND NOT isFirstIteration AND
+          (actionName == "submit" OR actionName == "request approval" OR actionName == "update" OR actionName == "Return to Opportunity") ){
+
+            coreCreateWithinModel = false;
+            coreTerminateWithinModel = false;
+
+            if( containskey(stringsDict, parentDocNum + DELIMITER + "coreCreateWithinModel") ){
+                coreCreateWithinModel = true;
+            }
+            if( containskey(stringsDict, parentDocNum + DELIMITER + "coreTerminateWithinModel") ){
+                coreTerminateWithinModel = true;
+            }
+            //Not reconfiguring and core or edition already changed for this model:
+            if(reconfig <> TRUE_STR AND coreCreateWithinModel AND coreTerminateWithinModel){
+                if( containskey(integersDict, parentDocNum + DELIMITER + "AddOnCoreTrans") ){
+                    trxns = get(integersDict, parentDocNum + DELIMITER + "AddOnCoreTrans");
+                }
+            }
+
+        }
+        //END CSYS-71641 part 3
+
+        //CSYS-71641 part 4: process existing extended service line items, coming out of reconfiguring a core after swapping the core/edition in config:
+        //Scenario: add-on business, core/edition change, returning to commerce from config (reconfigure inbound)
+        if(quoteType == ADD_ON AND reconfig == TRUE_STR AND NOT isFirstIteration AND assetAction <> CREATE_ACTION
+            AND assetAction <> TERMINATE_ACTION AND poCategory <> CORE_SERVICE AND findinarray(listOfNumOfTransPOs,poID) <> -1 AND
+            containskey(triggerDict, "customActionName")
+            ){
+
+            isCoreChanged = "";
+            isEditionChanged = "";
+            customActionName = get(triggerDict, "customActionName");
+
+            if( containskey(isCoreChangedDict, parentDocNum) ){
+                isCoreChanged = get(isCoreChangedDict, parentDocNum); //grab the result of core change detection
+            }
+            if( containskey(isEditionChangedDict, parentDocNum) ){
+                isEditionChanged = get(isEditionChangedDict, parentDocNum); //grab the result of edition change detection
+            }
+            /*coreCreateWithinModel = containskey(stringsDict, parentDocNum + DELIMITER + "coreCreateWithinModel"); //does a core create line item already exist?
+            coreTerminateWithinModel = containskey(stringsDict, parentDocNum + DELIMITER + "coreTerminateWithinModel"); //does a core terminate line item already exist?
+
+            coreCreateFirstIteration = containskey(stringsDict, parentDocNum + DELIMITER + "coreCreateFirstIteration");
+            coreTerminateFirstIteration = containskey(stringsDict, parentDocNum + DELIMITER + "coreTerminateFirstIteration");*/
+
+            if(customActionName == "Reconfigure Inbound" AND (isCoreChanged == TRUE_STR OR isEditionChanged == TRUE_STR)){ //core or edition changed in config for the first time and returning to commerce
+                reconfiguredDocNum = get(triggerDict, "reconfiguredDocNum");
+                if(parentDocNum == reconfiguredDocNum){ //silo the updates to the reconfigured model
+                    if( containskey(integersDict, parentDocNum + DELIMITER + "AddOnCoreTrans") ){
+                        trxns = get(integersDict, parentDocNum + DELIMITER + "AddOnCoreTrans");
+                    }
+                    else{
+                        trxns = QUOTE_TRANSACTIONS;
+                    }
+                }
+			}
+        }
+        //END CSYS-71641 part 4
+
+        //CSYS-78922 (KA. 3-9-2017): Make sure incrementalFeeTransactionDict has a value at the poID key to avoid incorrect inflation of incremental fees
+        if(assetAction == CREATE_ACTION AND piItemType <> INCREMENTAL_FEE){
+            put( incrementalFeeTransactionDict, parentDocNum + DELIMITER + poID, trxns );
+        }
+
+		//CSYS-93247 (LN. 9-12-2018) - If Policy Audit or Audit Elite is being added to the quote for the first time together
+        if( (poID == POLICY_AUDIT_PO OR poID == AUDIT_ELITE_PO) AND triggerAuditDefaultTrxn AND ( NOT(auditTransactionsDefaulted_quote) OR NOT(auditTransactionsDefaulted) ) ){
+
+            //For the Audit Setup Fee, retrieve the number of transactions of the corresponding Core Service and apply to Audit
+            if(piItemType <> INCREMENTAL_FEE AND containskey(integersDict, parentDocNum + DELIMITER + "defaultAuditTrxn")){
+                coreSetupTrxn = get(integersDict, parentDocNum + DELIMITER + "defaultAuditTrxn");
+				trxns = integer(round(coreSetupTrxn*(.3), 0));//Calculate 30% of the Cores Transactions
+            }
+            else{
+                //Fail safe, if there is nothing stored for the Core Service Transaction, apply 30% of the Quote Level Transactions
+                trxns = integer(round(QUOTE_TRANSACTIONS*(.3), 0));
+            }
+			utilResultString = util.formAttrValueStr(attributesDict, AUDIT_TRANSACTION_DEFAULTED, docNum, string(true));
+        }
+
+        //CSYS-93972 (LN. 12-5-2018) Capture the TRXN count of Policy Audit & Receipt Audit to then populate the Audit 48 Hour SLA for Policy/Receipt Audit
+        if( (poID == POLICY_AUDIT_PO OR poID == RECEIPT_AUDIT_PO) AND assetAction <> TERMINATE_ACTION AND piItemType == BASE_FEE){
+            put(integersDict, parentDocNum + DELIMITER + POLICY_RECEIPT_AUDIT_TRXN_COUNT, trxns);
+        }
+        //CSYS-100418 (SV. 17-09-2020) Capture the TRXN count of Concur Tax Assurance by VATBox to then populate the Add-on Historical Tax Reclaim
+        if( poID == CONCUR_VATBOX_PO AND assetAction <> TERMINATE_ACTION AND piItemType == BASE_FEE){
+            put(integersDict, parentDocNum + DELIMITER + CONCUR_VATBOX_TRXN_COUNT, trxns);
+        }
+	//CSYS-100418 End
+	//CSYS-100552 (SV. 21-09-2020) Capture the TRXN count of Concur Tax Assurance by VATBox to then populate the Add-on Historical Tax Reclaim
+        if( poID == JAPAN_PUBLIC_TRANSPORT_PO AND assetAction <> TERMINATE_ACTION AND piItemType == BASE_FEE){
+            put(integersDict, parentDocNum + DELIMITER + JAPAN_PUBLIC_TRANSPORT_TRXN_COUNT, trxns);
+        }
+	//CSYS-100552 End
+	
+	//CSYS-104811 Start (PG. 21-12-2021) Capture the TRXN count of Intelligent Audit - Essentials to then populate the Intelligent Audit - Essentials Edition - Expedited Service Add-on
+        if( poID == INTELLIGENT_AUDIT_ESSENTIALS_PO AND assetAction <> TERMINATE_ACTION AND piItemType == BASE_FEE){
+            put(integersDict, parentDocNum + DELIMITER + INTELLIGENT_AUDIT_ESSENTIALS_TRXN_COUNT, trxns);
+        }
+	//CSYS-104811 End
+	//CSYS-104818 Start (PG. 21-12-2021) Capture the TRXN count of Intelligent Audit - Advanced to then populate the Intelligent Audit - Advanced Edition - Expedited Service Add-on
+        if( poID == INTELLIGENT_AUDIT_ADVANCED_PO AND assetAction <> TERMINATE_ACTION AND piItemType == BASE_FEE){
+            put(integersDict, parentDocNum + DELIMITER + INTELLIGENT_AUDIT_ADVANCED_TRXN_COUNT, trxns);
+        }
+	//CSYS-104818 End
+
+        // If we are incremental, we need to be set to the global number of transactions for line items, for now just append to the array to set later
+        utilResultFlag = util.putIntegerAttribute(integersDict, docNum, DELIMITER, TRANSACTIONS, trxns);
+
+        // AH 181910 2014/02/20 (2 of 4)
+        utilResultFlag = util.putIntegerAttribute(integersDict, docNum, DELIMITER, ORIGINAL_TRANSACTIONS, originalTrxns);
+        //End (2 of 4)
+        //Setting OriginalNumberofTrans if TIER_CHANGE is false - Ronald Mendoza
+        if(piItemType == BASE_FEE AND poCategory == CORE_SERVICE AND (quoteType_quote <> ADD_ON OR (quoteType_quote == ADD_ON AND assetAction <> TERMINATE_ACTION))){
+            if(util.getIntegerAttribute(integersDict, parentDocNum, DELIMITER, "modelNumOfTransDict") == 0){ //integers dictionaries values are never null. They start out at 0.              
+                utilResultFlag = util.putIntegerAttribute( integersDict, parentDocNum, DELIMITER, "modelNumOfTransDict", trxns );
+            }
+        }
+
+        //CSYS-49649 Fix. KA. 7-29-15. If user edits a Core Trxn field, overwrite the dictionary value.
+        if(numOfTransactionsFromGrid <> prevTrxns AND piItemType == BASE_FEE AND poCategory == CORE_SERVICE AND (quoteType_quote <> ADD_ON OR (quoteType_quote == ADD_ON AND assetAction <> TERMINATE_ACTION))){
+            utilResultFlag = util.putIntegerAttribute( integersDict, parentDocNum, DELIMITER, "modelNumOfTransDict", trxns );
+        }
+	
+		//##################Approval ####################//
+        // Line level approval triggers
+        // By default, the number of transactions on the line level is "Monthly" basis.
+        if ( billingCycleNumber == "12" ) {
+            put(triggerDict, docNum + "~" + "annualTransaction", docNum + "~" + "annualTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns * 12));
+        } elif ( billingCycleNumber == "3" ) {
+            put(triggerDict, docNum + "~" + "quarterlyTransaction", docNum + "~" + "quarterlyTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns * 3));
+        } else {
+            put(triggerDict, docNum + "~" + "monthlyTransaction", docNum + "~" + "monthlyTransaction" + TRIG_KEY_VALUE_DELIM + string(trxns));
+        }
+
+        uomType = uomTypeFromGrid;
+        put(triggerDict, docNum + "~" + "itemType", docNum + "~" + "itemType" + TRIG_KEY_VALUE_DELIM + itemType);
+        poCategory = poCategoryFromGrid;
+        put(triggerDict, docNum + "~" + "poCategory_line", docNum + "~" + "poCategory_line" + TRIG_KEY_VALUE_DELIM + poCategory); //00170952 - JV 10.10.2013
+        put(triggerDict, docNum + "~" + "uomType", docNum + "~" + "uomType" + TRIG_KEY_VALUE_DELIM + uomType);
+		
+		/* ------------------------ Calculate Line Item Ramp Plans ---------------------- */
+
+        rampFlag = rampFlagFromGrid;
+        utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, RAMP_FLAG, rampFlag );
+        rampPlanOverride = util.getStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_OVERRIDE);
+
+        // Store rampPlanOverride for the Model + PO
+        if ( rollup == "Y" AND itemType == BASE_FEE ){
+            utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum + RAMP_DELIMITER + poID, DELIMITER, PO_RAMP_OVERRIDE, rampPlanOverride );
+            utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum + RAMP_DELIMITER + poID, DELIMITER, ROLLUP_DOC_NUM, docNum );
+            utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum, DELIMITER, PRIMARY_BASE_FEE, docNum );
+        }
+        elif ( itemType == BASE_FEE ){
+            existingRollupDocNum = util.getStringAttribute( stringsDict, parentDocNum + RAMP_DELIMITER + poID, DELIMITER, ROLLUP_DOC_NUM );
+
+            if ( existingRollupDocNum == "" ){
+                utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum + RAMP_DELIMITER + poID, DELIMITER, PO_RAMP_OVERRIDE, rampPlanOverride );
+                utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum + RAMP_DELIMITER + poID, DELIMITER, ROLLUP_DOC_NUM, docNum );
+            }
+        }
+
+		//AH 181910 2014/02/20 (3 of 4) ~Replaces other logic for tierChange
+        tierChange = FALSE_STR;
+        if(quoteType_quote == ADD_ON AND itemType == BASE_FEE AND ( assetAction <> CREATE_ACTION OR (assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND containskey(coreTerminatesTrxnDict, parentDocNum)) ) ){ //CSYS-51476
+            //94033
+            if (assetAction == CREATE_ACTION){
+                originalTrxns = get(coreTerminatesTrxnDict, parentDocNum);
+            }
+
+            //CSYS-88632 Part 1 of 3 (LN. 2/19/2018)
+            //if(poCategory == CORE_SERVICE){
+                //For each core service evaluate if there has been a tier increase/decrease and map to the dictionary
+
+                if (trxns <> originalTrxns){
+                    tierChange = TRUE_STR;
+                    if(trxns > originalTrxns){
+                        put(CORE_TIER_INCREASE, parentDocNum + DELIMITER + "coreTierIncrease_line", TRUE_STR);
+                    } else {
+                        put(CORE_TIER_DECREASE, parentDocNum + DELIMITER + "coreTierDecrease_line", TRUE_STR);
+                    }
+                    if (quoteTierChange == FALSE_STR){
+                        quoteTierChange = TRUE_STR;
+                    }
+                }
+            //}
+        }
+
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, TIER_CHANGE, tierChange);
+        //End (3 of 4)
+        //CSYS-97861
+        tierIncrease = FALSE_STR;
+        tierDecrease = FALSE_STR;
+        if (orderEffectiveDate_quote <> ""  AND NOT isnull(orderEffectiveDate_quote) AND quoteType_quote == ADD_ON AND itemType == BASE_FEE AND /* assetAction <> TERMINATE_ACTION AND */ trxns <> 0 AND originalTrxns <> 0){
+            if (trxns < originalTrxns){
+                utilResultString = util.formAttrValueStr(attributesDict, "lastTierDecrease_line", docNum, datetostr(util.getDateFromString(orderEffectiveDate_quote)));
+                tierDecrease = TRUE_STR;
+            }
+            elif (trxns > originalTrxns){
+                assetTierDecreaseDate = util.getStringAttribute(stringsDict, docNum, DELIMITER, "LastTierDecreaseDate");
+                if (assetTierDecreaseDate <> "" AND NOT isnull(assetTierDecreaseDate)){
+                    if ( displayARRCommissionsAlert == false ){
+                        if (util.getDifferenceInMonths(assetTierDecreaseDate, orderEffectiveDate_quote) <= 12 ){
+                            displayARRCommissionsAlert = true;
+                        }
+                    }
+                    utilResultString = util.formAttrValueStr(attributesDict, "lastTierDecrease_line", docNum, assetTierDecreaseDate);
+                }
+                tierIncrease = TRUE_STR;
+            }
+            else{
+                assetTierDecreaseDate = util.getStringAttribute(stringsDict, docNum, DELIMITER, "LastTierDecreaseDate");
+                if (assetTierDecreaseDate <> "" AND NOT isnull(assetTierDecreaseDate)){
+                    utilResultString = util.formAttrValueStr(attributesDict, "lastTierDecrease_line", docNum, assetTierDecreaseDate);
+                }
+            }
+        }
+		//CSYS-106761 - Start
+		uqgField = util.getStringAttribute(stringsDict, docNum, DELIMITER, UQG);
+		//CSYS-106563 - Adding condition of if no billing counter is changed
+        if (uqgField <> "" AND NOT isnull(uqgField) AND piItemType == "Incremental" AND get(triggerDict, "billingCounter") <> TRUE_STR){
+            utilResultString = util.formAttrValueStr(attributesDict, UQG, docNum, uqgField);
+        }
+		//CSYS-106761 - End
+		//CSYS-106563 - Update the asset action to MODIFY when billing counter is changed for Add on quotes.
+		if(quoteType_quote == ADD_ON AND get(triggerDict, "billingCounter") == TRUE_STR AND ownerMarket_quote == "Japan" AND parentDocNumBC == line._parent_doc_number AND assetAction == NONE_ACTION){
+			assetAction = MODIFY_ACTION;
+			put( stringsDict, docNum+DELIMITER+ ASSET_ACTION, assetAction );
+			put(stringsDict, poID + DELIMITER + "itemTypeActionSync" + DELIMITER + piItemType, MODIFY_ACTION);
+			utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER,ASSET_ACTION,assetAction);//and store the new value
+			utilResultString = util.formAttrValueStr(attributesDict, ASSET_ACTION, docNum, assetAction);
+		}
+		//CSYS-106563 - End	
+		
+        utilResultString = util.formAttrValueStr(attributesDict, "tierDecrease_line", docNum, tierDecrease);
+        utilResultString = util.formAttrValueStr(attributesDict, "tierIncrease_line", docNum, tierIncrease);
+        utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, LONG_DISCOUNT, disc); //CSYS-52578. KA. 10-12-2015
+	}
+    /* case 85005 May 14 2012*/
+    utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT, disc);
+    
+    if (((piItemType == "Setup" OR piItemType == "Pre Prod" OR piItemType == "Base" OR piItemType == "Incremental") AND (uomTypeFromGrid == "TRXN")) OR ((piItemType == "Setup" OR piItemType == "Base" OR piItemType == "Incremental") AND (uomTypeFromGrid == "QTY"))){
+        if (discountPercentFromGrid > greatestLineDisc){
+            greatestLineDisc = discountPercentFromGrid;
+            highestDiscountItemType = piItemType;
+        }
+    }
+	//CSYS-95500
+    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, "unitBasedProductCanBeRamped_line", string(unitBasedProductCanBeRamped));
+    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, "unitBasedProductCanUseOverridePrice_line", string(unitBasedProductCanUseOverridePrice));
+    utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, "pricebookChange_line", string(pricebookChange));//CSYS-95251 (LN. 5-1-2019)
+}
+//CSYS-97101 SN. 09-2019
+utilResultString = util.formAttrValueStr(attributesDict, "permanentTestEnvironmentApprovalMessage_quote", QUOTE_DOC_NUM, permanentTestEnvironmentApprovalMessage);
+utilResultString = util.formAttrValueStr(attributesDict, "tierChange_quote", QUOTE_DOC_NUM, quoteTierChange);//94033
+
+//CSYS-93675 (LN. 11-7-2018) If there are poIDs present in the 'createProfessionalUniversalArr', indicating that there is at least 1 CREATE Professional ONLY product on a Universal Quote, trigger approvals up and through EVP
+if(sizeofarray(createProfessionalUniversalArr) > 0){
+    put(triggerDict, "universalProfessionalProductsExistsCREATE", TRUE_STR);
+}
+//CSYS-97861
+utilResultString = util.formAttrValueStr(attributesDict, "aRRAdjustmentAlert_quote", QUOTE_DOC_NUM, string(displayARRCommissionsAlert));
+
+//CSYS-93973 (LN. 11-9-2018) Write to the "concurFAVRRequired_quote" indicating whether or not the Concur FAVR is present on the Quote to print legal language on the Contract
+utilResultString = util.formAttrValueStr(attributesDict, "concurFAVRRequired_quote", QUOTE_DOC_NUM, string(concurFAVRExistInQuote));
+
+//CSYS-93247 (LN. 9-12-2018)
+utilResultString = util.formAttrValueStr(attributesDict, "auditTransactionsDefaulted_quote", QUOTE_DOC_NUM, string(auditTrxnDefaulted));
+
+//CSYS-87441 (LN. 1/2/2018) Moving this further up to make further room in Pricing f(x)
+utilResultString = util.formAttrValueStr(attributesDict, "greatestLineDisc_quote", QUOTE_DOC_NUM, string(greatestLineDisc));
+utilResultString = util.formAttrValueStr(attributesDict, "highestDiscountItemType_quote", QUOTE_DOC_NUM, highestDiscountItemType);
+
+
+//CSYS-87441 (LN. 1/2/2018) Moving this further up to make further room in Pricing f(x)
+if(addOnNumOfTrans <> "-1" AND numCommittedTransaction_quote <1){
+    utilResultString = util.formAttrValueStr(attributesDict, "numCommittedTransaction_quote", QUOTE_DOC_NUM, addOnNumOfTrans);
+}
+
+//CSYS-87441 (LN. 1/2/2018) Moving this further up to make further room in Pricing f(x)
+//setting preprodfeeFlag for Addons
+utilResultString = util.formAttrValueStr(attributesDict, QUOTE_HAS_PREPROD_FEE, QUOTE_DOC_NUM, string(hasPreprodFeeForAddons));
+
+if (bundleIsModify){
+	put(stringsDict, "bundleIsModify", TRUE_STR);
+}
+else{
+	put(stringsDict, "bundleIsModify", FALSE_STR);
+}
+if (strImpMethod <> "" AND NOT isnull(strImpMethod)){
+	put(stringsDict, "strImpMethod", strImpMethod);
+}
+put(floatsDict, "QUOTE_TOTAL_EXISTING_ARR", QUOTE_TOTAL_EXISTING_ARR);
+//debugLogStr = debugLogStr + "*************Pricing**********" + "\n";
+//utilResultString = util.formAttrValueStr(attributesDict, "debugLog_quote", QUOTE_DOC_NUM, debugLogStr);
+
+return "";

@@ -1,0 +1,43 @@
+//CSYS-101279 (OK. 12-4-2020) New function to trigeer approvals when not allowed SMB Prime products selected in the quote
+
+result = "";
+NEW_BIZ = "New Business";
+SMB_BU = "SMB BU";
+US_SB_Digital = "US SB Digital";
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";
+allowedSMBProductsArr = String[]; 
+notAllowedSMBProductArr = String[];
+
+if(quoteType_quote == NEW_BIZ AND ownerBU_quote == SMB_BU) {
+	if (find("*US SB Digital Central*US SB Digital North*US SB Digital South*US SB Digital East*US SB Digital West*", "*"+ownerRegion_quote+"*") <> -1) {
+		//For all New Business, SMB BU Quotes query the SMBAllowedProducts table and create an array with all allowed poID's; 	
+		allowedProductRes = BMQL("SELECT poID FROM SMBAllowedProducts");
+
+		for entry in allowedProductRes {
+			poID = get(entry, "poID");
+			append(allowedSMBProductsArr, poID);
+		}
+
+		for line in line_process{
+			partNumber = line._part_number;
+			piItemType = line._part_custom_field8;
+			trxns = line.numCommittedTransaction_line;
+			poID = line._part_custom_field1;
+			
+			//For New Biz, SMB BU quotes where unallowed products have 20 or less transactions, populate the notAllowedSMBProductArr to be evaluated to trigger approvals; 
+			if(partNumber <> ""){
+				if(piItemType == BASE_FEE AND findinarray(allowedSMBProductsArr, poID) == -1 AND trxns <= 20 AND trxns <> 0){
+					append(notAllowedSMBProductArr, poID);
+				}
+			}
+		}
+
+		//If the notAllowedSMBProductArr has products present, trigger approvals	
+		if(sizeofarray(notAllowedSMBProductArr) > 0){
+			result = "true";
+		}
+	}
+}
+
+return result;

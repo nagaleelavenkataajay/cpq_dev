@@ -1,0 +1,16 @@
+/*
+  getStrListDict - Get the string[] from dict("string[]")
+  param:
+    dictionary
+    dictionaryKey
+    defaultList
+  return 
+    string[]
+*/
+result = defaultList;
+
+if ( containskey(dictionary, dictionaryKey) ) {
+  result = get(dictionary, dictionaryKey);
+} 
+
+return result;

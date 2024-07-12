@@ -1,0 +1,24 @@
+{
+  "name" : "putFloatAttribute",
+  "variableName" : "putFloatAttribute",
+  "description" : "Puts the value of a float attribute into the floatsDict.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "delimiter",
+    "type" : "String"
+  }, {
+    "name" : "commerceField",
+    "type" : "String"
+  }, {
+    "name" : "value",
+    "type" : "Float"
+  } ],
+  "attributes" : [ ]
+}

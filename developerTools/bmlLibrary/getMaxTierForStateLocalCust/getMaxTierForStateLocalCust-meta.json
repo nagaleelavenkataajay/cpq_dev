@@ -1,0 +1,12 @@
+{
+  "name" : "Get Max Tier For State Local Cust",
+  "variableName" : "getMaxTierForStateLocalCust",
+  "description" : "CSYS-87130",
+  "libraryFunctions" : [ ],
+  "returnType" : "Integer",
+  "parameters" : [ {
+    "name" : "numTransactions",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

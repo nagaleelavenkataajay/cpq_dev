@@ -1,0 +1,33 @@
+result = "";
+returnArray = String[];
+pipe = "|^|";
+returnArray[0] = pipe;
+
+//BM_VT. Business unit is required as additional filter. Getting the business unit from the commerce process
+ownerBusUnit = "";
+ownerTheater = "";
+ownerMarket = "";
+quoteType = "";
+resSet = bmql("SELECT ownerBU_quote, ownerTheater_quote, ownerMarket_quote, quoteType_quote FROM commerce.quote_process");
+
+for res in resSet {
+	ownerBusUnit = "%"+get(res, "ownerBU_quote")+"%";
+	ownerTheater = "%"+get(res, "ownerTheater_quote")+"%";
+	ownerMarket = "%"+get(res, "ownerMarket_quote")+"%";
+	quoteType = "%"+get(res, "quoteType_quote")+"%";
+}
+
+// Add Business unit filter
+recordSet = bmql("select serviceValue, availability from serviceCompatibility where serviceAttr = $serviceAttr and coreOffering = $coreOffer and implementationMethod = $implementationMethod and (businessUnit like $ownerBusUnit or businessUnit = '' or businessUnit is null) and (ownerTheater like $ownerTheater or ownerTheater = '' or ownerTheater is null) and (ownerMarket like $ownerMarket or ownerMarket = '' or ownerMarket is null) AND (quoteType like $quoteType or quoteType = '' or quoteType is null)");
+
+for rec in recordSet
+{
+	if((upper(get(rec,"availability"))=="TRUE"))
+	{
+		append(returnArray, trim(get(rec,"serviceValue")));
+	}
+}
+
+result = join(returnArray,pipe);
+
+return result;

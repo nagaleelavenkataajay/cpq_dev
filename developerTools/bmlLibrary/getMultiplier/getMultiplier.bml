@@ -1,0 +1,57 @@
+/* util -> getMultiplier
+
+docNum - String
+piDelimiter - String
+stringsDict - String Dictionary
+integersDict - Integer Dictionary
+floatsDict - Float Dictionary
+*/
+//Constants
+PI = "_part_number";
+UOM_TYPE = "uomType_line";
+UOM_QTY = "QTY";
+QTY = "_price_quantity";
+TRANSACTIONS = "numCommittedTransaction_line";
+UNIT_OR_FIXED = "unitOrFixed_line";
+UNIT = "UNIT";
+FIXED = "FIXED";
+debug = false;
+//Get the PI of this line item
+piKey = docNum + piDelimiter + PI;
+pi = "";
+if (containskey(stringsDict, piKey)) {
+	pi = get(stringsDict, piKey);
+}
+
+//Get the UOM Type of this line item
+uomTypeKey = pi + piDelimiter + UOM_TYPE;
+uomType = "";
+if (containskey(stringsDict, uomTypeKey)) {
+	uomType = get(stringsDict, uomTypeKey);
+}
+
+//Get the Unit/Fixed field of this line item
+unitOrFixedKey = pi + piDelimiter + UNIT_OR_FIXED;
+unitOrFixed = "";
+if (containskey(stringsDict, unitOrFixedKey)) {
+	unitOrFixed = get(stringsDict, unitOrFixedKey);
+}
+
+//Get the value of either the Qty or Transactions, depending on what the UOM Type is
+multiplierKey = docNum + piDelimiter;
+multiplier = 0;
+if(unitOrFixed == UNIT) {
+	if (uomType == UOM_QTY) {
+		multiplierKey = multiplierKey + QTY;
+	} else {
+		multiplierKey = multiplierKey + TRANSACTIONS;
+	}
+	if (containskey(integersDict, multiplierKey)) {
+		multiplier = get(integersDict, multiplierKey);
+	}
+} else {
+	multiplier = 1;
+}
+
+
+return multiplier;

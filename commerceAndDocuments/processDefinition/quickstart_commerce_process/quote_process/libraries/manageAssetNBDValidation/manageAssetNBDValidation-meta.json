@@ -1,0 +1,11 @@
+{
+  "name" : "Manage AssetNBD Validation",
+  "variableName" : "manageAssetNBDValidation",
+  "description" : "CSYS-89840",
+  "libraryFunctions" : [ "util.getUserTimeZone" ],
+  "returnType" : "Boolean",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "quoteType_quote", "orderEffectiveDate_quote", "billingCycle_quote" ],
+  "systemAttributes" : [ ]
+}

@@ -1,0 +1,21 @@
+{
+  "name" : "spliceXMLNodeValuesExtended",
+  "variableName" : "spliceXMLNodeValuesExtended",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "originalXMLString",
+    "type" : "String"
+  }, {
+    "name" : "spliceNodeName",
+    "type" : "String"
+  }, {
+    "name" : "newNodeValues",
+    "type" : "String[]"
+  }, {
+    "name" : "parentNode",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

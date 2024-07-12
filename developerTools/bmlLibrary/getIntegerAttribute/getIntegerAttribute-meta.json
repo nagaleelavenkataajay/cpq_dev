@@ -1,0 +1,21 @@
+{
+  "name" : "getIntegerAttribute",
+  "variableName" : "getIntegerAttribute",
+  "description" : "Obtains the value of an integer-type attribute from the integersDict.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Integer",
+  "parameters" : [ {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "delimiter",
+    "type" : "String"
+  }, {
+    "name" : "commerceField",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

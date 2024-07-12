@@ -1,0 +1,15 @@
+{
+  "name" : "Get VAT Validation Message",
+  "variableName" : "getVATValidationMessage",
+  "description" : "For CSYS-50180. KA. 8-19-2015. Retrieves the appropriate message to show the user based on validating the entered VAT #.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "vatValidationResult",
+    "type" : "String"
+  }, {
+    "name" : "contractAutomation",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

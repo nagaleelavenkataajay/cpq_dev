@@ -1,0 +1,85 @@
+/* util -> captureProdBasedLinesForRamps
+stringsDict - dict("string")
+integersDict - dict("integer")
+*/
+
+PARENT_PRODUCT_POID_INDEX = "parentProductPOIDIndex";//CSYS-94381
+PARENT_INDEX_DOC_NUM = "parentIndexDocNum";//CSYS-94381
+IS_PRODUCTBASED = "productBasedTransaction_line";//CSYS-94381
+DELIMITER = "@.@";
+TERMINATE_ACTION = "TERMINATE";
+TILDE_DELIMITER = "~";
+BASE_FEE = "Base";
+TRUE_STR = "true";
+/*
+###### CSYS-94381 (LN. 1-3-2018) ######
+
+New logic for those FIXED priced Extended Services that need to match the Ramp Plan of their designated 'Parent' Extended Service
+
+Example:
+    1. The Audit 48 Hour SLA for Policy Audit Ramps MUST match Policy Audit's Ramp Plan
+    2. The 'Parent/Child Product' relationship is stored in the ProductBasedRecServs table in BMI.
+    3. This table is called via the utility library getProductBasedRecurringServicesPO() & returns a delimited String[]
+        a. Example Return Statement: [977~4388615, ...] - [parentPoID~childPoID, ...]
+*/
+parentProductPOArr = String[];//Initialize a new array to store the Parent PO ID
+childProductPOArr = String[];//Initialize a new array to store the Child PO ID
+
+productBasedPOArr = util.getProductBasedRecurringServicesPO();
+
+for eachEntry in productBasedPOArr {
+    productBasedPO = split(eachEntry, TILDE_DELIMITER);
+    //Append the Parent PO ID's to its corresponding array - the relationship between the data in the two arrays is associated with their matching index number
+    append(parentProductPOArr, productBasedPO[0]);
+    //Append the Child PO ID's to its corresponding array
+    append(childProductPOArr, productBasedPO[1]);
+}
+
+for line in line_process{
+	poID = line.poId_line;
+	piItemType = line._part_custom_field8;
+	docNum = line._document_number;
+	assetAction = line.assetAction_line;
+	//CSYS-94381 (LN. 1-3-2019)
+    if(findinarray(parentProductPOArr, poID) <> -1 AND assetAction <> TERMINATE_ACTION){//If a Parent POID is found on the quote, continue
+		index = 0;
+		for eachPO in parentProductPOArr {
+
+            if(eachPO == poID AND piItemType == BASE_FEE){
+                /*Store the index number of the Parent POID found in the parentProductPOArr.
+                The index is how we will associate the corresponding Child PO below.
+                If both the Parent POID & corresponding Child POID is found, ensure the Child's ramps match the Parent.*/
+                put(integersDict, PARENT_PRODUCT_POID_INDEX + DELIMITER + string(index), index);
+                put(stringsDict, childProductPOArr[index] + DELIMITER + PARENT_INDEX_DOC_NUM, docNum);
+            }
+
+            index = index + 1;
+        }
+    }
+}
+
+for line in line_process{
+	poID = line.poId_line;//CSYS-94381 (LN. 1-3-2019)
+	assetAction = line.assetAction_line;
+	docNum = line._document_number;
+	 //CSYS-94381 (LN. 1-3-2019)
+    if(findinarray(childProductPOArr, poID) <> -1 AND assetAction <> TERMINATE_ACTION){//If a Child POID is found on the quote, continue
+
+        index = 0;
+
+        for eachPO in childProductPOArr {
+			if(containskey(integersDict, PARENT_PRODUCT_POID_INDEX + DELIMITER + string(index)))//CSYS-104050 NT 23092021
+			{
+            if(eachPO == poID AND get(integersDict, PARENT_PRODUCT_POID_INDEX + DELIMITER + string(index)) == index){
+                /* If the Child POID's index matches the index of the Parent POID in the parentProductPOArr that is also on the quote,
+                write to the productBasedTransaction_line attribute to indicate this Child Product POID will need to match the Parent Product Ramp Plan.*/
+                utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, IS_PRODUCTBASED, TRUE_STR);
+				break; //CSYS-104050 NT 23092021
+            }
+			}
+            index = index + 1;
+        }
+    }
+	
+}
+return "";

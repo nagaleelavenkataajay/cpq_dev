@@ -1,0 +1,21 @@
+{
+  "name" : "Get Intell Constrain Attr",
+  "variableName" : "getIntellConstrainAttr",
+  "description" : "NO LONGER USED in determining if there is an Intelligence constraint scenario with 2 or more cores.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "parentDNarray",
+    "type" : "String[]"
+  }, {
+    "name" : "poList",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "modelContainsBI",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "intellConstrainAttrDict",
+    "type" : "Boolean Dictionary"
+  } ],
+  "attributes" : [ ]
+}

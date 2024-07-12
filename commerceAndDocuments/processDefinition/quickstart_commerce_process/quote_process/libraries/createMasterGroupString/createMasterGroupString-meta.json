@@ -1,0 +1,11 @@
+{
+  "name" : "Create Master Group String",
+  "variableName" : "createMasterGroupString",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ ],
+  "systemAttributes" : [ ]
+}

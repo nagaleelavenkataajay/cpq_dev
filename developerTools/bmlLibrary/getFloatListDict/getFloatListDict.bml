@@ -1,0 +1,16 @@
+/*
+  getFloatListDict - Get the float[] from dict("float[]")
+  param:
+    dictionary
+    dictionaryKey
+    defaultList
+  return 
+    float[]
+*/
+result = defaultList;
+
+if ( containskey(dictionary, dictionaryKey) ) {
+  result = get(dictionary, dictionaryKey);
+} 
+
+return result;

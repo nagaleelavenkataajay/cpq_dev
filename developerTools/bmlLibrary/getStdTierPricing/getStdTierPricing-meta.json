@@ -1,0 +1,24 @@
+{
+  "name" : "getStdTierPricing",
+  "variableName" : "getStdTierPricing",
+  "description" : "Populates the piQtyToPriceDict with the correct Standard Tier Price for a given list of PIs and Qtys (or Transactions).",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "priceList",
+    "type" : "String"
+  }, {
+    "name" : "currencyCode",
+    "type" : "String"
+  }, {
+    "name" : "piQtyAndImplementationMethodToPriceDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "piQtyAndImplementationMethodList",
+    "type" : "String[]"
+  }, {
+    "name" : "piDelimiter",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

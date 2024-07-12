@@ -1,0 +1,15 @@
+{
+  "name" : "printDebugSubsection",
+  "variableName" : "printDebugSubsection",
+  "description" : "Prints a subsection for debugging output.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "description",
+    "type" : "String"
+  }, {
+    "name" : "tabs",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

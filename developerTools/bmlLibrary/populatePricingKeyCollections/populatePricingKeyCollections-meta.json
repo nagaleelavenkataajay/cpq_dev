@@ -1,0 +1,33 @@
+{
+  "name" : "populatePricingKeyCollections",
+  "variableName" : "populatePricingKeyCollections",
+  "description" : "",
+  "libraryFunctions" : [ "util.getIntegerAttribute", "util.getStringAttribute", "util.putStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "docNumList",
+    "type" : "String[]"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "coreTerminateEditionDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "piQtyAndImplementationMethodList",
+    "type" : "String[]"
+  }, {
+    "name" : "piQtyAndImplementationMethodToPriceDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "piQtyAndImplementationMethodDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "piDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  } ],
+  "attributes" : [ ]
+}

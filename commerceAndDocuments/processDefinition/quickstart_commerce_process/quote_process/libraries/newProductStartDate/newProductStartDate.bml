@@ -1,0 +1,2319 @@
+/* 		==========================================================================
+		| COMMERCE BML LIBRARY													 |
+		+------------------------------------------------------------------------+
+		| New Product Start Date																 |
+		==========================================================================
+				
+		TABLE OF CONTENTS
+		==========================================================================	
+		i.	CONSTANTS -------------------------------------------- [CONSTANTS]
+		
+	*/
+	
+	
+/* Parameters to this function
+
+attributesDict - This dictionary contanis all the Quote and Line level attributes and their values
+			   - This is built in pricing and approval libraries and is passed to setAttributes library to form the final return string.
+*/
+
+
+floatsDict = dict("float");
+integersDict = dict("integer");//CSYS-95793 SN. 7-2019
+
+/* ======================================================================== */
+/*	                   CONSTANTS [CONSTANTS]  			    */
+/* ======================================================================== */
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd";
+QUOTE_DOC_NUM = "1";
+dateString = string[];
+nextBillingSplit = string[];
+dateDelim = "-";
+newOrderDate = "";
+//countDict = dict("integer"); Possible future use for tracking multiple core services
+totalOffsetDict = dict("string"); //per CSYS-46342. Track totalOffset by core. KA. 3-7-2016
+prodOffsetFlagDict = dict("string"); //per CSYS-46342. Track prodOffsetFlag by core. KA. 3-7-2016
+coreActionDict = dict("string"); //per CSYS-46342. Track core action code. KA. 3-7-2016
+coreDescDict = dict("string"); //per CSYS-46342. Track core description. KA. 3-7-2016
+coreHasCreatesDict = dict("string"); //per CSYS-46342. Does the core contain CREATE action codes?
+coreHasTerminatesDict = dict("string"); //per CSYS-46342. Does the core contain TERMINATE action codes?
+coreHasExtServCreateModifyTerminate = dict("string"); //per CSYS-46342/CSYS-96967. Does the core contain an extended service that has a CREATE, MODIFY, TERMINATE action code?
+TRUE_BOOLEAN = true;
+TRUE_STR = "true";
+FALSE_STR = "false";
+CREATE_ACTION = "CREATE";
+NONE_ACTION = "NONE"; 
+MODIFY_ACTION = "MODIFY";
+TERMINATE_ACTION = "TERMINATE";
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";
+SETUP_FEE = "Setup";
+PRE_PRODUCTION = "Pre Prod";
+CORE_SERVICE = "Core Service";
+EXT_SERVICE = "Extended Service";
+//cntOffsetTotal = 0;
+cntOffset = 0;
+cntWaive = 0;
+newProdBaseDate = "";
+newProdIncDate = "";
+newProdPreDate = "";
+newProdSetupDate = "";
+months = "";
+nBQuoteWithSAPOtherContractingEntity = false;  //CSYS-99177 (OK. 5-14-2020)
+sAPNewProdStartDate = ""; //CSYS-99177 (OK. 5-14-2020)
+nextBillingDateforOFArray = string[]; //CSYS-100040 (OK. 8-10-2020)
+coreOneTFSD = ""; //CSYS-100040 (OK. 8-10-2020)
+coreTwoTFSD =""; //CSYS-100040 (OK. 8-10-2020)
+nPSDDict = dict("string"); //CSYS-100040 (OK. 8-10-2020)
+audit60Dict = dict("string"); //CSYS-100310 (OK. 8-19-2020)
+audit6Dict = dict("string"); //CSYS-100310 (OK. 8-19-2020)
+productName = "";//CSYS-95793 SN. 7-2019
+coreDocNumDict = dict("string");
+existingCoreDict = dict("string");
+terminateDateDict = dict("string"); //CSYS-41517 start
+//CSYS-88391 (LN. 3-7-2018) Initialization 
+APPLIED_PROMOTION_POID = "appliedPromotion_PoID";
+MONTHS_IN_DAYS_POID = "monthsInDays_PoID";
+START_END_OF_MONTH_POID = "startEndofMonth_PoID";
+END_OF_MONTH = "EOM";
+promoProductFamilyDict = dict("string");
+assetInitialStartDateDict = dict("date");
+assetInitialEndDateDict = dict("date");
+//CSYS-88391 Initialization END
+newPreProdArr = string[];  
+ADD_ON = "Add-On Business";
+DELIMITER = "@.@";
+ATTR_DELIMITER = "~";
+parentDocArr = string[]; //CSYS-105460																			 
+/* -------------------- Constants for quote level Attributes ---------------- */
+BUSINESS_UNIT = ownerBU_quote;
+THEATER = ownerTheater_quote;
+MARKET = ownerMarket_quote;
+PRE_PROD_WAIVE = preproductionWaive_quote;
+MONTHLY_WAIVE = monthlyWaivePeriod_quote;
+//CSYS-100991 (SV. 04-01-2021) Start
+TERM_DATE = "termDate_line";
+NEXT_BILL_DATE = "nextBillingDate_line";
+orderEffectiveDateHDS = orderEffectiveDateHDS_quote;
+termDateText = "";
+//CSYS-100991  End
+//CSYS-102447 NP 12/04/2021 Start
+newProdSetupDateSTPM=""; 
+sTPMParentId = ""; 
+sTPMParentIdOthercore=""; // CSYS-102915 NP 05/19-2021
+stdToProfMigration = false;
+termDateSTPM = "";
+//CSYS-102447 End
+nbdOldLineSTPM=""; //CSYS-102511 NP 11-15-2021
+//CSYS-100742 NP 07/05/2021 Start
+nPSDDetectOversight=""; 
+termDateDetect = "";
+//CSYS-100742 End
+nbdOldLine="";//CSYS-104596 NP 11-09-2021
+detectByAppZenTerminateParentId="";//CSYS-104596 NP 11-09-2021
+terminationDateDelay = ""; //CSYS-106050 (OK. 4-25-2022)
+poidArray = string[]; //CSYS-106050 (OK. 4-25-2022)
+anyTypeDict = dict("anytype"); //CSYS-106638 (OK. 7-11-2022)
+detectParentDocNum = ""; //CSYS-106638 (OK. 7-11-2022)
+parentDocNumArray = string[]; //CSYS-106714 (OK. 7-22-2022)
+detectMigrationTermDate = "";//CSYS-106714 (OK. 7-22-2022)
+hDSTermDate = "";//CSYS-106714 (OK. 7-22-2022)
+coreNBDDict = dict("string"); //IESCNQRCPQ-481 (OK. 4-13-2023)
+isDelayedBilling = ""; //IESCNQRCPQ-932 (OK. 8-7-2023)
+coreNBDonTerminateDict = dict("string"); //IESCNQRCPQ-1133 (OK. 9-25-2023)
+coreAccountPreProdOffsetDict = dict("integer"); //IESCNQRCPQ-1698 (LIK. 3-21-2024)
+
+
+//productionOffsetFlag = false; //moved to loop to set this variable by core
+//CSYS-94744
+if ( MONTHLY_WAIVE <> "" AND NOT (isnull(MONTHLY_WAIVE)) ){
+	daysArr = split(MONTHLY_WAIVE, " ");
+	if ( find(daysArr[1], "days") <> -1 ){
+		waivePeriod = atoi(daysArr[0])/30;
+	}
+	else{
+		waivePeriod = atoi(daysArr[0]);
+	}
+}else{
+	waivePeriod = 0;
+}
+
+//CSYS-97078
+if ( PRE_PROD_WAIVE <> "" AND NOT (isnull(PRE_PROD_WAIVE)) ){
+	daysArr = split(PRE_PROD_WAIVE, " ");
+	if ( find(daysArr[1], "days") <> -1 ){
+		preProdWaivePeriod = atoi(daysArr[0])/30;
+	}
+	else{
+		preProdWaivePeriod = atoi(daysArr[0]);
+	}
+}else{
+	preProdWaivePeriod = 0;
+}
+
+
+/* -------------------- Constants for Line Item Attributes ---------------- */
+NEW_PROD_START_DATE = "newProductStartDate_line";
+NEW_PROD_END_DATE = "newProductEndDate_line";
+ASSET_ACTION = "assetAction_line";
+CORE_OFFERING = "coreOffering_line";
+EDITION_LINE = "implementationMethod_line";
+PO_CATEGORY = "poCategory_line";
+PI_ITEM_TYPE = "piItemType_line";
+
+/*--------------------- Booleans to set Account Pre Production flag ------------------ */
+newPreProd = false;
+addOnPreProd = false;
+
+
+//CSYS-88981 (LN. 2-9-2018) State and Local Government Logic: Map the accountVertical_quote ("State and Local Goverment") to the ownerMarket_quote
+if(stateAndLocal_quote){
+	MARKET = accountVertical_quote;
+}
+
+
+// #############################################################################
+// Set Order Effective Date to the 1st of the Month
+// #############################################################################
+dateText = substring((orderEffectiveDate_quote),0,10);
+
+if (find(dateText,"-") <> -1){
+	dateString = split(dateText, dateDelim);
+}
+
+if(sizeofarray(dateString) > 0 AND isnumber(dateString[2])){
+	dateString[2] = "01";
+	newOrderDate = join(dateString,dateDelim);
+}
+
+for line in line_process{
+// #############################################################################
+// Track core action code state
+// #############################################################################
+	parentDocNum = line._parent_doc_number;	
+	itemType = line.piItemType_line;
+	assetAction = line.assetAction_line;
+	poCategory = line.poCategory_line;
+	PoId = line._part_custom_field1; //CSYS-105460 - LIN 02-04-2022																													
+	nextBillingDate = substring(line.nextBillingDate_line,0,10); //CSYS-106714 (OK. 7-22-2022)
+	
+	//CSYS-106050 (OK. 4-25-2022) New array to store poid values
+	if (findinarray(poidArray, PoId) == -1) {
+		append(poidArray, PoId);
+	}
+	
+	//CSYS-106714 (OK. 7-22-2022) New array with parentDocNum
+	if (assetAction == TERMINATE_ACTION) {
+		if (nextBillingDate <> "" AND findinarray(parentDocNumArray, parentDocNum) == -1) {
+			append(parentDocNumArray, parentDocNum);
+		}
+	}
+	
+	//IESCNQRCPQ-481 (OK. 4-13-2023) Create new dict to store core NBD value
+	if (poCategory == CORE_SERVICE AND assetAction <> TERMINATE_ACTION AND nextBillingDate <> "" AND itemType == BASE_FEE AND NOT(containskey(coreNBDDict, parentDocNum))) {
+		put(coreNBDDict, parentDocNum, nextBillingDate);
+	}
+	
+	if(assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE){ //core CREATE
+		put(coreHasCreatesDict, parentDocNum, TRUE_STR);
+	}
+	if(assetAction == TERMINATE_ACTION AND poCategory == CORE_SERVICE){ //existing core CREATE replacing terminate
+		put(coreHasTerminatesDict, parentDocNum, TRUE_STR);
+		put(coreNBDonTerminateDict, parentDocNum, nextBillingDate); //IESCNQRCPQ-1133 (OK. 9-25-2023) Store the NBD value for terminated core
+	}
+	//CSYS-96967 (LN. 8-28-2019)
+	if(assetAction <> NONE_ACTION AND poCategory == EXT_SERVICE){  //extended service CREATE, MODIFY, TERMINATE
+		put(coreHasExtServCreateModifyTerminate, parentDocNum, TRUE_STR);
+	}
+	//CSYS-105460 LIN 02/04/2022
+	if(billingCycle_quote <> ""){
+			if(PoId == "1100" AND itemType == SETUP_FEE AND OwnerBU_quote == "SMB BU" AND (billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly")) //CSYS-102511 NP 11-15-2021
+			{
+				stdToProfMigration = true;
+				sTPMParentId = parentDocNum;					
+          	}
+    }
+    //CSYS-105460 end 					  
+}
+
+// CSYS-99177 (OK. 5-14-2020) Using this variable to check the condition
+if(contractingEntity_quote == "SAP Other" AND quoteType_quote == "New Business"){
+	nBQuoteWithSAPOtherContractingEntity = true;
+}
+
+//IESCNQRCPQ-1299 (OK. 11-20-2023) Start: Use ResellerOffset table for montly offset for Resellers
+isJapanReseller = "";
+resellerOffsetValue = "";
+if (ownerMarket_quote == "Japan") {
+	isJapanReseller = "YES";
+}
+else {
+	isJapanReseller = "NO";
+}
+resellerOffsetRec = bmql("select monthlyOffset from ResellerOffset where isJapanReseller = $isJapanReseller");		
+for rec in resellerOffsetRec {
+	resellerOffsetValue = get(rec, "monthlyOffset");
+}
+//IESCNQRCPQ-1299 (OK. 11-20-2023) End
+	
+// #############################################################################
+// Set New Product Start Date specific to each line based on Action/Item Type/PO Category etc.
+// #############################################################################
+for line in line_process {
+	cntOffsetTotal = 0;
+	productionOffsetFlag = false;
+	extendedMonthlyOffset = -1;//CSYS-95793 SN. 7-2019
+	pid = line._part_number;//CSYS-95793 SN. 7-2019
+	lineNum = line._document_number;
+	
+	coreOffering = line.coreOffering_line;	
+	edition = line.implementationMethod_line;	
+	assetAction = line.assetAction_line;	
+	poCategory = line.poCategory_line;	
+	itemType = line.piItemType_line;	
+	lineDescription = line.lineDescription_line; //CSYS-95793 SN. 7-2019
+	
+	parentDocNum = line._parent_doc_number;
+	impFlag = util.getStringAttribute(triggerDict, parentDocNum, DELIMITER, "coreFlip" ); //this needs refactored since it's only ever set coming out of config
+	coreFlag = util.getStringAttribute(triggerDict, parentDocNum, DELIMITER, "editionFlip" ); //this needs refactored since it's only ever set coming out of config
+	
+	//CSYS-105460 LIN 02/04/2022
+	if(stdToProfMigration){
+		if(assetAction == MODIFY_ACTION OR assetAction == TERMINATE_ACTION){
+			sTPMParentIdOthercore = parentDocNum;	
+			append(parentDocArr,sTPMParentIdOthercore);
+		}
+	}
+	//CSYS-105460 end					 						   
+// #############################################################################
+// Track core action code state: Map action codes 
+// #############################################################################	
+	if(assetAction == NONE_ACTION AND poCategory == CORE_SERVICE AND NOT containskey(coreHasExtServCreateModifyTerminate, parentDocNum)){ //existing core NONE action with no extended service CREATE's
+		put(coreActionDict, parentDocNum, NONE_ACTION);
+		put(coreDescDict, parentDocNum, coreOffering);
+	}
+	if(assetAction == NONE_ACTION AND poCategory == CORE_SERVICE AND containskey(coreHasExtServCreateModifyTerminate, parentDocNum)){ //existing core NONE action WITH extended service CREATE, MODIFY, TERMINATE (CSYS-96967 (LN. 8-28-2019))
+		put(coreActionDict, parentDocNum, "NONE/CREATE_MODIFY_TERMINATE");//CSYS-96967 (LN. 8-28-2019)
+		put(coreDescDict, parentDocNum, coreOffering);
+	}
+	if(assetAction == MODIFY_ACTION AND poCategory == CORE_SERVICE){ //existing core MODIFY action
+		put(coreActionDict, parentDocNum, MODIFY_ACTION);
+		put(coreDescDict, parentDocNum, coreOffering);
+	}
+	if(assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND NOT containskey(coreHasTerminatesDict, parentDocNum)){ //core CREATE, core doesn't have TERMINATE's
+		put(coreActionDict, parentDocNum, CREATE_ACTION);
+		put(coreDescDict, parentDocNum, coreOffering);
+	}
+	if(assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND containskey(coreHasTerminatesDict, parentDocNum)){ //existing core CREATE replacing terminate
+		put(coreActionDict, parentDocNum, "CREATE/TERMINATE");
+		put(coreDescDict, parentDocNum, coreOffering);
+	}
+	
+	// BMQL to select the monthly offset from the newProductStartDate Table based on Owner BU, Owner Theater, Core Product and Edition (added the market check to the query for CSYS-83703. KA. 9-19-2017)
+	lineOffset = bmql("select monthlyOffset, market from newProductStartDate where bu = $BUSINESS_UNIT and theater = $THEATER and coreProduct = $coreOffering and edition = $edition and (market = $MARKET or market is null or market = '')");
+
+	//CSYS-99177, (OK. 5-14-2020) For SAP Other Contratcing Entity setting the NPSD.
+	if(nBQuoteWithSAPOtherContractingEntity == true)
+	{  
+		if(sAPSellsConcur_quote == "Shadow Harmony Quote"){  //New Product Start Date will be OED
+			sAPNewProdStartDate = orderEffectiveDate_quote;		
+		}		
+		if(sAPSellsConcur_quote == "SAP Exception"){   //New Product Start Date will be 1st of the Month{
+			sAPNewProdStartDate = util.addMonthsToDate(newOrderDate, string(1));		
+		}
+		if (assetAction == CREATE_ACTION AND itemType == BASE_FEE ){  // set Monthly Offset value 1
+			utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffset_line", lineNum, "1");
+		}
+
+		utilResultString = util.formAttrValueStr(attributesDict, "accountPreProduction_quote", QUOTE_DOC_NUM ,"false"); // set the Account Pre-Prod flag false
+		utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(sAPNewProdStartDate)));
+		put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(sAPNewProdStartDate));		
+		continue; 	//To bypass the current logic leveraging the Monthly Offset Table 
+	}  
+	//CSYS-99177 (OK. 5-14-2020) End
+	
+	//CSYS-100331 (OK. 8-27-2020) Start: Setting NPSD to order effective date for Shadow Harmony Addon quotes in SAP Other
+	if (quoteType_quote == ADD_ON AND SAPSellsConcurFromAccount_quote == "Shadow Harmony Quote") {
+		sAPNewProdStartDate = orderEffectiveDate_quote;	
+		utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(sAPNewProdStartDate)));
+		put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(sAPNewProdStartDate));
+		continue; //To bypass the current logic leveraging the Monthly Offset Table
+	}
+	//CSYS-100331 - End
+	
+	//CSYS-100603 (OK. 10-5-2020) Start: For Resell Opp we are setting NPSD Value
+	//CSYS-100964 (OK. 11-2-2020) Commenting out below line to update the condition for resell to check the new field value
+	//if(quoteType_quote == "New Business" AND primaryReferringPartnerCategory_quote == "VAR") {
+	if(quoteType_quote == "New Business" AND referralStatus_quote == "Accept" AND referringPartnerCategory_quote == "VAR") {
+		//CSYS-102151 (TJG 3-22-2021) Changing monthly offset from 1 to 2
+		//totalOffsetValue = 1 + waivePeriod;
+		//CSYS-105925 (PG 4-21-2022) Changing monthly offset from 2 to 3
+		//totalOffsetValue = 2 + waivePeriod;
+		//CSYS-106979 (PG 9-2-2022) Changing monthly offset from 3 to 4
+		
+		//IESCNQRCPQ-1299 (OK. 11-20-2023) Comment out below line and use ResellerOffset data table for monthlyoffser value
+		//totalOffsetValue = 4 + waivePeriod;
+		totalOffsetValue = atoi(resellerOffsetValue) + waivePeriod;
+		
+		vARNewProdStartDate = util.addMonthsToDate(newOrderDate, string(totalOffsetValue));
+		if (itemType == BASE_FEE) {  // set Monthly Offset value 2; formerly 1
+		        //CSYS-102151 (TJG 3-22-2021) Changing monthly offset from 1 to 2 
+			//utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffset_line", lineNum, "1");
+			//CSYS-105925 (PG 4-21-2022) Changing monthly offset from 2 to 3
+			//utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffset_line", lineNum, "2");
+			//CSYS-106979 (PG 9-2-2022) Changing monthly offset from 3 to 4
+			
+			//IESCNQRCPQ-1299 (OK. 11-20-2023)Comment out below line and use monthlyoffset from ResellerOffset data table
+			//utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffset_line", lineNum, "4");
+			utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffset_line", lineNum, resellerOffsetValue);
+		}
+		utilResultString = util.formAttrValueStr(attributesDict, "accountPreProduction_quote", QUOTE_DOC_NUM ,"false"); // set the Account Pre-Prod flag false
+		utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(vARNewProdStartDate)));
+		put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(vARNewProdStartDate));		
+		//CSYS- 105925 (PG. 03-02-2022) Commenting out the below line to leverage the Monthly Offset table
+		continue; //To bypass the current logic leveraging the Monthly Offset Table
+	}
+	//CSYS-100603 (OK. 10-5-2020) End
+	
+	for offset in lineOffset {
+		months = get(offset, "monthlyOffset");
+	}
+	monthlyOffsetFromDataTable = util.customAtoi(months, 0); //CSYS-96144 SN. 
+
+	//CSYS-95793 SN. 7-2019; BMQL to get the monthly offset when the extended services is populated
+	extendedLineOffset = bmql("select monthlyOffset from newProductStartDate where extendedService = $lineDescription");
+	//CSYS-95793 SN. 7-2019
+	for offset in extendedLineOffset {
+		extendedMonthlyOffset = util.customAtoi(get(offset, "monthlyOffset"), 0);
+
+		if(extendedMonthlyOffset <> 0){
+			months = string(extendedMonthlyOffset);
+			put(integersDict, lineNum + DELIMITER + pid, extendedMonthlyOffset);
+		}
+	}
+
+//CSYS-39154 11-4-14 ATG Part 1 of 2
+	if(quoteType_quote == "New Business" AND poCategory == CORE_SERVICE AND itemType == BASE_FEE){
+		if(months == "prod"){
+			newPreProd = true;
+		}
+	}
+	
+	//Set Account Pre Prod to True if new Core Service and NPSD = PROD (CSYS-44581 PART 1)
+	if(quoteType_quote == ADD_ON AND poCategory == CORE_SERVICE AND assetAction == CREATE_ACTION AND itemType == BASE_FEE AND coreFlag <> string(true) AND impFlag <> string(true)){ 
+		if(months == "prod"){
+			addOnPreProd = true;
+		}
+	}
+// #############################################################################
+// Set New Product Start Date specific to Setup Line Items for the Core Service
+// #############################################################################
+	if(assetAction == CREATE_ACTION AND itemType == SETUP_FEE){
+
+		if(newOrderDate <> "") {
+			newProdSetupDate = util.addMonthsToDate (newOrderDate, string(1));
+		
+			if(newProdSetupDate <> ""){
+				utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newProdSetupDate)));
+				//CSYS-88391 (LN. 3-7-2018)
+				put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(newProdSetupDate));
+			}
+		}
+	}
+// #############################################################################
+// Set New Product Start Date specific to Pre Prod Line Level Items for the Core Services
+// #############################################################################
+	if(assetAction == CREATE_ACTION AND itemType == PRE_PRODUCTION AND poCategory == CORE_SERVICE){
+		
+		if(newOrderDate <> "") {
+			newProdPreDate = util.addMonthsToDate(newOrderDate, string(1));
+			/*
+			if(PRE_PROD_WAIVE <> ""){
+					
+				if(PRE_PROD_WAIVE == "30 days"){
+					newProdPreDate = util.addMonthsToDate(newProdPreDate, string(1));
+				}elif(PRE_PROD_WAIVE == "60 days"){
+					newProdPreDate = util.addMonthsToDate(newProdPreDate, string(2));				
+				}elif(PRE_PROD_WAIVE == "90 days"){
+					newProdPreDate = util.addMonthsToDate(newProdPreDate, string(3));					
+				}
+			}*/
+			if (preProdWaivePeriod <> 0){
+				newProdPreDate = util.addMonthsToDate(newProdPreDate, string(preProdWaivePeriod));
+			}
+		}
+		if(newProdPreDate <> ""){
+			utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newProdPreDate)));
+			//CSYS-88391 (LN. 3-7-2018)
+			put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(newProdPreDate));
+		}
+	}
+// #############################################################################
+// Set New Product Start Date specific to Base Line Level Items both Core and Extended Services
+// #############################################################################
+	//IESCNQRCPQ-533 - LIK-05-10-2023- Added OR condition for NPSD calculation for base product with zero price for new business quotes.
+	if((assetAction == CREATE_ACTION AND itemType == BASE_FEE) OR (assetAction == NONE_ACTION AND itemType == BASE_FEE AND quoteType_quote == "New Business")){
+		if(newOrderDate <> "") {
+
+			//lineMonthlyOffset = 0; 
+
+			if(months <> "") { 
+
+				utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffset_line", lineNum, months);
+				//CSYS-96144 SN. 
+				if (months == "prod"){
+					newProdBaseDate = util.addMonthsToDate(newOrderDate, string(61));
+					cntOffset = 1;
+					productionOffsetFlag = true;
+				}
+				else{
+					newProdBaseDate = util.addMonthsToDate(newOrderDate, string(monthlyOffsetFromDataTable));
+					cntOffset = monthlyOffsetFromDataTable;
+				}
+				//CSYS-96144 SN. Commenting out below code
+				/*
+				if(months == "1"){
+					newProdBaseDate = util.addMonthsToDate(newOrderDate, string(1));
+					cntOffset = 1;
+					//lineMonthlyOffset = cntOffset;
+					
+				}elif (months == "prod"){
+					newProdBaseDate = util.addMonthsToDate(newOrderDate, string(61));
+					cntOffset = 1;
+					//lineMonthlyOffset = -1;
+					productionOffsetFlag = true;
+
+				}elif(months == "2"){
+					newProdBaseDate = util.addMonthsToDate(newOrderDate, string(2));
+					cntOffset = 2;
+					//lineMonthlyOffset = cntOffset;
+					
+				}elif(months == "3"){
+					newProdBaseDate = util.addMonthsToDate(newOrderDate, string(3));
+					cntOffset = 3;
+					//lineMonthlyOffset = cntOffset;
+					
+				}*/
+			}else {
+				newProdBaseDate = newOrderDate;
+			}
+			//CSYS-94744
+			/*
+			if(MONTHLY_WAIVE <> ""){
+				if(MONTHLY_WAIVE == "30 days"){
+					newProdBaseDate = util.addMonthsToDate(newProdBaseDate, string(1));
+					cntWaive = 1;
+					//if(months == "prod"){
+						//lineMonthlyOffset = 1;
+					//} else{ lineMonthlyOffset = lineMonthlyOffset + cntWaive; }
+					
+				}elif(MONTHLY_WAIVE == "60 days"){
+					newProdBaseDate = util.addMonthsToDate(newProdBaseDate, string(2));
+					cntWaive = 2;
+					//if(months == "prod"){
+						//lineMonthlyOffset = 2;
+					//} else{ lineMonthlyOffset = lineMonthlyOffset + cntWaive; }
+					
+				}elif(MONTHLY_WAIVE == "90 days"){
+					newProdBaseDate = util.addMonthsToDate(newProdBaseDate, string(3));
+					cntWaive = 3;
+					//if(months == "prod"){
+						//lineMonthlyOffset = 3;
+					//} else{ lineMonthlyOffset = lineMonthlyOffset + cntWaive; }
+					
+				}
+			}
+			*/
+			if (waivePeriod <> 0){
+				cntWaive = waivePeriod;
+				newProdBaseDate = util.addMonthsToDate(newProdBaseDate, string(cntWaive));
+			}
+			//CSYS-95793 SN. 7-2019
+			if(extendedMonthlyOffset <> -1){
+				newProdBaseDate = util.addMonthsToDate(newOrderDate, string(extendedMonthlyOffset));
+				cntOffset = extendedMonthlyOffset;
+			}
+			
+			/*if(months <> "" AND lineMonthlyOffset <> 0) {
+				//CSYS-70907: store offset in it's own attribute to be passed to the XML. KA. 9-27-2016. 
+				if(lineMonthlyOffset == -1){ //if prod with no monthly waive
+					utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffset_line", lineNum, "prod");
+				}
+				else{
+					utilResultString = util.formAttrValueStr(attributesDict, "monthlyOffset_line", lineNum, string(lineMonthlyOffset));
+				}
+			}*/
+
+		}
+		if(newProdBaseDate <> "" AND cntOffset <> -1 AND cntWaive <> -1 AND extendedMonthlyOffset == -1){//CSYS-95793 SN. 7-2019 exclude those unique Ext. Services that have their own Offset
+			utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newProdBaseDate)));
+			//CSYS-88391 (LN. 3-7-2018)
+			put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(newProdBaseDate));
+			cntOffsetTotal = cntOffset + cntWaive; 
+			
+			utilResultString = util.formAttrValueStr(attributesDict, "totalOffset_quote", QUOTE_DOC_NUM , string(cntOffsetTotal));
+			utilResultString = util.formAttrValueStr(attributesDict, "productionOffsetFlag_quote", QUOTE_DOC_NUM , string(productionOffsetFlag));
+			
+			put(totalOffsetDict, parentDocNum, string(cntOffsetTotal)); //CSYS-46342. Store totalOffset by core
+			put(prodOffsetFlagDict, parentDocNum, string(productionOffsetFlag)); //CSYS-46342. Store prodOffset by core
+			// Dictionary if more than 2 cores are present (future use possibly)
+			//put(countDict, coreOffering, cntOffsetTotal);
+		}
+	}
+// #############################################################################
+// Set New Product Start Date specific to each Incremental Line Item for both Core and Extended Services
+// #############################################################################	
+	If(assetAction == CREATE_ACTION AND itemType == INCREMENTAL_FEE){
+		if(newOrderDate <> "") {
+			if(months <> "") {
+				//CSYS-96144 SN. 
+				if (months == "prod"){
+					newProdIncDate = util.addMonthsToDate(newOrderDate, string(61));
+				}
+				else{
+					newProdIncDate = util.addMonthsToDate(newOrderDate, string(monthlyOffsetFromDataTable));
+				}
+				//CSYS-96144 SN. Commenting out below code
+				/*
+				if(months == "1"){
+					newProdIncDate = util.addMonthsToDate(newOrderDate, string(1));
+					
+				}elif(months == "prod"){
+					newProdIncDate = util.addMonthsToDate(newOrderDate, string(61));
+					
+				}elif(months == "2"){
+					newProdIncDate = util.addMonthsToDate(newOrderDate, string(2));
+					
+				}elif(months == "3"){
+					newProdIncDate = util.addMonthsToDate(newOrderDate, string(3));
+					
+				}
+				*/
+			}else {
+				newProdIncDate = newOrderDate;
+			}
+			//CSYS-94744
+			/*
+			if(MONTHLY_WAIVE <> ""){
+				if(MONTHLY_WAIVE == "30 days"){
+					newProdIncDate = util.addMonthsToDate(newProdIncDate, string(1));					
+				}elif(MONTHLY_WAIVE == "60 days"){
+					newProdIncDate = util.addMonthsToDate(newProdIncDate, string(2));							
+				}elif(MONTHLY_WAIVE == "90 days"){
+					newProdIncDate = util.addMonthsToDate(newProdIncDate, string(3));					
+				}
+			}
+			*/
+			if (waivePeriod <> 0){
+				newProdIncDate = util.addMonthsToDate(newProdIncDate, string(waivePeriod));
+			}
+			//CSYS-95793 SN. 7-2019
+			if(extendedMonthlyOffset <> -1){
+				newProdIncDate = util.addMonthsToDate(newOrderDate, string(extendedMonthlyOffset));
+			}
+		}
+	
+		if(newProdIncDate <> ""){
+			utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newProdIncDate)));
+			//CSYS-88391 (LN. 3-7-2018)
+			put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(newProdIncDate));
+		}
+	}
+// #############################################################################
+// Write the model level dates to coreDocNumDict for add-on quotes
+// #############################################################################
+	cntOffsetAdd = 0;
+	if(quoteType_quote == ADD_ON){
+		nextBillDate = "";
+		nextBilling = util.getStringAttribute(attributesDict, lineNum, ATTR_DELIMITER, "nextBillingDate_line");
+		nextBillingSplit = split(nextBilling, ATTR_DELIMITER);
+		nextBillDateSplit = nextBillingSplit[2]; 
+		nextBillDate = replace(nextBillDateSplit, "|", ""); 
+    	nextBillingDate = substring((nextBillDate), 0, 10);
+
+    		
+    		if(find(dateText, "-") <> -1){
+    			nextString = split(nextBillingDate, dateDelim);
+    			nextBillDate = join(nextString, dateDelim);
+    		}
+    	
+		//CSYS-41517 part 1 continued
+		if (impFlag == string(true) OR coreFlag == string(true)){ //model has a core/edition change
+			if (poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION){ //line is a core and terminated
+				if(itemType == BASE_FEE){ //line is a base
+					put(terminateDateDict, parentDocNum + BASE_FEE, nextBillDate); //store the date of the terminated core base, model specific
+				}
+				if(itemType == INCREMENTAL_FEE){ //line is an incremental
+					put(terminateDateDict, parentDocNum + INCREMENTAL_FEE, nextBillDate); //store the date of the terminated core incremental, model specific
+				}
+			}
+		}	
+		//CSYS-41517 part 1 end
+		
+		if(assetAction <> CREATE_ACTION AND months == "prod" AND parentDocNum <> ""){
+  			put(existingCoreDict, parentDocNum, TRUE_STR);
+  		}
+  
+  		//CSYS-96144 SN.
+  		if (months == "prod"){
+  			productionoffsetflag = true;
+			cntOffsetAdd = 1; 
+  		}
+  		else{
+  			cntOffsetAdd = monthlyOffsetFromDataTable;
+  		}
+  		//CSYS-96144 SN. Commenting out below code
+  		/*
+  		if(months == "prod"){
+			productionoffsetflag = true;
+			cntOffsetAdd = 1; 
+  		}
+  		elif(months == "1"){
+			cntOffsetAdd = 1; 
+  		}
+  		elif(months == "2"){
+			cntOffsetAdd = 2; 
+  		}
+  		elif(months == "3"){
+			cntOffsetAdd = 3; 
+  		}
+  		*/
+  		
+  		utilResultString = util.formAttrValueStr(attributesDict, "totalOffset_quote", QUOTE_DOC_NUM , string(cntOffsetAdd));
+		utilResultString = util.formAttrValueStr(attributesDict, "productionOffsetFlag_quote", QUOTE_DOC_NUM , string(productionOffsetFlag));
+		
+		//We may need to overwrite the values in the totalOffsetDict and prodOffsetFlagDict here (doubtful though)
+		
+		if(assetAction == CREATE_ACTION AND itemType == BASE_FEE AND poCategory == CORE_SERVICE  AND (impFlag == string(true) OR coreFlag == string(true))){
+	        put(coreDocNumDict, parentDocNum, newProdBaseDate);  
+	    	}elif((assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION)AND itemType == BASE_FEE AND poCategory == CORE_SERVICE){
+			put(coreDocNumDict, parentDocNum, nextBillDate); 			 
+		}
+
+	}
+	
+	//Populate the totalOffsetDict and prodOffsetFlagDict parentDocNum keys if they haven't previously been written to in CREATE Base section. CSYS-59620. KA. 3-16-2016
+	if(assetAction <> CREATE_ACTION AND poCategory == CORE_SERVICE){
+		if(isnull(get(totalOffsetDict, parentDocNum))){
+			put(totalOffsetDict, parentDocNum, string(cntOffsetTotal)); //CSYS-46342. Store totalOffset by core
+		}
+		if(isnull(get(prodOffsetFlagDict, parentDocNum))){
+			put(prodOffsetFlagDict, parentDocNum, string(productionOffsetFlag)); //CSYS-46342. Store prodOffset by core
+		}
+	}
+}
+
+// #############################################################################
+// Check to see if the Account Pre Prod attribute needs to be set on New Business. 
+// #############################################################################
+//CSYS-39154 11-4-14 ATG Part 2 of 2
+if(quoteType_quote == "New Business"){
+	preProdValue = false; 
+	
+	if (newPreProd){
+		preProdValue = true;
+	}
+	
+	utilResultString = util.formAttrValueStr(attributesDict, "accountPreProduction_quote", QUOTE_DOC_NUM , string(preProdValue));
+}
+
+// #############################################################################
+// Check to see if the Account Pre Prod attribute needs to be set on Add-On Business. (CSYS-44581 PART 2)
+// #############################################################################
+if(quoteType_quote == ADD_ON){
+	preProdValue = false; 
+	
+	if (addonPreProd OR accountPreProductionStatic_quote == true){
+		preProdValue = true;
+	}
+	
+	utilResultString = util.formAttrValueStr(attributesDict, "accountPreProduction_quote", QUOTE_DOC_NUM , string(preProdValue));
+}
+
+// #############################################################################
+// Set New Product Start Date specific to Add-on Quotes
+// #############################################################################
+if(quoteType_quote == ADD_ON){
+	for line in line_process{
+	poId = line._part_custom_field1;	
+	lineNum = line._document_number;
+    parentDocNum = line._parent_doc_number;
+    assetAction = line.assetAction_line;
+    poCategory = line.poCategory_line;
+    itemType = line.piItemType_line; 
+    pid = line._part_number;//CSYS-95793 SN. 7-2019
+	impFlag = util.getStringAttribute(triggerDict, parentDocNum, DELIMITER, "coreFlip" ); //this needs refactored since it's only ever set coming out of config
+	coreFlag = util.getStringAttribute(triggerDict, parentDocNum, DELIMITER, "editionFlip" ); //this needs refactored since it's only ever set coming out of config
+	
+        newProdAddDate = get(coreDocNumDict, parentDocNum); //retrieve the correct base date for add-on create products
+	
+	//commenting out section below. Extended Service NPSD's always need to match the core.
+	/*if(accountPreProduction_quote == true AND assetAction == CREATE_ACTION AND poCategory <> CORE_SERVICE AND containskey(existingCoreDict, parentDocNum)){
+		newProdAddDate = util.addMonthsToDate(newProdAddDate, string(60));  
+	}*/
+
+		//CSYS-87864 (LN. 12/4/2017) Only set the NPSD for CREATE Line items for Add-Ons
+		if(assetAction == CREATE_ACTION){
+	
+			if(poCategory <> CORE_SERVICE AND containskey(coreDocNumDict, parentDocNum)AND (coreFlag == string(true) OR impFlag == string(true))){
+				
+				if(newProdAddDate <> "" AND itemType <> SETUP_FEE){//CSYS-88143 (LN. 12/20/2017)
+				utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, newProdAddDate);
+				//CSYS-88391 (LN. 3-7-2018);
+				put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(newProdAddDate));
+				} else { //CSYS-88143 (LN. 12/20/2017) Need to ensure our Setup's stay with an offset of the next month
+					newProdSetupDate = util.addMonthsToDate (newOrderDate, string(1));
+					utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, newProdSetupDate);
+					//CSYS-88391 (LN. 3-7-2018);
+					put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(newProdSetupDate));
+				}
+    	    }
+    	    if(poCategory <> CORE_SERVICE AND containskey(coreDocNumDict, parentDocNum) AND (coreFlag <> string(true) OR impFlag <> string(true))){ 
+    		   	
+    	    	if(newProdAddDate <> "" AND itemType <> SETUP_FEE){
+					utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newProdAddDate)));	
+					//CSYS-88391 (LN. 3-7-2018);
+					put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(newProdAddDate));
+				}else{
+					newProdSetupDate = util.addMonthsToDate (newOrderDate, string(1));
+					utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, newProdSetupDate);
+					//CSYS-88391 (LN. 3-7-2018);
+					put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(newProdSetupDate)); 
+				}
+			}
+	
+			//CSYS-41517 part 2 start
+			terminateBillingDate = "";
+			if (containskey(terminateDateDict, parentDocNum + itemType)){ //Model has a core/edition change
+				terminateBillingDate = get(terminateDateDict, parentDocNum + itemType); //grab the next billing date of the terminated line
+				utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, terminateBillingDate);
+				//CSYS-88391 (LN. 3-7-2018)
+				if(terminateBillingDate <> ""){//CSYS-91213 (LN. 5-11-2018) Need to ensure that the NBD is not null before population 
+					put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(terminateBillingDate)); 
+				}	
+			}
+			//CSYS-41517 part 2 end
+			
+			//CSYS-95793 SN. 7-2019
+			if(containskey(integersDict, lineNum + DELIMITER + pid) AND itemType <> SETUP_FEE){
+				extendedMonthlyOffset = get(integersDict, lineNum + DELIMITER + pid);
+				if(extendedMonthlyOffset <> -1){
+					
+					newProdBaseDate = util.addMonthsToDate(newOrderDate, string(extendedMonthlyOffset));
+					cntOffsetAdd = extendedMonthlyOffset;
+					utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newProdBaseDate)));
+				}
+			}// end CSYS-95793 SN. 7-2019
+			//CSYS-100991 (SV. 04-01-2021) Start				
+			if(orderEffectiveDateHDS <> ""){				
+				if((PoId == "5005" OR poId == "6969985") AND itemType == BASE_FEE){
+					utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, orderEffectiveDateHDS);
+					utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, orderEffectiveDateHDS);
+				}	
+			}
+			//CSYS-100991 End
+		}
+		else {
+			utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, "");
+		}
+		//CSYS-100991 (SV. 04-01-2021) Start					
+		//CSYS-105464 SV. 07-02-2022 Modified the below if condition by adding itemType == INCREMENTAL_FEE	
+		if((PoId <> "5005" AND poId <> "6969985") AND (itemType == BASE_FEE OR itemType == INCREMENTAL_FEE) AND assetAction == TERMINATE_ACTION AND orderEffectiveDateHDS <> ""){
+			npsd = strtodate(orderEffectiveDateHDS+" 00:00:00", "%m/%d/%Y %H:%M:%S");
+			termDate = minusdays(npsd, 1);
+			termDateText = datetostr(termDate , "MM/dd/yyyy");
+			termDateText1 = datetostr(termDate , "yyyy-MM-dd");	
+			utilResultString = util.formAttrValueStr(attributesDict, TERM_DATE, lineNum, termDateText);
+			terminatedDateHDS = util.formatDate(termDateText1,"long");//CSYS-102447 NP 12/04/2021
+			utilResultString = util.formAttrValueStr(attributesDict, "terminatedDateHDS_quote", QUOTE_DOC_NUM, termDateText1);
+			utilResultString = util.formAttrValueStr(attributesDict, "termDateForDocumentDesignerOfHDS_quote", QUOTE_DOC_NUM, terminatedDateHDS); //CSYS-102913 NP 24/05/2021
+			hDSTermDate = termDateText1; //CSYS-106714 (OK. 7-22-2022) 
+		}		
+		//CSYS-100991 End
+		//CSYS-102447 NP 12/04/2021
+		if(billingCycle_quote <> ""){
+			if(PoId == "1100" AND itemType == SETUP_FEE AND OwnerBU_quote == "SMB BU" AND (billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly")) //CSYS-102511 NP 11-15-2021
+			{
+				stdToProfMigration = true;
+				sTPMParentId = parentDocNum;					
+          	}
+         }
+        //CSYS-102447 end					
+	}
+	//CSYS-103372 (SV. 11-08-2021) Start
+	//CSYS-105450 (SV. 14-02-2022) commented the below declaration to use the new attibute terminationDate_quote instead of terminatedDate_quote
+	//termDateAccntPreProd = terminatedDate_quote;
+	termDateAccntPreProd = terminationDate_quote;
+	accountPreProductionStatic = accountPreProductionStatic_quote;
+	if(termDateAccntPreProd <> "" AND NOT(isnull(accountPreProductionStatic)) AND accountPreProductionStatic == true){
+		//termDateAccntPreProdDate = strtodate(termDateAccntPreProd+" 00:00:00", "%m/%d/%Y %H:%M:%S");
+		//termDateAccntPreProdDateText = datetostr(termDateAccntPreProdDate , "yyyy-MM-dd");			
+		termDateAccntPreProdDateDD = util.formatDate(termDateAccntPreProd,"long");//CSYS-102447 NP 12/04/2021
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateForDocumentDesignerOfAccountPreProd_quote", QUOTE_DOC_NUM, termDateAccntPreProdDateDD); //CSYS-102913 NP 24/05/2021			
+	}
+	//CSYS-103372 End
+}
+
+
+//CSYS-97532
+partnerBillingCoreServiceStartDate = "";
+partnerBillingCoreServiceStartDateV2 = "";
+if( partnerBillingQuote_quote){
+	currentDate = getDate();	
+	partnerBillingCurrentDate = datetostr(currentDate, DATE_FORMAT_PREFERENCE_HYPHEN);//get the current year in string format yyyy-MM-dd;
+	partnerBillingCurrentYear = substring(partnerBillingCurrentDate, 0, 4);//get the current year
+	partnerBillingCurrentYearInt = util.customAtoi(partnerBillingCurrentYear, 0);
+
+	partnerBillingStartYear = partnerBillingCurrentYearInt + 1;//take the current year and add 1
+	partnerBillingCoreServiceStartDate = "01/01/" + string(partnerBillingStartYear);//set the string value with a default of 01/01 - and add in the new year value
+	partnerBillingCoreServiceStartDateV2 = string(partnerBillingStartYear) + "-01-01";
+}
+
+//CSYS-83106 LN. 7/20/2017 Loop over line items one last time and take into account Partner Billing Products that need a one day subscription date
+for line in line_process{
+	lineNum = line._document_number;
+	oneDaySub = line._part_custom_field26;//CSYS-83106 LN. 7/20/2017
+	poCategory = line.poCategory_line;//CSYS-85599 LN. 9/20/2017
+	//CSYS-88391 (LN. 3-7-2018) Initializing new variables to be leveraged in store the POID when the ENTCLIENTTERM90 promo is applied
+	linePromo = line.promotionCode_line;
+	poID = line.poId_line;
+	promosApplied = split(linePromo, ",");
+	parentDocNum = line._parent_doc_number;
+	impFlag = util.getStringAttribute(triggerDict, parentDocNum, DELIMITER, "coreFlip" ); //this needs refactored since it's only ever set coming out of config
+	coreFlag = util.getStringAttribute(triggerDict, parentDocNum, DELIMITER, "editionFlip" ); //this needs refactored since it's only ever set coming out of config
+	itemType = line.piItemType_line;
+	assetAction = line.assetAction_line;
+	monthlyOffsetHidden = line.monthlyOffSetBeforeSubmit_line;	//IESCNQRCPQ-1698
+	
+	//IESCNQRCPQ-1698- Start - Storing monthly offset for core if account is preprod.
+	if(isnumber(monthlyOffsetHidden)AND poCategory == CORE_SERVICE AND itemType <> SETUP_FEE AND itemType <> PRE_PRODUCTION){
+		put(coreAccountPreProdOffsetDict,parentDocNum,atoi(monthlyOffsetHidden));
+	}
+	//IESCNQRCPQ-1698 - End
+	
+	if(oneDaySub == "Yes"){
+		//New Product Start Date will be OED
+		partnerBillingStartDate = datetostr(util.getDateFromString(orderEffectiveDate_quote));
+		utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, partnerBillingStartDate);
+		//CSYS-88391 (LN. 3-7-2018) Getting an error on the date format, needed to swap out for the Order Effective Date, also populating the assetInitialEndDateDict with the OED for all Professional Services related to Partner Billing
+		put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(orderEffectiveDate_quote)); 
+		put(assetInitialEndDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(orderEffectiveDate_quote));
+		//CSYS-85800 (LN. 9/26/2017) Reformatting newProductEndDate to be OED - same as partnerBillingStartDate 
+		//New Product End Date will be OED + 1 day:
+		// partnerBillingEndDate = adddays(strtojavadate(partnerBillingStartDate, "MM/dd/yyyy"), 1);
+		utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_END_DATE, lineNum, partnerBillingStartDate);
+	}
+
+	//CSYS-85599 (LN. 9/20/2017); CSYS-95097
+	currentDate = getDate();
+	if( partnerBillingQuote_quote AND poCategory == CORE_SERVICE AND itemType <> SETUP_FEE AND itemType <> PRE_PRODUCTION){
+		if(assetAction == CREATE_ACTION AND (quoteType_quote <> ADD_ON OR (quoteType_quote == ADD_ON AND coreFlag <> string(true) AND impFlag <> string(true) ) ) ){
+			utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, partnerBillingCoreServiceStartDate);
+			put(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum, util.getDateFromString(partnerBillingCoreServiceStartDateV2)); 
+		}
+	}
+
+	//CSYS-88391 If the ENTCLIENTTERM90 has been applied at the line level, store associated the POID so that we may apply the Asset Initial Contract End Date to all products in the Product Family
+
+	if(linePromo <> ""){//If there has been a promotion applied at the line level, continue
+
+		//Query the PromoContractTerm table to retrieve entries
+		promoContractTermRes = BMQL("SELECT promotion, monthsInDays, startEndofMonth FROM PromoContractTerm");
+
+		for entry in promoContractTermRes{
+			promotion = get(entry, "promotion");
+			monthsInDays = get(entry, "monthsInDays");
+			startEndofMonth = get(entry, "startEndofMonth");
+
+
+			if(findinarray(promosApplied, promotion) <> -1){ //if applied promotion at the line is found in the PromoContractTerm table, store the table entries in the promoProductFamilyDict to be utilized in calucations in the next loop
+				put(promoProductFamilyDict, APPLIED_PROMOTION_POID + ATTR_DELIMITER + poID, poID);
+				put(promoProductFamilyDict, MONTHS_IN_DAYS_POID + ATTR_DELIMITER + poID, monthsInDays);
+				put(promoProductFamilyDict, START_END_OF_MONTH_POID + ATTR_DELIMITER + poID, startEndofMonth);
+			} 
+		}
+	}	
+	//CSYS-105460 - Commented the below code
+	/*									 
+	//CSYS-102915 NP 19/05/2021
+	if(stdToProfMigration){
+		if(assetAction == MODIFY_ACTION OR assetAction == TERMINATE_ACTION){
+			sTPMParentIdOthercore = parentDocNum;					
+		}
+	}
+	//CSYS-102915 end
+	*/
+	//CSYS-104596 NP 11-09-2021 Start
+	if(find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == TERMINATE_ACTION){
+		detectByAppZenTerminateParentId=parentDocNum;
+	}
+	//CSYS-104596 End
+}
+
+//IESCNQRCPQ-479 SV. 27-03-2023 Start
+preProdOffsetDict = dict("anytype");
+createdDate = strtojavadate(createdDate_quote, DATE_FORMAT_PREFERENCE_HYPHEN);
+onOrAfterFirstOfApril2023 = strtojavadate("2023-03-31", DATE_FORMAT_PREFERENCE_HYPHEN);
+aCCPreProdValue = "false";
+aCCPreProdValueDict = get(attributesDict, QUOTE_DOC_NUM + "~" + "accountPreProduction_quote");
+
+aCCPreProdValueSplit = split(aCCPreProdValueDict, "~");
+if(aCCPreProdValueDict <> "" AND NOT(isnull(aCCPreProdValueDict))){
+	aCCPreProdValue = aCCPreProdValueSplit[2];
+	aCCPreProdValue = replace(aCCPreProdValue, "|", "");
+}
+termDateForPreProd = "";
+isPreProdRestatement = string[]; //IESCNQRCPQ-399 SV. 10-03-2023
+//IESCNQRCPQ-479 End
+
+//CSYS-88391 (LN. 3-7-2018) Loop through line items to evaluate if NPSD is set and assign the NPSD to the Asset Initial Contract Start Date attribute (Refactor 4-2-2018: this is applicable for CREATE line items only)
+for line in line_process{
+	lineNum = line._document_number;	
+	assetAction = line.assetAction_line;
+	poID = line.poId_line;
+	pid = line._part_number;
+	itemType = line.piItemType_line;
+	linePromo = line.promotionCode_line;
+	promosApplied = split(linePromo, ",");
+	assetInitialContractStartDate = get(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum);
+	assInitialContractEndDate = get(assetInitialEndDateDict, NEW_PROD_START_DATE + lineNum);
+	assetInitialContractEndDate = "";
+	parentDocNum = line._parent_doc_number; //CSYS-100040 (OK. 8-11-2020)
+    poCategory = line.poCategory_line; //CSYS-100040 (OK. 8-11-2020)
+	originalNextBillDate = line.originalNextBillDate_line; //CSYS-105329 SV. 12-01-2022 Added the new line level attribtue to hold the original next bill date
+	delayedBillingContractProduct = line.lineDescription_line; //IESCNQRCPQ-720
+	monthlyOffsetHidden = line.monthlyOffSetBeforeSubmit_line;	//IESCNQRCPQ-1698
+
+	//CREATE lines where there is a valid NPSD assigned to the dictionary 
+	if( assetAction == CREATE_ACTION AND containskey(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum) AND NOT(isnull(assetInitialContractStartDate)) ){
+
+
+		//If there has been a promotion mapped the promoProductFamilyDict (in the loop above), grabbed the stored data via the PromoContractTerm table to assign the Asset Initial Contract End Date accordingly
+		if( containskey(promoProductFamilyDict, APPLIED_PROMOTION_POID + ATTR_DELIMITER + poID) ){
+
+			daysToAdd = get(promoProductFamilyDict, MONTHS_IN_DAYS_POID + ATTR_DELIMITER + poID);//Retrieve how many days should be added to the NPSD
+			startEndOfMonth = get(promoProductFamilyDict, START_END_OF_MONTH_POID + ATTR_DELIMITER + poID);//Retrieve the value to determine whether the asset initial contract end date should be set to the start or end of the month after days are added
+			daysToAddInt = util.customAtoi(daysToAdd, 0);//Ensure the days to add is a viable integer
+			assetEndDate = "";
+			newAssetEndDate = getdate();
+			
+			newAssetEndDate = adddays(assetInitialContractStartDate, daysToAddInt);
+
+			if( startEndOfMonth <> "" ){
+				if(startEndOfMonth == END_OF_MONTH){
+					assetEndDate = util.setDateToLastDayOfMonth(datetostr(newAssetEndDate, DATE_FORMAT_PREFERENCE_HYPHEN));
+				}
+				else {
+					assetEndDate = util.setDateToFirstDayOfMonth(datetostr(newAssetEndDate, DATE_FORMAT_PREFERENCE_HYPHEN));
+				}
+			}
+			assetInitialContractEndDate = assetEndDate;
+		}
+		//Else, business as usual, the asset initial contract end date should be set to the contract renewal date
+		else {
+
+			//This will only ever be populated for Professional Services related to Partner Billing Quotes
+			if(containskey(assetInitialEndDateDict, NEW_PROD_START_DATE + lineNum) AND NOT(isnull(assInitialContractEndDate))){
+				assetInitialContractEndDate = datetostr(assInitialContractEndDate);
+			}
+			else {
+				assetInitialContractEndDate = contractRenewalDate_quote;
+			}	
+		}
+
+		utilResultString = util.formAttrValueStr(attributesDict, "assetInitialContractStartDate_line", lineNum, datetostr(assetInitialContractStartDate));
+		utilResultString = util.formAttrValueStr(attributesDict, "assetInitialContractEndDate_line", lineNum, assetInitialContractEndDate);		
+		
+	}
+	
+	//CSYS-100040 (OK. 8-10-2020)
+    if (quoteType_quote == "New Business" AND ownerBU_quote == "SMB BU") { //CSYS-100310 - Modified the condition
+        nextBillDate = "";   
+        nextBilling = get(assetInitialStartDateDict, NEW_PROD_START_DATE + lineNum);
+        nextBillDate = datetostr(nextBilling);        
+        nextBillingDate = substring((nextBillDate), 0, 10);
+		dateSplit = string[];
+        nextBillingDateValue = "";
+		//CSYS-104515 (LIN 10-14-2021) - BMI SMB TFSD is printing the WRONG DATE on the Contract - Added the base condition 
+        if (poCategory == CORE_SERVICE AND line.piItemType_line =="Base") { //CSYS-100310 Moved the condition from above to here separately to add the code in same place.
+		if (find(nextBillingDate,"/") <> -1 ){ 
+			dateSplit = split(nextBillingDate, "/");
+			nextBillingDateValue = dateSplit[2] + "-" + dateSplit[0] + "-" + dateSplit[1];
+		}
+		else {
+			nextBillingDateValue = nextBillingDate;
+		}
+		put(nPSDDict, parentDocNum, nextBillingDateValue);
+	}
+	//CSYS-100310 (OK. 8-19-2020) Start
+		for value in promosApplied {
+			if (value == "AUDITSLAOFFER60") {
+				put(audit60Dict, parentDocNum, "AUDITSLAOFFER60");
+			}
+			if (value == "AUDITSLAOFFER6") {
+				put(audit6Dict, parentDocNum, "AUDITSLAOFFER6");
+			}
+		}
+		utilResultString = util.formAttrValueStr(attributesDict, "isSMBNewBusiness_quote", QUOTE_DOC_NUM, TRUE_STR);		
+    }
+    else {
+		utilResultString = util.formAttrValueStr(attributesDict, "isSMBNewBusiness_quote", QUOTE_DOC_NUM, FALSE_STR);
+	}
+	//CSYS-100310 - End
+	
+	//CSYS-106389 (PG. 8-12-2022) Start
+		contractTFSDOverride = contractTFSDOverride_quote;
+		contractTFSDOverrideDate = "";
+		if (quoteType_quote == "New Business" AND ownerBU_quote == "SMB BU" AND pid <> ""){
+		if (contractTFSDOverride <> "" AND NOT(isnull(contractTFSDOverride))){
+			contractTFSDOverrideDate = substring(contractTFSDOverride, 0, 10);
+			put(nPSDDict, parentDocNum, contractTFSDOverrideDate);
+			}
+			for value in promosApplied {
+			if (value == "AUDITSLAOFFER60") {
+				put(audit60Dict, parentDocNum, "AUDITSLAOFFER60");
+			}
+			if (value == "AUDITSLAOFFER6") {
+				put(audit6Dict, parentDocNum, "AUDITSLAOFFER6");
+			}
+		}
+		utilResultString = util.formAttrValueStr(attributesDict, "isSMBNewBusiness_quote", QUOTE_DOC_NUM, TRUE_STR);		
+    }
+    else {
+		utilResultString = util.formAttrValueStr(attributesDict, "isSMBNewBusiness_quote", QUOTE_DOC_NUM, FALSE_STR);
+	}
+		//CSYS-106389 (PG. 8-12-2022) End	
+	
+	//CSYS-102447/CSYS-102711 NP 15-4-2021) Start
+	
+	if(stdToProfMigration){
+		futureDateSTPM = ""; //CSYS-102511 NP 11-15-2021
+		//CSYS-105460 - Updated the Or condition								  
+		if(parentDocNum==sTPMParentId or (findinarray(parentDocArr,parentDocNum) <> -1)) //CSYS-102915 NP 05/19/2021
+		{
+			//CSYS-106638 (OK. 7-11-2022) Start: Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+			migrationScenario = "standardToProfessionalMigration"; 
+			if(poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION){
+				nbdOldLineSTPM = substring((line.nextBillingDate_line),0,10);
+			}
+			
+			//IESCNQRCPQ-1133 (OK. 9-25-2023) Fix the issue with the doc number sequence change for terminated core
+			if (nbdOldLineSTPM == "" AND containskey(coreNBDonTerminateDict, parentDocNum)) {
+				nbdOldLineSTPM = get(coreNBDonTerminateDict, parentDocNum);
+			}
+			
+			put(anyTypeDict, "standardToProfessionalMigrationNBD", nbdOldLineSTPM);
+			put(anyTypeDict, "standardToProfessionalMigrationParentDoc", parentDocNum);
+			//CSYS-106638 (OK. 7-11-2022) - End
+			
+			//CSYS-102511 NP 11-15-2021 Start
+			if(billingCycle_quote == "Monthly"){
+			newProdSetupDateSTPM = util.addMonthsToDate (newOrderDate, string(3));
+			}
+			elif(billingCycle_quote == "Quarterly"){
+				/*CSYS-106638 (OK. 7-11-2022) Start - Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+				if(poCategory == CORE_SERVICE){
+					nbdOldLineSTPM = substring((line.nextBillingDate_line),0,10);
+					//CSYS-105329 Added the if  else block to fix the bug. If the Original Next Bill Date is blank then the actual next bill date willl be the value of nbdOldLineSTPM else it will be equal to the Original Next bill date
+					if(originalNextBillDate == ""){
+						utilResultString = util.formAttrValueStr(attributesDict, "originalNextBillDate_line", lineNum, nbdOldLineSTPM);						
+								   
+					}
+					else{
+						nbdOldLineSTPM = substring((line.originalNextBillDate_line),0,10);	
+					}	
+				}
+				futureDateSTPM = util.addMonthsToDate (newOrderDate, string(3));
+				if(nbdOldLineSTPM==futureDateSTPM){
+					newProdSetupDateSTPM=futureDateSTPM;
+				}
+				else
+				{
+					newProdSetupDateSTPM = util.addMonthsToDate (nbdOldLineSTPM, string(3));
+				}*/
+				newProdSetupDateSTPM = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+				//CSYS-106638 (OK. 7-11-2022) - End
+			}
+			//CSYS-102511 End
+			newOrderDateNxtMonth = util.addMonthsToDate (newOrderDate, string(1));
+			if(assetAction == CREATE_ACTION){
+				//CSYS-102881 NP 05-10-2021 Start
+				if(itemType == BASE_FEE OR itemType==INCREMENTAL_FEE) {
+					utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newProdSetupDateSTPM)));
+					//CSYS-102915 NP 05-18-2021 Start
+					utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(newProdSetupDateSTPM)));
+					//CSYS-102915 End
+				}
+				if(itemType == SETUP_FEE) {
+					utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newOrderDateNxtMonth)));
+					//CSYS-102915 NP 05-18-2021 Start
+					if(poCategory <> CORE_SERVICE){
+						utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(newOrderDateNxtMonth)));
+					}
+					//CSYS-102915 End
+				}
+				//CSYS-102881 End
+			}
+			//CSYS-102915 NP 05-18-2021 Start
+			if(assetAction == MODIFY_ACTION or assetAction == NONE_ACTION){
+				utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(newProdSetupDateSTPM)));
+			}
+			//CSYS-102915 End
+			if(assetAction == TERMINATE_ACTION){
+				termDateSTPM = datetostr(minusdays(util.getDateFromString(newProdSetupDateSTPM), 1), "MM/dd/yyyy");
+				utilResultString = util.formAttrValueStr(attributesDict, TERM_DATE, lineNum, datetostr(util.getDateFromString(termDateSTPM)));
+			}
+		}
+	}
+	
+	//CSYS-102447/CSYS-102711 End
+	
+	//CSYS-106050 (OK. 4-25-2022) moved this code from below to utilize in other logics
+	if(poCategory == CORE_SERVICE and parentDocNum==detectByAppZenTerminateParentId){
+		nbdOldLine = substring((line.nextBillingDate_line),0,10);
+		detectParentDocNum = parentDocNum; //CSYS-106638 (OK. 7-11-2022)
+	}
+	
+	//CSYS-100742 NP 5-7-2021) Start
+	
+	if(detectByAppzenTerminate_quote AND (billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly")){ //CSYS-104595 NP 10/26/2021 Removed condition for Quarterly CSYS-104596 NP 11-09-2021 
+		migrationScenario = "detectByAppzenTerminate"; //CSYS-106638 (OK. 7-11-2022)
+		put(anyTypeDict, "detectByAppzenTerminateNBD", nbdOldLine); //CSYS-106638 (OK. 7-11-2022) Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+		put(anyTypeDict, "detectByAppzenTerminateParentDoc", detectParentDocNum); //CSYS-106638 (OK. 7-11-2022)
+		newOrderDateNxtMonth = util.addMonthsToDate (newOrderDate, string(1));
+		//CSYS-104596 NP 11-09-2021 Start
+		if(billingCycle_quote == "Monthly"){
+			nPSDDetectOversight = util.addMonthsToDate (newOrderDate, string(4));
+		}
+		elif(billingCycle_quote == "Quarterly"){
+			//CSYS-106050 (OK. 4-25-2022) moved this to up to utilize in other logics
+			/*if(poCategory == CORE_SERVICE and parentDocNum==detectByAppZenTerminateParentId){
+				nbdOldLine = substring((line.nextBillingDate_line),0,10);
+			}*/
+			//CSYS-106638 (OK. 7-11-2022) Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+			//nPSDDetectOversight = util.addMonthsToDate (nbdOldLine, string(3));
+			nPSDDetectOversight = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+		}
+		//CSYS-104596 End
+		//set NBD and NPSD for Concur Detect by Oversight with create action
+		if(poID=="7526957" AND assetAction==CREATE_ACTION){
+			if(itemType == BASE_FEE OR itemType==INCREMENTAL_FEE) {
+				utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(nPSDDetectOversight)));
+				utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(nPSDDetectOversight)));
+			}
+			if(itemType == SETUP_FEE) {
+				utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newOrderDateNxtMonth)));
+				utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(newOrderDateNxtMonth)));
+			}
+		}
+		//Set Term date for Concur Detect by Appzen with Terminate action
+		if(find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == TERMINATE_ACTION){
+			termDateDetect = datetostr(minusdays(util.getDateFromString(nPSDDetectOversight), 1), "MM/dd/yyyy");
+			utilResultString = util.formAttrValueStr(attributesDict, TERM_DATE, lineNum, datetostr(util.getDateFromString(termDateDetect)));
+			detectMigrationTermDate = termDateDetect; //CSYS-106714 (OK. 7-22-2022)
+		}
+	}
+	//CSYS-100742 End
+	
+	//CSYS-106050 (OK. 4-25-2022) start - Future date the NBD and NPSD date for Intelligent audit - advanced sku. Future date the termination date for detect sku.
+	if ((billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly") AND (detectMigrateToIntelligentAuditAdvanced_quote == TRUE_STR OR detectMigrateToIntelligentAuditEssential_quote == TRUE_STR OR detectMigrateToVerify_quote == TRUE_STR)) {
+		productNameInContract = "";
+		newOrderDateNxtMonth = util.addMonthsToDate (newOrderDate, string(1));
+		if (detectMigrateToIntelligentAuditAdvanced_quote == TRUE_STR) {
+			migrationScenario = "detectMigrateToIntelligentAuditAdvanced"; //CSYS-106638 (OK. 7-11-2022)
+			put(anyTypeDict, "detectMigrateToIntelligentAuditAdvancedNBD", nbdOldLine); //CSYS-106638 (OK. 7-11-2022) Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+			put(anyTypeDict, "detectMigrateToIntelligentAuditAdvancedParentDoc", detectParentDocNum); //CSYS-106638 (OK. 7-11-2022)
+			if(billingCycle_quote == "Monthly"){
+				terminationDateDelay = util.addMonthsToDate(newOrderDate, string(4));
+			}
+			elif(billingCycle_quote == "Quarterly"){
+				//CSYS-106638 (OK. 7-11-2022) Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+				//terminationDateDelay = util.addMonthsToDate(nbdOldLine, string(3));
+				terminationDateDelay = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+			}
+			if (findinarray(poidArray, "8224070") <> -1) {
+				productNameInContract = "Intelligent Audit - Advanced is ";
+			}
+			if (findinarray(poidArray, "8224070") <> -1 AND findinarray(poidArray, "8825411") <> -1) {
+				productNameInContract = "Intelligent Audit - Advanced and Intelligent Audit - Advanced Edition - Expedited Service Add-on is ";
+			}
+		}
+		
+		//CSYS-106157 (OK. 5-06-2022) Future date the NBD and NPSD date for Intelligent audit - Essential sku.
+		if (detectMigrateToIntelligentAuditEssential_quote == TRUE_STR) {
+			migrationScenario = "detectMigrateToIntelligentAuditEssential"; //CSYS-106638 (OK. 7-11-2022)
+			put(anyTypeDict, "detectMigrateToIntelligentAuditEssentialNBD", nbdOldLine); //CSYS-106638 (OK. 7-11-2022) Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+			put(anyTypeDict, "detectMigrateToIntelligentAuditEssentialParentDoc", detectParentDocNum); //CSYS-106638 (OK. 7-11-2022)
+			if(billingCycle_quote == "Monthly"){
+				terminationDateDelay = util.addMonthsToDate(newOrderDate, string(3));
+			}
+			elif(billingCycle_quote == "Quarterly"){
+				//CSYS-106638 (OK. 7-11-2022) Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+				//terminationDateDelay = util.addMonthsToDate(nbdOldLine, string(2));
+				terminationDateDelay = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+			}
+			if (findinarray(poidArray, "8224086") <> -1) {
+				productNameInContract = "Intelligent Audit - Essential is ";
+			}
+			if (findinarray(poidArray, "8224086") <> -1 AND findinarray(poidArray, "8825427") <> -1) {
+				productNameInContract = "Intelligent Audit - Essential and Intelligent Audit - Essential Edition - Expedited Service Add-on is ";
+			}
+		}
+		
+		//CSYS-106158 (OK. 5-06-2022) Future date the NBD and NPSD date for Verify sku
+		if (detectMigrateToVerify_quote == TRUE_STR) {
+			migrationScenario = "detectMigrateToVerify"; //CSYS-106638 (OK. 7-11-2022)
+			put(anyTypeDict, "detectMigrateToVerifyNBD", nbdOldLine); //CSYS-106638 (OK. 7-11-2022) Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+			put(anyTypeDict, "detectMigrateToVerifyParentDoc", detectParentDocNum); //CSYS-106638 (OK. 7-11-2022)
+			if(billingCycle_quote == "Monthly"){
+				terminationDateDelay = util.addMonthsToDate(newOrderDate, string(2));
+			}
+			elif(billingCycle_quote == "Quarterly"){
+				//CSYS-106638 (OK. 7-11-2022) Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+				//terminationDateDelay = util.addMonthsToDate(nbdOldLine, string(1));
+				terminationDateDelay = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+			}
+			if (findinarray(poidArray, "7877689") <> -1) {
+				productNameInContract = "Verify is ";
+			}
+		}
+		
+		utilResultString = util.formAttrValueStr(attributesDict, "detectMigrationProductNameInDD_quote", QUOTE_DOC_NUM, productNameInContract);
+		
+		if((poID == "8224070" OR poID == "8825411" OR poID == "8224086" OR poID == "8825427" OR poID == "7877689") AND assetAction == CREATE_ACTION){
+			if(itemType == BASE_FEE OR itemType == INCREMENTAL_FEE) {
+				utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(terminationDateDelay)));
+				utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(terminationDateDelay)));
+			}
+			if(itemType == SETUP_FEE) {
+				utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newOrderDateNxtMonth)));
+				utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(newOrderDateNxtMonth)));
+			}
+		}
+		
+		if(find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == TERMINATE_ACTION){
+			termDateDetect = datetostr(minusdays(util.getDateFromString(terminationDateDelay), 1), "MM/dd/yyyy");
+			utilResultString = util.formAttrValueStr(attributesDict, TERM_DATE, lineNum, datetostr(util.getDateFromString(termDateDetect)));
+			detectMigrationTermDate = termDateDetect; //CSYS-106714 (OK. 7-22-2022)
+		}
+	}
+	//CSYS-106050 (OK. 4-25-2022) - End
+	//CSYS-106546 (LIN 07-06-2022)-Start
+	if(poID == "9158385"){
+		utilResultString = util.formAttrValueStr(attributesDict, "netPriceEach_line", lineNum, string(0.00));
+		utilResultString = util.formAttrValueStr(attributesDict, "extendedNetPrice_line", lineNum, string(0.00));
+		utilResultString = util.formAttrValueStr(attributesDict, "prevExtendedNetPrice_line", lineNum, string(0.00));
+		utilResultString = util.formAttrValueStr(attributesDict, "prevNetPrice_line", lineNum, string(0.00));
+	}
+	//CSYS-106546 - End
+	
+	//IESCNQRCPQ-481 (OK. 4-13-2023) Start: Delay Billing of Specific Service Offerings
+	//IESCNQRCPQ-932 (OK. 8-7-2023) Remove Production Sandbox Environment and Service Assistant POIDs from below array and add Client web services
+	//IESCNQRCPQ-1885 (OK. 6-17-2024) Comment out the below skuPoidArray to remove the delayed billng for Premium Assistant and Client Web Services. we only Premium Assistant and Client Web Services skus in skuPoidArray. so comment out the array.
+	//skuPoidArray = string[] {"8602400", "8602413", "8602423", "849", "570781", "2272155"};
+	coreNBDValue = "";
+	if (containskey(coreNBDDict, parentDocNum)) {
+		coreNBDValue = get(coreNBDDict, parentDocNum);
+	}
+	//IESCNQRCPQ-932 (OK. 8-7-2023) Comment out the below line to avoid the contract issue and move it outside the loop
+	//utilResultString = util.formAttrValueStr(attributesDict, "delayedBillingContractFlag_quote", QUOTE_DOC_NUM, string(false)); //IESCNQRCPQ-814 (PG 21-07-2023) Setting the Delayed Billing Contract Flag to False
+	//IESCNQRCPQ-727 - 06-07-2023 -Remove Delayed Billing for Quarterly Customers
+	//IESCNQRCPQ-1885 (OK. 6-17-2024) Comment out the below code to remove the delayed billing logic
+	/*if (findinarray(skuPoidArray, poID) <> -1 AND OwnerBU_quote == "SMB BU" AND assetAction == CREATE_ACTION AND (billingCycle_quote == "Monthly") AND quoteType_quote == ADD_ON AND coreNBDValue <> "") {
+		newFutureDate = "";
+		newOrderDateNxtMonth = util.addMonthsToDate(newOrderDate, string(1));
+		scenario = "futureDateSpecificSKUs"; 
+		put(anyTypeDict, "futureDateSpecificSKUsNBD", coreNBDValue);
+		put(anyTypeDict, "futureDateSpecificSKUsParentDoc", parentDocNum);
+		isDelayedBilling = "true"; //IESCNQRCPQ-932 (OK. 8-7-2023)
+		
+		if(billingCycle_quote == "Monthly"){
+			newFutureDate = util.addMonthsToDate(newOrderDate, string(3));
+		}
+		elif(billingCycle_quote == "Quarterly"){
+			newFutureDate = commerce.calculateFutureDateForQuarterly(scenario, anyTypeDict, newOrderDate, attributesDict);
+		}
+		
+		if(itemType == BASE_FEE OR itemType == INCREMENTAL_FEE) {
+			utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newFutureDate)));
+			utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(newFutureDate)));
+		}
+		if(itemType == SETUP_FEE) {
+			utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, datetostr(util.getDateFromString(newOrderDateNxtMonth)));
+			utilResultString = util.formAttrValueStr(attributesDict, NEXT_BILL_DATE, lineNum, datetostr(util.getDateFromString(newOrderDateNxtMonth)));
+		}
+		
+		//IESCNQRCPQ-720 - Setting the Delayed Billing Contract Flag to true- LIK - (06-07-2023)
+		utilResultString = util.formAttrValueStr(attributesDict, "delayedBillingContractFlag_quote", QUOTE_DOC_NUM, string(true));
+		if(itemType == BASE_FEE){
+			utilResultString = util.formAttrValueStr(attributesDict, "delayedBillingContractProducts_line", lineNum, delayedBillingContractProduct);
+		}
+		//IESCNQRCPQ-720 - End
+	}*/
+	//IESCNQRCPQ-481 - End
+	
+	//IESCNQRCPQ-479 SV. 27-03-2023 Start
+	if(aCCPreProdValue == "true" AND assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND itemType == PRE_PRODUCTION AND comparedates(createdDate, onOrAfterFirstOfApril2023) == 1){	
+		orderEffectiveDate = strtojavadate(orderEffectiveDate_quote, DATE_FORMAT_PREFERENCE_HYPHEN);
+		orderEffectiveDateNextMonth = addmonths(orderEffectiveDate,1);
+		preProdNPSD = util.setDateToFirstDayOfMonth(datetostr(orderEffectiveDateNextMonth, "yyyy-MM-dd"));	
+		//preProdNPSDOffset = addmonths(strtojavadate(preProdNPSD, DATE_FORMAT_PREFERENCE_HYPHEN),preProdWaivePeriod);
+		//preProdNPSDOffset12Months = addmonths(preProdNPSDOffset,12);
+		preProdNPSDOffset12Months = addmonths(strtojavadate(preProdNPSD, DATE_FORMAT_PREFERENCE_HYPHEN),12);
+		termDateForPreProd = datetostr(minusdays(preProdNPSDOffset12Months,1), "yyyy-MM-dd HH:mm:ss");
+		utilResultString = util.formAttrValueStr(attributesDict, TERM_DATE, lineNum, termDateForPreProd);
+		put(preProdOffsetDict,parentDocNum,datetostr(preProdNPSDOffset12Months, "yyyy-MM-dd"));
+		
+		//IESCNQRCPQ-1698-Start - Recalculating the NPSD if account is pre prod but core has monthly offset.
+		if(NOT isnull(coreAccountPreProdOffsetDict) AND containskey(coreAccountPreProdOffsetDict,parentDocNum)){
+		monthlyOffSetNonPreProdCore = get(coreAccountPreProdOffsetDict,parentDocNum);
+		preProdNPSDOffset12Months = addmonths(strtojavadate(preProdNPSD, DATE_FORMAT_PREFERENCE_HYPHEN),monthlyOffSetNonPreProdCore);
+		termDateForPreProd = datetostr(minusdays(preProdNPSDOffset12Months,1), "yyyy-MM-dd HH:mm:ss");
+		utilResultString = util.formAttrValueStr(attributesDict, TERM_DATE, lineNum, termDateForPreProd);
+		put(preProdOffsetDict,parentDocNum,datetostr(preProdNPSDOffset12Months, "yyyy-MM-dd"));
+		}
+		//IESCNQRCPQ-1698 - End
+	}
+	if(assetAction == CREATE_ACTION AND termDateForPreProd == "" AND poCategory == CORE_SERVICE AND itemType == PRE_PRODUCTION){
+		utilResultString = util.formAttrValueStr(attributesDict, TERM_DATE, lineNum, termDateForPreProd);
+	}
+	//IESCNQRCPQ-479 End
+	//IESCNQRCPQ-399 SV. 10-03-2023 Start
+	preProductionExtNetPrice =  line.preProductionExtNetPrice_line;
+	if(preProductionExtNetPrice <> "" AND NOT(isnull(preProductionExtNetPrice))){
+		append(isPreProdRestatement,"true");
+	}
+	//IESCNQRCPQ-399 End
+}
+
+//IESCNQRCPQ-932 (OK. 8-7-2023) set the contract flag to false
+if (isDelayedBilling <> "true") {
+	utilResultString = util.formAttrValueStr(attributesDict, "delayedBillingContractFlag_quote", QUOTE_DOC_NUM, string(false));
+}
+
+//IESCNQRCPQ-479 SV. 27-03-2023 Start
+if(NOT(isnull(preProdOffsetDict))){
+	for line in line_process{
+		lineNum = line._document_number;
+		itemType = line.piItemType_line;
+		parentDocNum = line._parent_doc_number;
+		monthlyOffsetHidden = line.monthlyOffSetBeforeSubmit_line;		
+		if((itemType == BASE_FEE OR itemType == INCREMENTAL_FEE) AND containskey(preProdOffsetDict, parentDocNum)){
+			utilResultString = util.formAttrValueStr(attributesDict, NEW_PROD_START_DATE, lineNum, get(preProdOffsetDict, parentDocNum,"string"));
+		}
+	}
+}
+//IESCNQRCPQ-479 End
+//IESCNQRCPQ-399 SV. 10-03-2023 Start
+if(NOT(isempty(isPreProdRestatement))){
+	utilResultString = util.formAttrValueStr(attributesDict, "isPreProdRestatement_quote", QUOTE_DOC_NUM, TRUE_STR);
+}
+else{
+	utilResultString = util.formAttrValueStr(attributesDict, "isPreProdRestatement_quote", QUOTE_DOC_NUM, FALSE_STR);
+}
+//IESCNQRCPQ-399 End
+
+//CSYS-102447 NP 15-4-2021) Start
+if (newProdSetupDateSTPM<>""){
+	npsdSTPM = util.formatDate(newProdSetupDateSTPM, "long");
+	npsdSTPMFrench = util.formatDate(newProdSetupDateSTPM, "frenchLong"); //CSYS-102834 NP 08/05/2021
+	npsdSTPMSpanish = util.formatDate(newProdSetupDateSTPM, "spanishLong"); //CSYS-103933 NP 09/13/2021
+	npsdSTPMGerman = util.formatDate(newProdSetupDateSTPM, "germanLong"); //CSYS-103932 NP 09/27/2021
+	utilResultString = util.formAttrValueStr(attributesDict, "nPSDDateForDDSTPM_quote", QUOTE_DOC_NUM, npsdSTPM);
+	utilResultString = util.formAttrValueStr(attributesDict, "nPSDDateForDDSTPMFrench_quote", QUOTE_DOC_NUM, "le "+npsdSTPMFrench+"."); //CSYS-102834 NP 08/05/2021
+	utilResultString = util.formAttrValueStr(attributesDict, "nPSDDateForDDSTPMSpanish_quote", QUOTE_DOC_NUM, npsdSTPMSpanish+"."); //CSYS-103933 NP 09/13/2021
+	utilResultString = util.formAttrValueStr(attributesDict, "nPSDDateForDDSTPMGerman_quote", QUOTE_DOC_NUM, "den "+npsdSTPMGerman+"."); //CSYS-103932 NP 09/27/2021
+}
+if (termDateSTPM<>""){
+	termDateSTPMVar = datetostr(util.getDateFromString(termDateSTPM),"yyyy-MM-dd");
+	termDateSTPMEng = util.formatDate(termDateSTPMVar, "long");
+	termDateSTPMFrench = util.formatDate(termDateSTPMVar, "frenchLong"); //CSYS-102834 NP 08/05/2021
+	termDateSTPMSpanish = util.formatDate(termDateSTPMVar, "spanishLong"); //CSYS-103933 NP 09/13/2021
+	termDateSTPMGerman = util.formatDate(termDateSTPMVar, "germanLong"); //CSYS-103932 NP 09/27/2021
+	utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPM", QUOTE_DOC_NUM, termDateSTPMEng);
+	utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMFrench_quote", QUOTE_DOC_NUM, termDateSTPMFrench); //CSYS-102834 NP 08/05/2021
+	utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMSpanish_quote", QUOTE_DOC_NUM, termDateSTPMSpanish); //CSYS-103933 NP 09/13/2021
+	utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMGerman_quote", QUOTE_DOC_NUM, termDateSTPMGerman); //CSYS-103932 NP 09/27/2021
+}
+//CSYS-102447 End
+
+//CSYS-100742 NP 5-7-2021) Start
+if (nPSDDetectOversight<>""){
+	npsdDetect = util.formatDate(nPSDDetectOversight, "long");
+	utilResultString = util.formAttrValueStr(attributesDict, "nPSDForDDDetect_quote", QUOTE_DOC_NUM, npsdDetect);
+}
+if (termDateDetect<>""){
+	termDateDetectVar = util.formatDate(datetostr(util.getDateFromString(termDateDetect),"yyyy-MM-dd"), "long");
+	utilResultString = util.formAttrValueStr(attributesDict, "termDateForDDDetect_quote", QUOTE_DOC_NUM, termDateDetectVar);
+}
+//CSYS-100742 End
+
+//CSYS-106050 (OK. 4-25-2022) TFSD
+if (terminationDateDelay <> "") {
+	npsdNewValue = util.formatDate(terminationDateDelay, "long");
+	utilResultString = util.formAttrValueStr(attributesDict, "tFSDWhenMigratingFromDetect_quote", QUOTE_DOC_NUM, npsdNewValue);
+}
+
+//CSYS-106714 (OK. 7-22-2022) Start - Calculate Termination date for all the terminated lines and display it in line item grid. calculateTerminationDate function will calculate the termination date after all the special future dated scenario's like detect migration/ Standard to professional migration etc. this function call should be in the end to avoid the overriding
+put(anyTypeDict, "stdToProfMigrationValidation", stdToProfMigration);
+put(anyTypeDict, "stdToProfMigrationTerminationDate", termDateSTPM);
+put(anyTypeDict, "detectMigrationTerminationDate", detectMigrationTermDate);
+put(anyTypeDict, "hDSTerminationDate", hDSTermDate);
+terminationDate = commerce.calculateTerminationDate(attributesDict, anyTypeDict, parentDocNumArray);
+//CSYS-106714 - End
+
+//CSYS-107671 (OK. 12-16-2022) Display the overriden TFSD value in the NPSD column in line item grid for future dated scenarios. This function should be called after all the NPSD calculation logics so placing it in the end of thr NPSD logics.  
+overrideTFSDDate = commerce.overrideTFSDDateInLIG(anyTypeDict,attributesDict);
+
+// #############################################################################
+//Build TFSD paragraphs for contracts. CSYS-46342. KA. 3-7-2016
+// #############################################################################
+TFSD_LANGUAGE = "";
+TFSD_LANGUAGE_FRENCH = "";//CSYS-91982 (LN. 7-20-2018)
+TFSD_LANGUAGE_SPANISH = "";//CSYS-93356 (LN. 2-19-2018)
+TFSD_LANGUAGE_GERMAN = "";//CSYS-96004 (SN. 09-2019)
+TFSD_LANGUAGE_JAPANESE = ""; //CSYS-107251 (PG 11/14/2022)
+
+
+//CSYS-83288 LN. 7-11-2017//
+//Need to convert to and Integer Array for proper sorting
+parentDocNumKeys = keys(coreActionDict);//Using coreActionDict for ParentDocNum related to each core
+parentDocNumInts = integer[];
+
+for modelDocNumStr in parentDocNumKeys{
+	if(isnumber(modelDocNumStr)){
+		parentDocNumInt = atoi(modelDocNumStr);
+		append(parentDocNumInts, parentDocNumInt);
+	}
+}
+sort(parentDocNumInts, "asc");
+
+
+//Populate totalOffsetArray with the correct order
+totalOffsetArray = string[];
+//Populate prodOffSetFlagArray with the correct order
+prodOffSetFlagArray = string[];
+//Populate coreActionArray with the correct order
+coreActionArray = string[];
+//Populate coreDescArray with the correct order 
+coreDescArray = string[];
+
+if(NOT(isempty(parentDocNumInts))){
+	for val in parentDocNumInts{
+		totalOffset = get(totalOffsetDict, string(val));
+		append(totalOffsetArray, totalOffset);
+	}
+
+	for val in parentDocNumInts{
+		prodOffSetFlag = get(prodOffsetFlagDict, string(val));
+		append(prodOffSetFlagArray, prodOffSetFlag);
+	}
+	
+	for val in parentDocNumInts{
+		coreAction = get(coreActionDict, string(val));
+		append(coreActionArray, coreAction);
+	}
+	
+	for val in parentDocNumInts{
+		coreDesc = get(coreDescDict, string(val));
+		append(coreDescArray, coreDesc);
+	}
+}
+
+coreOneOffsetVal = "";
+coreTwoOffsetVal = "";
+coreOneProdOffsetFlag = "";
+coreTwoProdOffsetFlag = "";
+coreOneAction = "";
+coreTwoAction = "";
+coreOneDesc = "";
+coreTwoDesc = "";
+//for future scalability (3+ cores), add more variable pairs here along with matching null check conditions below
+
+if(NOT isnull(totalOffsetArray[0])){
+	coreOneOffsetVal = totalOffsetArray[0];
+}
+if(NOT isnull(totalOffsetArray[1])){
+	coreTwoOffsetVal = totalOffsetArray[1];
+}
+if(NOT isnull(prodOffSetFlagArray[0])){
+	coreOneProdOffsetFlag = prodOffSetFlagArray[0];
+}
+if(NOT isnull(prodOffSetFlagArray[1]) AND prodOffSetFlagArray[1] <> ""){
+	coreTwoProdOffsetFlag = prodOffsetFlagArray[1];
+}
+else{
+	coreTwoProdOffsetFlag = "NA";
+}
+if(NOT isnull(coreActionArray[0])){
+	coreOneAction = coreActionArray[0];
+}
+if(NOT isnull(coreActionArray[1]) AND coreActionArray[1] <> ""){
+	coreTwoAction = coreActionArray[1];
+}
+else{
+	coreTwoAction = "NA";
+}
+if(NOT isnull(coreDescArray[0])){
+	coreOneDesc = coreDescArray[0];
+}
+if(NOT isnull(coreDescArray[1])){
+	coreTwoDesc = coreDescArray[1];
+}
+
+coreOneProdOffsetFlag = upper(coreOneProdOffsetFlag);
+coreTwoProdOffsetFlag = upper(coreTwoProdOffsetFlag);
+coreOneAction = upper(coreOneAction);
+coreTwoAction = upper(coreTwoAction);
+
+numberValDict = dict("string");
+//CSYS-96004 (SN. 09-2019)
+//CSYS-107251 (PG 11/14/2022) - For Japanese Order Form
+put(numberValDict, "1", "first" + DELIMITER + "premier" + DELIMITER + "primer" + DELIMITER + "ersten" + DELIMITER + "翌");
+//IESCNQRCPQ-736 04-07-2023 SV. As per the comments updating the vlaue of second for Japanese
+//put(numberValDict, "2", "second" + DELIMITER + "deuxième" + DELIMITER + "segundo" + DELIMITER + "zweiten" + DELIMITER + "2番目の");
+put(numberValDict, "2", "second" + DELIMITER + "deuxième" + DELIMITER + "segundo" + DELIMITER + "zweiten" + DELIMITER + "翌々");
+put(numberValDict, "3", "third" + DELIMITER + "troisième" + DELIMITER + "tercero" + DELIMITER + "dritten" + DELIMITER + "3番目の");
+put(numberValDict, "4", "fourth" + DELIMITER + "quatrième" + DELIMITER + "cuarto" + DELIMITER + "vierten" + DELIMITER + "4番目の");
+put(numberValDict, "5", "fifth" + DELIMITER + "cinquième" + DELIMITER + "quinto" + DELIMITER + "fünften" + DELIMITER + "5番目の");
+put(numberValDict, "6", "sixth" + DELIMITER + "sixième" + DELIMITER + "sexto" + DELIMITER + "sechsten" + DELIMITER + "6番目の");
+put(numberValDict, "7", "seventh" + DELIMITER + "septième" + DELIMITER + "séptimo" + DELIMITER + "siebten" + DELIMITER + "7番目の");
+put(numberValDict, "8", "eighth" + DELIMITER + "huitième" + DELIMITER + "octavo" + DELIMITER + "achten" + DELIMITER + "8番目の");
+put(numberValDict, "9", "ninth" + DELIMITER + "neuvième" + DELIMITER + "noveno" + DELIMITER + "neunten" + DELIMITER + "9番目の");
+put(numberValDict, "10", "tenth" + DELIMITER + "dixième" + DELIMITER + "décimo" + DELIMITER + "zehnten" + DELIMITER + "10番目の");
+put(numberValDict, "11", "eleventh" + DELIMITER + "onzième" + DELIMITER + "undécimo" + DELIMITER + "elften" + DELIMITER + "11番目の");
+put(numberValDict, "12", "twelfth" + DELIMITER + "douzième" + DELIMITER + "duodécimo" + DELIMITER + "zwölften" + DELIMITER + "12番目の");
+put(numberValDict, "13", "thirteenth" + DELIMITER + "treizième" + DELIMITER + "decimotercero" + DELIMITER + "dreizehnten" + DELIMITER + "13番目の");
+put(numberValDict, "14", "fourteenth" + DELIMITER + "quatorzième" + DELIMITER + "decimocuarto" + DELIMITER + "vierzehnten" + DELIMITER + "14番目の");
+put(numberValDict, "15", "fifteenth" + DELIMITER + "quinzième" + DELIMITER + "decimoquinto" + DELIMITER + "fünfzehnten" + DELIMITER + "15番目の");
+
+
+//CSYS-91982 (LN. 7-20-2018) New Constants to leverage the population of the French 'first, second, third, etc..'
+splitOneOffset = string[];
+coreOneOffset = "";
+coreOneOffsetFrench = "";
+coreOneOffsetSpanish = "";//CSYS-93356 (LN. 2-19-2018)
+coreOneOffsetGerman = "";//CSYS-96004 (SN. 09-2019)
+coreOneOffsetJapanese = ""; //CSYS-107251 (PG 11/14/2022)
+
+if(containskey(numberValDict, coreOneOffsetVal)){
+	splitOneOffset = split(get(numberValDict, coreOneOffsetVal), DELIMITER);
+	coreOneOffset = splitOneOffset[0];//first index is in English
+	coreOneOffsetFrench = splitOneOffset[1];//second index is in French
+	coreOneOffsetSpanish = splitOneOffset[2];//second index is in Spanish
+	coreOneOffsetGerman = splitOneOffset[3];//CSYS-96004 (SN. 09-2019) 3rd index is in German
+	coreOneOffsetJapanese = splitOneOffset[4]; //CSYS-107251 (PG 11/14/2022)
+}
+else {
+	coreOneOffset = coreOneOffsetVal;
+	coreOneOffsetFrench = coreOneOffsetVal;
+	coreOneOffsetSpanish = coreOneOffsetVal;
+	coreOneOffsetGerman = coreOneOffsetVal;//CSYS-96004 (SN. 09-2019)
+	coreOneOffsetJapanese = coreOneOffsetVal; //CSYS-107251 (PG 11/14/2022)
+}
+
+//CSYS-91982 (LN. 7-20-2018) New Constants to leverage the population of the French 'first, second, third, etc..'
+splitTwoOffset = string[];
+coreTwoOffset = "";
+coreTwoOffsetFrench = "";
+coreTwoOffsetSpanish = "";//CSYS-93356 (LN. 2-19-2018)
+coreTwoOffsetGerman = "";//CSYS-96004 (SN. 09-2019)
+coreTwoOffsetJapanese = ""; //CSYS-107251 (PG 11/14/2022)
+
+if(containskey(numberValDict, coreTwoOffsetVal)){
+	splitTwoOffset = split(get(numberValDict, coreTwoOffsetVal), DELIMITER);
+	coreTwoOffset = splitTwoOffset[0];//first index is in English
+	coreTwoOffsetFrench = splitTwoOffset[1];//second index is in French
+	coreTwoOffsetSpanish = splitTwoOffset[2];//second index is in Spanish
+	coreTwoOffsetGerman = splitTwoOffset[3];//CSYS-96004 (SN. 09-2019) 3rd index is in German
+	coreTwoOffsetJapanese = splitTwoOffset[4]; //CSYS-107251 (PG 11/14/2022)
+}
+else {
+	coreTwoOffset = coreTwoOffsetVal;
+	coreTwoOffsetFrench = coreTwoOffsetVal;
+	coreTwoOffsetSpanish = coreTwoOffsetVal;
+	coreTwoOffsetGerman = coreTwoOffsetVal;//CSYS-96004 (SN. 09-2019)
+	coreTwoOffsetJapanese = coreTwoOffsetVal; //CSYS-107251 (PG 11/14/2022)
+}
+
+
+
+//**********************************************************
+//new business quotes
+//CSYS-92292
+/*
+if(quoteType_quote == "New Business"){
+	if(sizeofarray(coreDescArray) == 1){ //1 core scenarios
+		if(coreOneAction == CREATE_ACTION){ //prod
+			if(coreOneProdOffsetFlag == TRUE_STR){
+		
+				TFSD_LANGUAGE = "means the " + coreOneOffset + " calendar month after the date of Production Availability.";
+				
+			
+			} 
+			elif(coreOneProdOffsetFlag == FALSE_STR){ //non prod
+		
+				TFSD_LANGUAGE = "means the " + coreOneOffset + " calendar month after the date set forth above as the \"ORDERVSQUOTATIONSTR Effective Date\".";
+				
+				/*CSYS-91982 (LN. 7-20-2018)
+					As referenced by the NPSD table for all core service available to SMB BU, EMEA, France: the table will only return an offset of '2'.
+					Therefore, PROD will never be an option at this point in time.  We will only be accounting for non-prod offsets for France currently.
+				*/
+//CSYS-92292
+/*				TFSD_LANGUAGE_FRENCH = "Signifie le " + coreOneOffsetFrench + " mois calendaire suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande ».";
+				
+			}
+		}
+	}
+	
+	if(sizeofarray(coreDescArray) == 2){ //2 core scenarios
+		if(coreOneAction == CREATE_ACTION AND coreOneProdOffsetFlag == TRUE_STR AND coreTwoAction == CREATE_ACTION AND coreTwoProdOffsetFlag == TRUE_STR){ //prod on core 1, prod on core 2
+		
+			TFSD_LANGUAGE = "means (i) for the " + coreOneDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreOneOffset + " calendar month after the date of Production Availablility" + "; " + "and (ii) for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date of Production Availablility of such Service Type.";
+			
+		}
+		
+		elif(coreOneAction == CREATE_ACTION AND coreOneProdOffsetFlag == FALSE_STR AND coreTwoAction == CREATE_ACTION AND coreTwoProdOffsetFlag == FALSE_STR){ //non prod on core 1, non prod on core 2
+		
+			TFSD_LANGUAGE = "means (i) for the " + coreOneDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreOneOffset + " calendar month after the  date specified above as the \"ORDERVSQUOTATIONSTR Effective Date\"" + "; " + "and (ii) for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date set forth above as the \"ORDERVSQUOTATIONSTR Effective Date\".";
+
+			/*CSYS-91982 (LN. 7-20-2018)
+				As referenced by the NPSD table for all core service available to SMB BU, EMEA, France: the table will only return an offset of '2'.
+				Therefore, PROD will never be an option at this point in time.  We will only be accounting for non-prod offsets for France currently.
+			*/
+//CSYS-92292
+/*			TFSD_LANGUAGE_FRENCH = "signifie (i) pour chaque Service Type " + coreOneDesc + " commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le " + coreOneOffsetFrench + " calendaire suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande », et (ii) pour le Service Type " + coreTwoDesc + " commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le " + coreTwoOffsetFrench + " calendaire suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande ».";
+			
+		}
+		
+		elif(coreOneAction == CREATE_ACTION AND coreOneProdOffsetFlag == FALSE_STR AND coreTwoAction == CREATE_ACTION AND coreTwoProdOffsetFlag == TRUE_STR){ //non prod on core 1, prod on core 2
+		
+			TFSD_LANGUAGE = "means (i) for the " + coreOneDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreOneOffset + " calendar month after the  date specified above as the \"ORDERVSQUOTATIONSTR Effective Date\"" + "; " + "and (ii) for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date of Production Availablility of such Service Type.";
+			
+		}
+		
+		elif(coreOneAction == CREATE_ACTION AND coreOneProdOffsetFlag == TRUE_STR AND coreTwoAction == CREATE_ACTION AND coreTwoProdOffsetFlag == FALSE_STR){ //prod on core 1, non prod on core 2
+		
+			TFSD_LANGUAGE = "means (i) for the " + coreOneDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreOneOffset + " calendar month after the date of Production Availablility" + "; " + "and (ii) for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date set forth above as the \"ORDERVSQUOTATIONSTR Effective Date\".";
+			
+		}
+	}
+}
+*/
+//nonesIncluded = includeAllProductsOnContract_quote;
+TFSD_LANGUAGE_EXTENDED = "";
+TFSD_LANGUAGE_EXTENDED_FRENCH = "";//CSYS-91982 (LN. 7-20-2018)
+TFSD_LANGUAGE_EXTENDED_SPANISH = "";//CSYS-93356 (LN. 2-19-2018)
+TFSD_LANGUAGE_EXTENDED_GERMAN = "";//CSYS-96004 (SN. 09-2019)
+TFSD_LANGUAGE_EXTENDED_JAPANESE = ""; //CSYS-107251 (PG 11/14/2022)
+//add-on quotes
+if(quoteType_quote == ADD_ON){
+	//CSYS-92105
+	if (accountPreProductionStatic_quote <> true){
+		/*
+		TFSD_LANGUAGE = "means the first calendar month after the date of Production Availability.";
+		TFSD_LANGUAGE_EXTENDED = TFSD_LANGUAGE;
+
+		//CSYS-93356 (LN. 2-19-2018)
+		TFSD_LANGUAGE_SPANISH = "significa el primer mes calendario después de la Disponibilidad en Producción del Servicio Cloud.";
+		TFSD_LANGUAGE_EXTENDED_SPANISH = TFSD_LANGUAGE_SPANISH;
+	}
+	else{
+		
+		TFSD_LANGUAGE = "means the first scheduled Billing Cycle after the date specified above as the \"ORDERVSQUOTATIONSTR Effective Date\"."; //default language for add-ons
+		TFSD_LANGUAGE_EXTENDED = TFSD_LANGUAGE; //default language for add-ons when customer elects to include all products on contract
+
+		/*CSYS-91982 (LN. 7-20-2018)
+			As referenced by the NPSD table for all core service available to SMB BU, EMEA, France: the table will only return an offset of '2'.
+			Therefore, PROD will never be an option at this point in time.  We will only be accounting for non-prod offsets for France currently.
+		
+		TFSD_LANGUAGE_FRENCH = "signifie le premier Cycle de Facturation suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande ».";
+		TFSD_LANGUAGE_EXTENDED_FRENCH = TFSD_LANGUAGE_FRENCH;
+		*/
+
+		utilResultString = util.formAttrValueStr(attributesDict, "forceIncludeAllProducts_quote", QUOTE_DOC_NUM, FALSE_STR); //by default, allow the user to choose whether they want to include all products on contract or not and don't hide the checkbox
+		
+		
+		if(sizeofarray(coreDescArray) >= 1){ //1 and 2 core scenarios
+			//CSYS-92292
+			/*
+			if(coreOneAction == NONE_ACTION AND coreTwoAction == CREATE_ACTION){ //core 1 is NONE, core 2 is CREATE
+			
+				if(coreTwoProdOffsetFlag == FALSE_STR){ //non-prod
+					
+					//for when user DOES NOT elect to include NONE's on contract:
+					TFSD_LANGUAGE = "means for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date set forth above as the \"ORDERVSQUOTATIONSTR Effective Date\".";
+
+					/*CSYS-91982 (LN. 7-20-2018)
+						As referenced by the NPSD table for all core service available to SMB BU, EMEA, France: the table will only return an offset of '2'.
+						Therefore, PROD will never be an option at this point in time.  We will only be accounting for non-prod offsets for France currently.
+
+						The scenario below is for when a user DOES NOT elect to include NONE's on the contract:
+					*/
+					//CSYS-92292
+					/*			
+					TFSD_LANGUAGE_FRENCH = "signifie pour le Service Type " + coreTwoDesc + " commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le " + coreTwoOffsetFrench + " calendaire suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande ».";
+					
+					//for when user DOES elect to include NONE's on contract:
+					TFSD_LANGUAGE_EXTENDED = "means (i) for the " + coreOneDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the first scheduled Billing Cycle after the date specified above as the \"ORDERVSQUOTATIONSTR Effective Date\"" + "; " + "and (ii) for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date set forth above as the \"ORDERVSQUOTATIONSTR Effective Date\".";
+
+					/*CSYS-91982 (LN. 7-20-2018)
+						As referenced by the NPSD table for all core service available to SMB BU, EMEA, France: the table will only return an offset of '2'.
+						Therefore, PROD will never be an option at this point in time.  We will only be accounting for non-prod offsets for France currently.
+
+						The scenario below is for when a user DOES elect to include NONE's on the contract:
+					*/
+					//CSYS-92292
+					/*						
+					TFSD_LANGUAGE_EXTENDED_FRENCH = "signifie (i) pour le Service Type " + coreOneDesc + " commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le premier Cycle de Facturation suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande », et (ii) pour le Service Type " + coreTwoDesc + " commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le " + coreTwoOffsetFrench + " calendaire suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande ».";
+					
+				}elif(coreTwoProdOffsetFlag == TRUE_STR){ //prod
+					
+					//for when user DOES NOT elect to include NONE's on contract:
+					TFSD_LANGUAGE = "means for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date of Production Availability.";
+					
+					//for when user DOES elect to include NONE's on contract:
+					TFSD_LANGUAGE_EXTENDED = "means (i) for the " + coreOneDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the first scheduled Billing Cycle after the date specified above as the \"ORDERVSQUOTATIONSTR Effective Date\"" + "; " + "and (ii) for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date of Production Availability of such Service Type.";
+					
+				}
+			}
+			*/
+				
+			if((coreOneAction == "CREATE/TERMINATE" AND coreTwoAction == CREATE_ACTION) //core 1 is CREATE/TERMINATE, core 2 is CREATE
+			OR (coreOneAction == MODIFY_ACTION AND coreTwoAction == CREATE_ACTION) //core 1 is MODIFY, core 2 is CREATE
+			OR (coreOneAction == "NONE/CREATE_MODIFY_TERMINATE" AND coreTwoAction == CREATE_ACTION)){ //core 1 is NONE with ext serv CREATE, MODIFY, TERMINATE (CSYS-96967 (LN. 8-28-2019), core 2 is CREATE
+
+				utilResultString = util.formAttrValueStr(attributesDict, "forceIncludeAllProducts_quote", QUOTE_DOC_NUM, TRUE_STR); //all products must be included in the contract's pricing grid. We'll use the forceInclude attribute to hide the 'include all products on contract' checkbox since it shouldn't be tweakable in this case.
+				utilResultString = util.formAttrValueStr(attributesDict, "includeAllProductsOnContract_quote", QUOTE_DOC_NUM, TRUE_STR); //behind the scenes, set the checkbox to include all products on the contract
+				//CSYS-92292
+				/*
+				if(coreTwoProdOffsetFlag == TRUE_STR){ //prod
+				
+					TFSD_LANGUAGE = "means (i) for the " + coreOneDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the first scheduled Billing Cycle after the date specified above as the \"ORDERVSQUOTATIONSTR Effective Date\"" + "; " + "and (ii) for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date of Production Availability of such Service Type.";
+					TFSD_LANGUAGE_EXTENDED = TFSD_LANGUAGE;
+					
+				}elif(coreTwoProdOffsetFlag == FALSE_STR){ //non prod
+				
+					TFSD_LANGUAGE = "means (i) for the " + coreOneDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the first scheduled Billing Cycle after the date specified above as the \"ORDERVSQUOTATIONSTR Effective Date\"" + "; " + "and (ii) for the " + coreTwoDesc + " Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the " + coreTwoOffset + " calendar month after the date set forth above as the \"ORDERVSQUOTATIONSTR Effective Date\".";
+					TFSD_LANGUAGE_EXTENDED = TFSD_LANGUAGE;
+
+					/*CSYS-91982 (LN. 7-20-2018)
+						As referenced by the NPSD table for all core service available to SMB BU, EMEA, France: the table will only return an offset of '2'.
+						Therefore, PROD will never be an option at this point in time.  We will only be accounting for non-prod offsets for France currently.
+					*/
+					//CSYS-92292
+					/*
+					TFSD_LANGUAGE_FRENCH = "signifie (i) pour le Service Type " + coreOneDesc + " commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le premier Cycle de Facturation suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande », et (ii) pour le Service Type " + coreTwoDesc + " commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le " + coreTwoOffsetFrench + " calendaire suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande ».";
+					TFSD_LANGUAGE_EXTENDED_FRENCH = TFSD_LANGUAGE_FRENCH;
+				}
+				*/
+			}
+			//CSYS-92292
+			/*
+			if((coreOneAction == MODIFY_ACTION AND (coreTwoAction == NONE_ACTION OR coreTwoAction == "NONE/CREATE_MODIFY_TERMINATE"))//core 1 is MODIFY, core 2 is NONE
+			OR ((coreOneAction == NONE_ACTION OR coreOneAction == "NONE/CREATE_MODIFY_TERMINATE") AND coreTwoAction == MODIFY_ACTION) //core 1 is NONE, core 2 is MODIFY
+			OR (coreOneAction == MODIFY_ACTION AND coreTwoAction == MODIFY_ACTION) //core 1 is MODIFY, core 2 is MODIFY
+			OR (coreOneAction == MODIFY_ACTION AND coreTwoAction == "CREATE/TERMINATE") //core 1 is MODIFY, core 2 is CREATE/TERMINATE
+			OR (coreOneAction == "CREATE/TERMINATE" AND coreTwoAction == MODIFY_ACTION) //core 1 is CREATE/TERMINATE, core 2 is MODIFY
+			OR (coreOneAction == "CREATE/TERMINATE" AND coreTwoAction == "CREATE/TERMINATE")){ //core 1 is CREATE/TERMINATE, core 2 is CREATE/TERMINATE
+			
+				TFSD_LANGUAGE = "means for each Service Type ordered as specified above (and all extended services that pertain to each such Service Type) the first scheduled Billing Cycle for each such Service Type after the date specified above as the \"ORDERVSQUOTATIONSTR Effective Date\".";
+				TFSD_LANGUAGE_EXTENDED = TFSD_LANGUAGE;
+
+				/*CSYS-91982 (LN. 7-20-2018)
+					As referenced by the NPSD table for all core service available to SMB BU, EMEA, France: the table will only return an offset of '2'.
+					Therefore, PROD will never be an option at this point in time.  We will only be accounting for non-prod offsets for France currently.
+				*/
+			//CSYS-92292
+			/*		
+				TFSD_LANGUAGE_FRENCH = "signifie pour tout Service Type commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le premier Cycle de Facturation suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande ».";
+				TFSD_LANGUAGE_EXTENDED_FRENCH = TFSD_LANGUAGE_FRENCH;
+				
+			}
+			*/
+		}
+	}
+}
+
+//CSYS-99114 contract conversion to from concur paper to sap gtc flag (by default the below contract flags are false, so we dont need to make them false when sap gtc flag is false)
+if (contractConversionToSAPGTC_quote == true) {
+	//utilResultString = util.formAttrValueStr(attributesDict, "includeAllProductsOnContract_quote", QUOTE_DOC_NUM, TRUE_STR);//CSYS-102063 (SV. 23-02-2021) Commenting out the code
+	utilResultString = util.formAttrValueStr(attributesDict, "forceIncludeAllProducts_quote", QUOTE_DOC_NUM, TRUE_STR);
+}
+
+//CSYS-92292
+QUOTE_TYPE = quoteType_quote;
+accntPreProdFlag = upper(string(accountPreProductionStatic_quote));
+ownerBU = ownerBU_quote; //CSYS-100040 (OK. 8-11-2020) Added Owner BU in below query.
+
+//CSYS-96004 (SN. 09-2019) Include german columns
+//CSYS-107251 (PG 11/14/2022) Include Japanese Columns
+recordSet = BMQL("SELECT language1, language2, language3, languageExt1, languageExt2, languageExt3, languageFrench1, languageFrench2, languageFrench3, languageFrenchExt1, languageFrenchExt2, languageFrenchExt3, languageSpanish1, languageSpanish2, languageSpanish3, languageSpanishExt1, languageSpanishExt2, languageSpanishExt3, languageGerman1, languageGerman2, languageGerman3, languageGermanExt1, languageGermanExt2, languageGermanExt3, languageJapan1, languageJapan2, languageJapan3, languageJapanExt1, languageJapanExt2, languageJapanExt3 FROM TfsdLanguage WHERE quoteType = $QUOTE_TYPE AND (coreOneAction = $coreOneAction OR coreOneAction is null OR coreOneAction = '') AND (coreTwoAction = $coreTwoAction OR coreTwoAction is null OR coreTwoAction = '') AND (coreOneProdOffsetFlg = $coreOneProdOffsetFlag OR coreOneProdOffsetFlg is null or coreOneProdOffsetFlg = '') AND (coreTwoProdOffsetFlg = $coreTwoProdOffsetFlag OR coreTwoProdOffsetFlg is null OR coreTwoProdOffsetFlg = '') AND (accntPreProdFlag = $accntPreProdFlag OR accntPreProdFlag is null OR accntPreProdFlag = '') AND (OwnerBU = $ownerBU OR OwnerBU is null OR OwnerBU = '')");
+
+for entry in recordSet{
+	language1 = get(entry, "language1");
+	language2 = get(entry, "language2");
+	language3 = get(entry, "language3");
+	languageExt1 = get(entry, "languageExt1");
+	languageExt2 = get(entry, "languageExt2");
+	languageExt3 = get(entry, "languageExt3");
+	languageFrench1 = get(entry, "languageFrench1");
+	languageFrench2 = get(entry, "languageFrench2");
+	languageFrench3 = get(entry, "languageFrench3");
+	languageFrenchExt1 = get(entry, "languageFrenchExt1");
+	languageFrenchExt2 = get(entry, "languageFrenchExt2");
+	languageFrenchExt3 = get(entry, "languageFrenchExt3");
+	//CSYS-93356 (LN. 2-19-2018)
+	languageSpanish1 = get(entry, "languageSpanish1");
+	languageSpanish2 = get(entry, "languageSpanish2");
+	languageSpanish3 = get(entry, "languageSpanish3");
+	languageSpanishExt1 = get(entry, "languageSpanishExt1");
+	languageSpanishExt2 = get(entry, "languageSpanishExt2");
+	languageSpanishExt3 = get(entry, "languageSpanishExt3");
+	//CSYS-96004 (SN. 09-2019)
+	languageGerman1 = get(entry, "languageGerman1");
+	languageGerman2 = get(entry, "languageGerman2");
+	languageGerman3 = get(entry, "languageGerman3");
+	languageGermanExt1 = get(entry, "languageGermanExt1");
+	languageGermanExt2 = get(entry, "languageGermanExt2");
+	languageGermanExt3 = get(entry, "languageGermanExt3");
+	//CSYS-107251 (PG 11/14/2022)
+	languageJapan1 = get(entry, "languageJapan1");
+	languageJapan2 = get(entry, "languageJapan2");
+	languageJapan3 = get(entry, "languageJapan3");
+	languageJapanExt1 = get(entry, "languageJapanExt1");
+	languageJapanExt2 = get(entry, "languageJapanExt2");
+	languageJapanExt3 = get(entry, "languageJapanExt3");
+	
+	if(language1 <> "" AND NOT isnull(language1)){
+		TFSD_LANGUAGE = language1 + " " + language2 + " " + language3;
+	}
+	if(languageExt1 <> "" AND NOT isnull(languageExt1)){
+		TFSD_LANGUAGE_EXTENDED = languageExt1 + " " + languageExt2 + " " + languageExt3;
+	}
+	if(languageFrench1 <> "" AND NOT isnull(languageFrench1)){
+		TFSD_LANGUAGE_FRENCH = languageFrench1 + " " + languageFrench2 + " " + languageFrench3;
+	}
+	if(languageFrenchExt1 <> "" AND NOT isnull(languageFrenchExt1)){
+		TFSD_LANGUAGE_EXTENDED_FRENCH = languageFrenchExt1 + " " + languageFrenchExt2 + " " + languageFrenchExt3;
+	}
+	//CSYS-93356 (LN. 2-19-2018)
+	if(languageSpanish1 <> "" AND NOT isnull(languageSpanish1)){
+		TFSD_LANGUAGE_SPANISH = languageSpanish1 + " " + languageSpanish2 + " " + languageSpanish3;
+	}
+	if(languageSpanishExt1 <> "" AND NOT isnull(languageSpanishExt1)){
+		TFSD_LANGUAGE_EXTENDED_SPANISH = languageSpanishExt1 + " " + languageSpanishExt2 + " " + languageSpanishExt3;
+	}
+	//CSYS-96004 (SN. 09-2019)
+	if(languageGerman1 <> "" AND NOT isnull(languageGerman1)){
+		TFSD_LANGUAGE_GERMAN = languageGerman1 + " " + languageGerman2 + " " + languageGerman3;
+	}
+	if(languageGermanExt1 <> "" AND NOT isnull(languageGermanExt1)){
+		TFSD_LANGUAGE_EXTENDED_GERMAN = languageGermanExt1 + " " + languageGermanExt2 + " " + languageGermanExt3;
+	}
+	//CSYS-107251 (PG 11/14/2022)
+	if(languageJapan1 <> "" AND NOT isnull(languageJapan1)){
+		TFSD_LANGUAGE_JAPANESE = languageJapan1 + " " + languageJapan2 + " " + languageJapan3;
+	}
+	if(languageJapanExt1 <> "" AND NOT isnull(languageJapanExt1)){
+		TFSD_LANGUAGE_EXTENDED_JAPANESE = languageJapanExt1 + " " + languageJapanExt2 + " " + languageJapanExt3;
+	}
+	//break;
+}
+
+//CSYS-100040 (OK. 8-10-2020) Start
+monthsDict = dict("string");
+put(monthsDict, "01", "January");
+put(monthsDict, "02", "February");
+put(monthsDict, "03", "March");
+put(monthsDict, "04", "April");
+put(monthsDict, "05", "May");
+put(monthsDict, "06", "June");
+put(monthsDict, "07", "July");
+put(monthsDict, "08", "August");
+put(monthsDict, "09", "September");
+put(monthsDict, "10", "October");
+put(monthsDict, "11", "November");
+put(monthsDict, "12", "December");
+
+nPSDKey = keys(nPSDDict);
+nPSDKeyValue = integer[];
+for res in nPSDKey{
+    if (isnumber(res)) {
+        key = atoi(res);
+        append(nPSDKeyValue, key);
+    }
+}
+sort(nPSDKeyValue, "asc");
+audit60PromoDateOFArray = string[]; //CSYS-100310 (OK. 8-10-2020) 
+audit6PromoDateOFArray = string[]; //CSYS-100310 (OK. 8-10-2020)
+
+if (NOT(isempty(nPSDKeyValue))) {
+    for val in nPSDKeyValue{
+        tFSDForOF = get(nPSDDict, string(val));
+        append(nextBillingDateforOFArray, tFSDForOF);
+        //CSYS-100310 (OK. 8-10-2020) - Start
+	audit60PromoDateOF = get(audit60Dict, string(val)); 
+        append(audit60PromoDateOFArray, audit60PromoDateOF); 
+	audit6PromoDateOF = get(audit6Dict, string(val)); 
+        append(audit6PromoDateOFArray, audit6PromoDateOF); 
+	//CSYS-100310 (OK. 8-10-2020) - End
+    }  
+}
+
+//CSYS-100310 (OK. 8-18-2020) Start
+sameTFSD = "";
+
+if (NOT isnull(nextBillingDateforOFArray [0]) AND NOT isnull(nextBillingDateforOFArray [1])) {
+	if (nextBillingDateforOFArray [0] == nextBillingDateforOFArray [1]) {
+		sameTFSD = "true";
+	}
+	else {
+		sameTFSD = "false";
+	}
+}
+else {
+	sameTFSD = "true";
+}
+
+promoPeriod = 0;
+audit60Period = 0;
+audit6Period = 0;
+appliedPromo = "";
+promoAudit60 = "";
+promoAudit6 = "";
+sMBPromoApplied = "";
+selectedNewSMBPromo = ""; //CSYS-101865 (OK. 1-25-2021)
+
+if (appliedPromotion_quote <> ""
+    AND NOT(isnull(appliedPromotion_quote))) {
+    promosSelected = split(appliedPromotion_quote, "#^#");
+    for promo in promosSelected {
+		if (promo == "SMB30DAYSFREE") {
+			promoPeriod = 1;
+			appliedPromo = "SMB30DAYSFREE";
+		}
+		if (promo == "TESTOFFER60") {
+			promoPeriod = 2;
+			appliedPromo = "TESTOFFER60";
+		}
+		if (promo == "SMNCUSTCLOSER") {
+			promoPeriod = 3;
+			appliedPromo = "SMNCUSTCLOSER";
+		}
+		if (promo == "AUDITSLAOFFER60") {
+			audit60Period = 2;
+			promoAudit60 = "true";
+		}
+		if (promo == "AUDITSLAOFFER6") {
+			audit6Period = 6;
+			promoAudit6 = "true";
+		}
+		
+		//CSYS-101865 (OK. 1-25-2021) - Start: Adding this condition to support upcoming new SMB New Business Promotions in future. "newSMBPromoArr" needs update for new SMB New business Promos. promos mentioning here should not combine with each other. Example: SMB60DAYSFREE and SMB90DAYSFREE promos cant selected together. like this we need to check the combinations
+																		   
+		newSMBPromoArr = string[] {"SMB60DAYSFREE", "SMB90DAYSFREE", "SMBAMPLIFY","SMB120DAYSFREE","SMB150DAYSFREE"};
+		if (findinarray(newSMBPromoArr, promo) <> -1) {		
+			selectedNewSMBPromo = "true";
+			appliedPromo = promo;
+		}
+		//CSYS-101865 - End
+	}
+}
+
+//CSYS-101865 (OK. 1-25-2021) - Start: Getting the promo length from promoLanguage table
+if (selectedNewSMBPromo == "true") {
+	promoLengthRecord = BMQL("SELECT promoLength FROM promoLanguage WHERE PromoCode = $appliedPromo AND oneTFSD = $sameTFSD");
+	for res in promoLengthRecord {
+		promoPeriod = atoi(get(res, "promoLength"));
+	}
+}
+//CSYS-101865 - End
+
+if (appliedPromo <> "") {
+	sMBPromoApplied = "true";
+}
+//CSYS-100310 - End
+
+tFSDForOFArray = string[];
+promoDateArray = string[]; //CSYS-100310 (OK. 8-10-2020)
+audit60Array = string[]; //CSYS-100310 (OK. 8-10-2020)
+audit6Array = string[]; //CSYS-100310 (OK. 8-10-2020)
+
+//IESCNQRCPQ-433 (LBN 13-03-2023)-start
+promoDateFrenchArray = string[]; 
+
+frenchMonthsDict = dict("string");
+put(frenchMonthsDict, "01", "janvier");
+put(frenchMonthsDict, "02", "février");
+put(frenchMonthsDict, "03", "mars");
+put(frenchMonthsDict, "04", "avril");
+put(frenchMonthsDict, "05", "mai");
+put(frenchMonthsDict, "06", "juin");
+put(frenchMonthsDict, "07", "juillet");
+put(frenchMonthsDict, "08", "août");
+put(frenchMonthsDict, "09", "septembre");
+put(frenchMonthsDict, "10", "octobre");
+put(frenchMonthsDict, "11", "novembre");
+put(frenchMonthsDict, "12", "décembre");
+//END
+
+if (NOT(isempty(nextBillingDateforOFArray))) {
+    for val in nextBillingDateforOFArray{
+	nextBillingDate = val;
+	yearVal = "";
+	monthVal = "";
+	dayVal = "";
+	splitNewDate = string[];
+	
+	if (find(nextBillingDate, "-") <> -1) {
+	    splitNewDate = split(nextBillingDate, dateDelim);		
+	}
+
+	yearVal = splitNewDate[0];
+	monthVal = splitNewDate[1];
+	dayVal = splitNewDate[2];
+	
+	month = get(monthsDict, monthVal);
+	tFSDForCore = month + " " + dayVal + ", " + yearVal;
+	append(tFSDForOFArray, tFSDForCore);
+	
+	//CSYS-100310 (OK. 8-10-2020) - Start
+	if (promoPeriod <> 0) {
+		newMonth1 = atoi(monthVal) + promoPeriod;
+		promoYear1 = yearVal;			
+		if (newMonth1 > 12) {
+			newMonth1 = newMonth1 - 12;
+			promoYear1 = string(atoi(yearVal) + 1);
+		}
+		newMonth2 = string(newMonth1);
+		if (newMonth1 < 10) {
+			newMonth2 = "0" + newMonth2;
+		}
+		month1 = get(monthsDict, newMonth2);
+		promoDate1 = month1 + " " + dayVal + ", " + promoYear1;
+		append(promoDateArray, promoDate1);
+		//IESCNQRCPQ-433 - start
+		frenchMonth = get(frenchMonthsDict, newMonth2);
+		frenchPromoDate1 = dayVal + " " + frenchMonth + " " + promoYear1;
+		append(promoDateFrenchArray, frenchPromoDate1); //IESCNQRCPQ-433 end
+	}
+	
+	//for AUDITSLAOFFER60 promo
+	if (audit60Period <> 0) {
+		newMonth3 = atoi(monthVal) + audit60Period;
+		promoYear2 = yearVal;			
+		if (newMonth3 > 12) {
+			newMonth3 = newMonth3 - 12;
+			promoYear2 = string(atoi(yearVal) + 1);
+		}							
+		newMonth4 = string(newMonth3);
+		if (newMonth3 < 10) {
+			newMonth4 = "0" + newMonth4;
+		}
+		month2 = get(monthsDict, newMonth4);
+		promoDate2 = month2 + " " + dayVal + ", " + promoYear2;
+		append(audit60Array, promoDate2);
+	}
+	
+	//for AUDITSLAOFFER6 promo
+	if (audit6Period <> 0) {
+		newMonth5 = atoi(monthVal) + audit6Period;			
+		promoYear3 = yearVal;
+		if (newMonth5 > 12) {
+			newMonth5 = newMonth5 - 12;
+			promoYear3 = string(atoi(yearVal) + 1);
+		}
+		newMonth6 = string(newMonth5);
+		if (newMonth5 < 10) {
+			newMonth6 = "0" + newMonth6;
+		}
+		month3 = get(monthsDict, newMonth6);
+		promoDate3 = month3 + " " + dayVal + ", " + promoYear3;
+		append(audit6Array, promoDate3);
+	}
+	//CSYS-100310 - End
+    }
+	coreOneTFSD = tFSDForOFArray[0];
+	coreTwoTFSD = tFSDForOFArray[1];
+}
+//CSYS-100040 - End
+
+//CSYS-100310 (OK. 8-10-2020) - Start
+firstCorePromoDate = promoDateArray[0];
+secondCorePromoDate = promoDateArray[1];
+//IESCNQRCPQ-433 start
+firstCorePromoDateFrench = promoDateFrenchArray[0];
+secondCorePromoDateFrench = promoDateFrenchArray[1];
+//END
+audit60PromoDate = "";
+audit6PromoDate = "";
+if (NOT isnull(audit60PromoDateOFArray[0])) {
+	audit60PromoDate = audit60Array[0];
+}
+else {
+	audit60PromoDate = audit60Array[1];
+}
+
+if (NOT isnull(audit6PromoDateOFArray[0])) {
+	audit6PromoDate = audit6Array[0];
+}
+else {
+	audit6PromoDate = audit6Array[1];
+}
+
+PROMO_LANGUAGE = "";
+recordSet = BMQL("SELECT language1, language2, language3, language4, language5 FROM promoLanguage WHERE PromoCode = $appliedPromo AND oneTFSD = $sameTFSD");
+
+amplifyPromoArr = string[] {"SMBAMPLIFY", "ENTNEWAMPLIFYAPA", "ENTNEWAMPLIFYWAIVER"};//CSYS-103944 NT 25/08/2021
+
+for res in recordSet {
+	language1 = get(res, "language1");
+    language2 = get(res, "language2");
+    language3 = get(res, "language3");
+	language4 = get(res, "language4");
+	language5 = get(res, "language5");	//CSYS-100951, (BS, 10/29/2020) Added new column to the promoLanguage table to overcome 255 character limit when adding PTE to the exclusion list
+	
+	if (language1 <> "" AND NOT isnull(language1)) {
+		//CSYS-103944 NT 25/08/2021
+		if (findinarray(amplifyPromoArr, appliedPromo) <> -1) 
+		{
+		 PROMO_LANGUAGE = language1 + " " + language2 + " " + language3 + " " + language5;
+		 utilResultString = util.formAttrValueStr(attributesDict, "amplifyLangCheck", QUOTE_DOC_NUM, TRUE_STR);
+		}
+		else
+		{
+		 PROMO_LANGUAGE = language1 + " " + language2 + " " + language3 + " " + language4 + " " + language5;
+		}
+       
+    }
+	
+	if (PROMO_LANGUAGE <> "") {
+		PROMO_LANGUAGE = replace(PROMO_LANGUAGE, "FC_line", firstCorePromoDate);
+		PROMO_LANGUAGE = replace(PROMO_LANGUAGE, "SC_line", secondCorePromoDate);
+		PROMO_LANGUAGE = replace(PROMO_LANGUAGE, "FCD_line", coreOneDesc);
+		PROMO_LANGUAGE = replace(PROMO_LANGUAGE, "SCD_line", coreTwoDesc);
+	}
+}
+
+//IESCNQRCPQ-433 LBN (03/10/2023) start
+SMB_PROMO_LANGUAGE_FRENCH = "";
+resultSet = BMQL("SELECT language1, language2, language3, language4, language5 FROM promoLangTranslation WHERE promoCode = $appliedPromo AND oneTFSD = $sameTFSD");
+
+for record in resultSet {
+	language1 = get(record, "language1");
+    language2 = get(record, "language2");
+    language3 = get(record, "language3");
+	language4 = get(record, "language4");
+	language5 = get(record, "language5");
+	
+	SMB_PROMO_LANGUAGE_FRENCH = language1 + " " + language2 + " " + language3 + " " + language4 + " " + language5;
+	
+	SMB_PROMO_LANGUAGE_FRENCH = replace(SMB_PROMO_LANGUAGE_FRENCH, "FC_line", firstCorePromoDateFrench);
+	SMB_PROMO_LANGUAGE_FRENCH = replace(SMB_PROMO_LANGUAGE_FRENCH, "SC_line", secondCorePromoDateFrench);
+	SMB_PROMO_LANGUAGE_FRENCH = replace(SMB_PROMO_LANGUAGE_FRENCH, "FCD_line", coreOneDesc);
+	SMB_PROMO_LANGUAGE_FRENCH = replace(SMB_PROMO_LANGUAGE_FRENCH, "SCD_line", coreTwoDesc);
+}
+utilResultSring = util.formAttrValueStr(attributesDict, "promoLanguageFrench_quote", QUOTE_DOC_NUM, SMB_PROMO_LANGUAGE_FRENCH);
+//IESCNQRCPQ-433 END
+ 
+utilResultString = util.formAttrValueStr(attributesDict, "promoLanguageEnglish_quote", QUOTE_DOC_NUM, PROMO_LANGUAGE);
+utilResultString = util.formAttrValueStr(attributesDict, "audit60PromoDateForOF_quote", QUOTE_DOC_NUM, audit60PromoDate);
+utilResultString = util.formAttrValueStr(attributesDict, "audit6PromoDateForOF_quote", QUOTE_DOC_NUM, audit6PromoDate);
+utilResultString = util.formAttrValueStr(attributesDict, "audit60Promotion_quote", QUOTE_DOC_NUM, promoAudit60);
+utilResultString = util.formAttrValueStr(attributesDict, "audit6Promotion_quote", QUOTE_DOC_NUM, promoAudit6);
+utilResultString = util.formAttrValueStr(attributesDict, "isSMBPromoApplied_quote", QUOTE_DOC_NUM, sMBPromoApplied);
+//CSYS-100310 - End
+
+if (TFSD_LANGUAGE <> ""){
+	TFSD_LANGUAGE = replace(TFSD_LANGUAGE, "transcationFeeStartDate1_line", coreOneTFSD); //CSYS-100040 (OK. 8-10-2020)
+    	TFSD_LANGUAGE = replace(TFSD_LANGUAGE, "transcationFeeStartDate2_line", coreTwoTFSD); //CSYS-100040 (OK. 8-10-2020)
+	TFSD_LANGUAGE = replace(TFSD_LANGUAGE, "coreOneOffset_line", coreOneOffset);
+	TFSD_LANGUAGE = replace(TFSD_LANGUAGE, "coreTwoOffset_line", coreTwoOffset);
+	TFSD_LANGUAGE = replace(TFSD_LANGUAGE, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE = replace(TFSD_LANGUAGE, "coreTwoDesc_line", coreTwoDesc);
+}
+
+if (TFSD_LANGUAGE_EXTENDED <> ""){
+	TFSD_LANGUAGE_EXTENDED = replace(TFSD_LANGUAGE_EXTENDED, "coreOneOffset_line", coreOneOffset);
+	TFSD_LANGUAGE_EXTENDED = replace(TFSD_LANGUAGE_EXTENDED, "coreTwoOffset_line", coreTwoOffset);
+	TFSD_LANGUAGE_EXTENDED = replace(TFSD_LANGUAGE_EXTENDED, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_EXTENDED = replace(TFSD_LANGUAGE_EXTENDED, "coreTwoDesc_line", coreTwoDesc);
+}
+
+if (TFSD_LANGUAGE_FRENCH <> ""){ //CSYS-96901 , coreOneOffsetFrench_line -> coreOneOffset_line
+	TFSD_LANGUAGE_FRENCH = replace(TFSD_LANGUAGE_FRENCH, "coreOneOffset_line", coreOneOffsetFrench);
+	TFSD_LANGUAGE_FRENCH = replace(TFSD_LANGUAGE_FRENCH, "coreTwoOffset_line", coreTwoOffsetFrench);
+	TFSD_LANGUAGE_FRENCH = replace(TFSD_LANGUAGE_FRENCH, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_FRENCH = replace(TFSD_LANGUAGE_FRENCH, "coreTwoDesc_line", coreTwoDesc);
+}
+
+if (TFSD_LANGUAGE_EXTENDED_FRENCH <> ""){ //CSYS-96901 , coreOneOffsetFrench_line -> coreOneOffset_line
+	TFSD_LANGUAGE_EXTENDED_FRENCH = replace(TFSD_LANGUAGE_EXTENDED_FRENCH, "coreOneOffset_line", coreOneOffsetFrench);
+	TFSD_LANGUAGE_EXTENDED_FRENCH = replace(TFSD_LANGUAGE_EXTENDED_FRENCH, "coreTwoOffset_line", coreTwoOffsetFrench);
+	TFSD_LANGUAGE_EXTENDED_FRENCH = replace(TFSD_LANGUAGE_EXTENDED_FRENCH, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_EXTENDED_FRENCH = replace(TFSD_LANGUAGE_EXTENDED_FRENCH, "coreTwoDesc_line", coreTwoDesc);
+}
+//CSYS-93356 (LN. 2-19-2018)
+if (TFSD_LANGUAGE_SPANISH <> ""){
+	TFSD_LANGUAGE_SPANISH = replace(TFSD_LANGUAGE_SPANISH, "coreOneOffset_line", coreOneOffsetSpanish);
+	TFSD_LANGUAGE_SPANISH = replace(TFSD_LANGUAGE_SPANISH, "coreTwoOffset_line", coreTwoOffsetSpanish);
+	TFSD_LANGUAGE_SPANISH = replace(TFSD_LANGUAGE_SPANISH, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_SPANISH = replace(TFSD_LANGUAGE_SPANISH, "coreTwoDesc_line", coreTwoDesc);
+}
+
+if (TFSD_LANGUAGE_EXTENDED_SPANISH <> ""){
+	TFSD_LANGUAGE_EXTENDED_SPANISH = replace(TFSD_LANGUAGE_EXTENDED_SPANISH, "coreOneOffset_line", coreOneOffsetSpanish);
+	TFSD_LANGUAGE_EXTENDED_SPANISH = replace(TFSD_LANGUAGE_EXTENDED_SPANISH, "coreTwoOffset_line", coreTwoOffsetSpanish);
+	TFSD_LANGUAGE_EXTENDED_SPANISH = replace(TFSD_LANGUAGE_EXTENDED_SPANISH, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_EXTENDED_SPANISH = replace(TFSD_LANGUAGE_EXTENDED_SPANISH, "coreTwoDesc_line", coreTwoDesc);
+}
+//CSYS-96004 (SN. 09-2019)
+if (TFSD_LANGUAGE_GERMAN <> ""){
+	TFSD_LANGUAGE_GERMAN = replace(TFSD_LANGUAGE_GERMAN, "coreOneOffset_line", coreOneOffsetGerman);
+	TFSD_LANGUAGE_GERMAN = replace(TFSD_LANGUAGE_GERMAN, "coreTwoOffset_line", coreTwoOffsetGerman);
+	TFSD_LANGUAGE_GERMAN = replace(TFSD_LANGUAGE_GERMAN, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_GERMAN = replace(TFSD_LANGUAGE_GERMAN, "coreTwoDesc_line", coreTwoDesc);
+}
+
+if (TFSD_LANGUAGE_EXTENDED_GERMAN <> ""){
+	TFSD_LANGUAGE_EXTENDED_GERMAN = replace(TFSD_LANGUAGE_EXTENDED_GERMAN, "coreOneOffset_line", coreOneOffsetGerman);
+	TFSD_LANGUAGE_EXTENDED_GERMAN = replace(TFSD_LANGUAGE_EXTENDED_GERMAN, "coreTwoOffset_line", coreTwoOffsetGerman);
+	TFSD_LANGUAGE_EXTENDED_GERMAN = replace(TFSD_LANGUAGE_EXTENDED_GERMAN, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_EXTENDED_GERMAN = replace(TFSD_LANGUAGE_EXTENDED_GERMAN, "coreTwoDesc_line", coreTwoDesc);
+}
+//CSYS-107251 (PG 11/14/2022)
+if (TFSD_LANGUAGE_JAPANESE <> ""){
+	TFSD_LANGUAGE_JAPANESE = replace(TFSD_LANGUAGE_JAPANESE, "coreOneOffset_line", coreOneOffsetJapanese);
+	TFSD_LANGUAGE_JAPANESE = replace(TFSD_LANGUAGE_JAPANESE, "coreTwoOffset_line", coreTwoOffsetJapanese);
+	TFSD_LANGUAGE_JAPANESE = replace(TFSD_LANGUAGE_JAPANESE, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_JAPANESE = replace(TFSD_LANGUAGE_JAPANESE, "coreTwoDesc_line", coreTwoDesc);
+}
+
+if (TFSD_LANGUAGE_EXTENDED_JAPANESE <> ""){
+	TFSD_LANGUAGE_EXTENDED_JAPANESE = replace(TFSD_LANGUAGE_EXTENDED_JAPANESE, "coreOneOffset_line", coreOneOffsetJapanese);
+	TFSD_LANGUAGE_EXTENDED_JAPANESE = replace(TFSD_LANGUAGE_EXTENDED_JAPANESE, "coreTwoOffset_line", coreTwoOffsetJapanese);
+	TFSD_LANGUAGE_EXTENDED_JAPANESE = replace(TFSD_LANGUAGE_EXTENDED_JAPANESE, "coreOneDesc_line", coreOneDesc);
+	TFSD_LANGUAGE_EXTENDED_JAPANESE = replace(TFSD_LANGUAGE_EXTENDED_JAPANESE, "coreTwoDesc_line", coreTwoDesc);
+}
+
+//CSYS-91982 (LN. 7-20-2018) Write the final value to the French TFSD attributes respectively
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageFrench_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_FRENCH);
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageExtendedFrench_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_EXTENDED_FRENCH);
+
+//CSYS-93356 (LN. 2-19-2018)
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageSpanish_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_SPANISH);
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageExtendedSpanish_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_EXTENDED_SPANISH);
+
+//CSYS-96004 (SN. 09-2019)
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageGerman_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_GERMAN);
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageExtendedGerman_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_EXTENDED_GERMAN);
+
+//CSYS-107251 (PG 11/14/2022)
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageJapanese_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_JAPANESE);
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageExtendedJapanese_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_EXTENDED_JAPANESE);
+
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguagePlaceholder_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE); //text area attribute to be read by doc engine
+utilResultString = util.formAttrValueStr(attributesDict, "tFSDLanguageExtendedPlaceholder_quote", QUOTE_DOC_NUM, TFSD_LANGUAGE_EXTENDED); //text area attribute to be conditionally evaluated by 'Set Output Values' library
+
+return "";

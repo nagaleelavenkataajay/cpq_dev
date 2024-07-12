@@ -1,0 +1,193 @@
+attachmentName = "";
+delimiter = "_";
+actionNameGeneral = "";
+
+//set the current date format to yyyyMMDD
+CurrentDateArr = string[]; 
+CurrentDateStrFinal = "";
+CurrentDateStr = datetostr(getdate());
+CurrentDateArr = split(CurrentDateStr, "/");
+CurrentDateArr[2] = substring(CurrentDateArr[2], 0, 4);
+
+CurrentDateStrFinal = CurrentDateArr[2] + CurrentDateArr[0] + CurrentDateArr[1];
+//end of set the current date format to yyyyMMDD
+
+//(LN. 9-18-2018) Commenting out the below logic, no longer being used
+/*if(find(actionName, "BSA") > -1){//generalize the action names
+	actionNameGeneral = "BSA";
+}
+elif(find(actionName, "ISOF") > -1){//generalize the action names
+	actionNameGeneral = "ISOF";
+}
+//Adding the below 2 conditions for contract harmonization. CSYS-47622. KA. 9-18-15.
+elif(actionName == "Generate_OF"){
+	actionNameGeneral = "OrderForm";
+}
+elif(actionName == "Generate_AOF"){
+	actionNameGeneral = "AddOnOrderForm";
+}
+*/
+if(find(actionName, "ASOF") > -1){//generalize the action names
+	//CSYS-92864 (LN. 9-19-2018) If includeConcurCounterSignature_quote is true, render "ASOFCounterSignature"
+	if(includeConcurCounterSignature_quote){
+		actionNameGeneral = "ASOFCounterSignature";
+	}
+	else {
+		actionNameGeneral = "ASOF";
+	}
+	
+}
+elif(find(actionName, "SMNENTOF") > -1){//generalize the action names
+	//CSYS-92864 (LN. 9-19-2018) If includeConcurCounterSignature_quote is true, render "OrderFormCounterSignature"
+	if(includeConcurCounterSignature_quote){
+		actionNameGeneral = "OrderFormCounterSignature";
+	} 
+	else {//Else, business as usual
+		actionNameGeneral = "OrderForm";
+	}
+}
+//CSYS-77783 (KA. 2-23-2017):
+elif(actionName == "SimplifiedOrder"){
+	//CSYS-92985 (LN. 10-3-2018) For Partner Billing Quotes, the attachment name should be "OrderForm"; CSYS-95097
+	/*if(partnerBillingQuote_quote){
+		actionNameGeneral = "OrderForm";
+	}
+	else {*/
+	//CSYS-105391 (AP 25-02-2022) BMI - Service Partner contracts naming should follow normal conventions Simplified Order
+		actionNameGeneral = "SimplifiedOrder";//CSYS-92864 (LN. 9-19-2018) Renaming the Quotation to Simplified Order
+	//}
+}
+//CSYS-100494: Cloud EULA Acceptance Form (TT. 9-14-2020)
+elif(actionName == "EULAForm"){
+	actionNameGeneral = "CloudEULAAceptanceForm";
+}
+
+//CSYS-91973 (LN. 6-11-2018)
+elif(actionName == "FrenchOF"){
+	actionNameGeneral = "FrenchOrderForm";
+}
+//CSYS-92929 (LN. 10-11-2018)
+elif(actionName == "SpanishOF"){
+	actionNameGeneral = "SpanishOrderForm";
+}
+
+//CSYS-92929 (LN. 10-11-2018)
+elif(actionName == "GermanOF"){
+	actionNameGeneral = "GermanOrderForm";
+}
+
+//CSYS-107140 (PG 11-14-2022)
+elif(actionName == "SimplifiedOrderJapan"){
+	actionNameGeneral = "SimplifiedOrderJapan";
+}
+//IESCNQRCPQ-1499 (LIK 01-30-2024)
+elif(actionName == "SEPAGerman"){
+	actionNameGeneral = "SEPAGerman";
+}
+//IESCNQRCPQ-1515 (AKG 01-30-2024)
+elif(actionName == "SEPAEnglish"){
+	actionNameGeneral = "SEPAEnglish";
+}
+//IESCNQRCPQ-1721 (LIK 04-25-2024)
+elif(actionName == "SEPASpanish"){
+	actionNameGeneral = "SEPASpanish";
+}
+//IESCNQRCPQ-1721 (LIK 04-25-2024)
+elif(actionName == "SEPAFrench"){
+	actionNameGeneral = "SEPAFrench";
+}
+//IESCNQRCPQ-1856 (AKASH 05-30-2024)
+elif(actionName == "canadianFrenchOrderForm"){
+	actionNameGeneral = "canadianFrenchOrderForm";
+	
+}
+//Handling special characters in the account name, due to recent upgrade:
+charArray = split(account_quote, "");
+
+count = 0;
+for charIndex in charArray {
+	if(charIndex == " "){
+		charArray[count] = "_";
+	}
+	
+	if(charIndex == "|"){
+		charArray[count] = "/";
+	}
+	
+	//Commenting out the code below. The 2015R1 upgrade fixed the issue with attachmentName. CSYS-51475. KA. 9-9-2015
+	/*if(charIndex == "&"){
+		charArray[count] = "&#038;";
+	}
+	if(charIndex == "#"){
+		charArray[count] = "&#035;";
+	}
+	if(charIndex == "$"){
+		charArray[count] = "&#036;";
+	}
+	if(charIndex == "%"){
+		charArray[count] = "&#037;";
+	}
+	if(charIndex == "+"){
+		charArray[count] = "&#043;";
+	}
+	//skipping the slash
+	if(charIndex == ","){
+		charArray[count] = "&#044;";
+	}
+	if(charIndex == ":"){
+		charArray[count] = "&#058;";
+	}
+	if(charIndex == ";"){
+		charArray[count] = "&#059;";
+	}
+	if(charIndex == "<"){
+		charArray[count] = "&#060;";
+	}
+	if(charIndex == "="){
+		charArray[count] = "&#061;";
+	}
+	if(charIndex == ">"){
+		charArray[count] = "&#062;";
+	}
+	if(charIndex == "?"){
+		charArray[count] = "&#063;";
+	}
+	if(charIndex == "@"){
+		charArray[count] = "&#064;";
+	}
+	if(charIndex == "["){
+		charArray[count] = "&#091;";
+	}
+	//skipping the forward slash
+	if(charIndex == "]"){
+		charArray[count] = "&#093;";
+	}
+	if(charIndex == "^"){
+		charArray[count] = "&#094;";
+	}
+	if(charIndex == "`"){
+		charArray[count] = "&#096;";
+	}
+	if(charIndex == "{"){
+		charArray[count] = "&#123;";
+	}
+	if(charIndex == "|"){
+		charArray[count] = "&#124;";
+	}
+	if(charIndex == "}"){
+		charArray[count] = "&#125;";
+	}
+	if(charIndex == "~"){
+		charArray[count] = "&#126;";
+	}*/
+	//END commenting out for CSYS-51475 
+	
+	count = count + 1;
+}
+
+formattedAccountName = join(charArray, "");
+//end special formatting
+
+attachmentName = formattedAccountName + delimiter + actionNameGeneral + delimiter + quoteNumber_quote + delimiter + CurrentDateStrFinal + "v"+string(revisionNumber_quote);//create the attachment name
+
+return attachmentName;

@@ -1,0 +1,18 @@
+{
+  "name" : "getBooleanDict",
+  "variableName" : "getBooleanDict",
+  "description" : "NOT USED. Imported in Pricing script, but not used in the code.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "dictionary",
+    "type" : "Boolean Dictionary"
+  }, {
+    "name" : "key",
+    "type" : "String"
+  }, {
+    "name" : "defaultValue",
+    "type" : "Boolean"
+  } ],
+  "attributes" : [ ]
+}

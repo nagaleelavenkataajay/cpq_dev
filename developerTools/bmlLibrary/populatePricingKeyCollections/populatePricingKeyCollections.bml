@@ -1,0 +1,100 @@
+/* util -> populatePricingKeyCollections
+docNumList - string[]
+stringsDict - dict("string")
+coreTerminateEditionDict - dict("string")
+piQtyAndImplementationMethodList - string[]
+piQtyAndImplementationMethodToPriceDict - dict("float")
+piQtyAndImplementationMethodDict - dict("string")
+piDict - dict("string")
+integersDict - dict("integer")
+*/
+DELIMITER = "@.@";
+QTY = "_price_quantity";
+TRANSACTIONS = "numCommittedTransaction_line";
+UOM_TYPE = "uomType_line";
+IMPLEMENTATION_METHOD = "implementationMethod_line";
+CORE_OFFERING = "coreOffering_line";
+TERM_OF_COMMITMENT = "termOfCommitment_line";
+PO_CATEGORY = "poCategory_line";
+TERMINATED_CORE_ASSET_EDITION = "TERMINATED_CORE_ASSET_EDITION";
+RAMP_DELIMITER = "-_**_-";
+UOM_QTY = "QTY";
+INCREMENTAL_PI = "incrementalPi";
+PARENT_DOC_NUM = "_parent_doc_number"; //CSYS-106564
+BILLING_COUNTER = "BILLING_COUNTER"; //CSYS-106564
+
+for docNum in docNumList {
+    //currentAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+    pi = get(piDict, docNum);
+
+    if (pi <> "") {
+        //Initialize local variables
+        quantity = util.getIntegerAttribute(integersDict, docNum, DELIMITER, QTY);
+        trxns = util.getIntegerAttribute(integersDict, docNum, DELIMITER, TRANSACTIONS);
+        //Determine the UOM Type of this product
+        uomType = util.getStringAttribute(stringsDict, pi, DELIMITER, UOM_TYPE);
+        //Determine the implementionMethod of this line item
+        implementationMethod = util.getStringAttribute(stringsDict, docNum, DELIMITER, IMPLEMENTATION_METHOD);
+        //Determine the core Offering of this line item
+        coreOffering = util.getStringAttribute( stringsDict, docNum, DELIMITER, CORE_OFFERING );
+        // Determine the term of commitment of this line item
+        termOfCommitment = util.getStringAttribute(stringsDict, docNum, DELIMITER, TERM_OF_COMMITMENT);
+        //Determine the pricingKey for this line item.
+        pricingKey = pi + DELIMITER;
+        poCategory = util.getStringAttribute(stringsDict, docNum, DELIMITER, PO_CATEGORY);
+		parentDocNum = util.getStringAttribute(stringsDict, docNum, DELIMITER, PARENT_DOC_NUM); //CSYS-106564
+		billingCounter = util.getStringAttribute( stringsDict, parentDocNum, DELIMITER, BILLING_COUNTER);//CSYS-106564
+
+        if (uomType == UOM_QTY) {
+            pricingKey = pricingKey + string(quantity);
+        } else {
+            pricingKey = pricingKey + string(trxns);
+        }
+
+        /* CSYS-95225 (LN. 3-28-2019)
+            In the event that there is a CREATE/TERMINATE on an Core Edition Change with a Tier DECREASE,
+            We need to retain the original Core's Edition to pass into stdTierPricing, otherwise the pricing retrieved
+            is incorrect since the pi on the new Edition doesn't exist.
+
+            CSYS-95591 (LN. 8-16-2019)
+            Putting the Implementation Method into the StringsDict to be consumed by calculateTierPricing to set the Edition correctly.
+        */
+        if(containskey(coreTerminateEditionDict, pi + DELIMITER + TERMINATED_CORE_ASSET_EDITION)){
+            implementationMethod = get(coreTerminateEditionDict, pi + DELIMITER + TERMINATED_CORE_ASSET_EDITION);
+            utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, IMPLEMENTATION_METHOD, implementationMethod);
+        }
+
+        //pricingKey = pricingKey + DELIMITER + implementationMethod + DELIMITER + coreOffering;
+		//CSYS-106564 - Appending billingCounter and commented the above line
+		pricingKey = pricingKey + DELIMITER + implementationMethod + DELIMITER + coreOffering + DELIMITER + billingCounter;
+
+        /* RAMP PLAN INCREMENTAL PRICE
+            If this is a ramp line item, we are also going to get an associated tier price for the incremental fee line item */
+        incFeePricingKey = "";
+        incMult = "1";
+
+        if ( find( docNum, RAMP_DELIMITER ) <> -1 ){
+            if ( uomType == UOM_QTY ){
+                incMult = string(quantity);
+            }
+            else{
+                incMult = string(trxns);
+            }
+
+            incPi = util.getStringAttribute( stringsDict, docNum, DELIMITER, INCREMENTAL_PI );
+            //incFeePricingKey = incPi + DELIMITER + incMult + DELIMITER + implementationMethod + DELIMITER + coreOffering;
+			//CSYS-106564 - Appending billingCounter and commented the above line
+			incFeePricingKey = incPi + DELIMITER + incMult + DELIMITER + implementationMethod + DELIMITER + coreOffering + DELIMITER + billingCounter;
+            append( piQtyAndImplementationMethodList, incFeePricingKey );
+            put( piQtyAndImplementationMethodToPriceDict, incFeePricingKey, 0.0 );
+        }
+
+        //Populate pricingKey dictionaries
+        put(piQtyAndImplementationMethodDict, docNum, pricingKey);
+        append(piQtyAndImplementationMethodList, pricingKey);
+
+        //Populate pricing dictionaries with pricingKeys
+        put(piQtyAndImplementationMethodToPriceDict, pricingKey, 0.0);
+    }
+}
+return "";

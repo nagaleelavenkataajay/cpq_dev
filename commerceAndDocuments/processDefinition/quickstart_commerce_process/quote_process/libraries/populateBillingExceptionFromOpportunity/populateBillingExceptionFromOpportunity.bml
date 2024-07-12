@@ -1,0 +1,36 @@
+/*
+	CSYS-100914 BS 11/11/2020, to split the single concatenated billing exception field updated from Opportunity 
+	using @!@ as delimiter and populate quote billing exception fields
+*/
+
+//Split the billingExceptionsFromOpportunity_quote by the delimiter "@!@" and store the 3 billing exception field value from opportunity in an array
+billingExceptionArr = split(billingExceptionsFromOpportunity_quote, "@!@");
+isprimary = false;
+
+//Check if this quote is indeed the primary quote and only then update the quote billing exception fields from Opportunity billing exception fields
+if(quoteNumber_quote == opportunityPrimaryQuote_quote){
+	isprimary = true;
+}
+
+// Find which billing exception field to populate
+
+result = "";
+if(isprimary){
+	if(fieldName == "billingFlag"){		// Find value of Billing Exception Flag
+		result = billingExceptionArr[0];
+	}
+	elif(fieldName == "billingComment"){	// Find value of Billing Exception Comment
+		result = billingExceptionArr[1];
+	}
+	elif(fieldName == "billingReason"){	// Find value of Billing Exception Reason
+		result = billingExceptionArr[2];
+	}
+	else{
+		result = "";
+	}
+}
+else{
+	result = "";
+}
+
+return result;

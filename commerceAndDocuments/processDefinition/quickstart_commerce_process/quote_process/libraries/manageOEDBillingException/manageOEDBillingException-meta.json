@@ -1,0 +1,11 @@
+{
+  "name" : "Manage OED Billing Exception",
+  "variableName" : "manageOEDBillingException",
+  "description" : "CSYS-79840\nDate logic to check if OED is within current month\nAlso checks to see if OED is not older than 2 months in past",
+  "libraryFunctions" : [ "util.getUserTimeZone" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "aRRInvolvedFlag_quote", "orderEffectiveDate_quote", "setupOnlyFlag_quote", "sAPSellsConcur_quote" ],
+  "systemAttributes" : [ "_system_user_groups", "_system_user_type" ]
+}

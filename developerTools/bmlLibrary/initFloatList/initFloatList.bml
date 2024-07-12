@@ -1,0 +1,17 @@
+/*
+  initFloatList 
+  param:
+    numElement      - integer
+    defaultValue    - float
+  return 
+    integer[];
+*/
+result = float[];
+
+list = range(numElement);
+
+for element in list {
+  result[element] = defaultValue;
+} 
+
+return result;

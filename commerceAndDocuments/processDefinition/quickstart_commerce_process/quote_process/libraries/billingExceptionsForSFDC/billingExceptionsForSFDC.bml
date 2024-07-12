@@ -1,0 +1,35 @@
+result = "";
+orderEffectiveDateBillingException = orderEffectiveDateBillingException_quote;
+annualBundleBillingException = annualBundleBillingException_quote;
+preproductionBillingException = preproductionBillingException_quote;
+submitOrderDateBillingException = submitOrderDateBillingException_quote;
+timeMaterialsBillingException = timeMaterialsBillingException_quote;
+promotionBillingException = promotionBillingException_quote;
+professionalServTerminationBillingException = professionalServTerminationBillingException_quote;
+billingExceptionCommentsHDS = billingExceptionCommentsHDS_quote;
+pONumException = pONumException_quote;
+delim = "$@#";
+pipeDelim = "|||";
+billingExceptionsExists = "";
+if(orderEffectiveDateBillingException <> "" OR annualBundleBillingException <> "" OR preproductionBillingException <> "" OR submitOrderDateBillingException <> "" OR timeMaterialsBillingException <> "" OR promotionBillingException <> "" OR professionalServTerminationBillingException <> "" OR billingExceptionCommentsHDS <> "" OR pONumException <> ""){
+	if(orderEffectiveDateBillingException == "flagged"){		
+		result = "Order Effective Date Billing Exception~"+orderEffectiveDateBillingException+delim+"Annual Bundling Billing Exception~"+annualBundleBillingException+delim+"Pre Production Billing Exception~"+preproductionBillingException+delim+"Submit Order Billing Exception~"+submitOrderDateBillingException+delim+"Time & Material Billing Exception~"+timeMaterialsBillingException+delim+"Promotion Billing Exception~"+promotionBillingException+delim+"Professional Service Termination Billing Exception~"+professionalServTerminationBillingException+delim+"HDS Billing Exception~"+billingExceptionCommentsHDS+delim+"PO Number Exception~"+pONumException+delim;
+	}
+	else{
+		result = "Annual Bundling Billing Exception~"+annualBundleBillingException+delim+"Pre Production Billing Exception~"+preproductionBillingException+delim+"Submit Order Billing Exception~"+submitOrderDateBillingException+delim+"Time & Material Billing Exception~"+timeMaterialsBillingException+delim+"Promotion Billing Exception~"+promotionBillingException+delim+"Professional Service Termination Billing Exception~"+professionalServTerminationBillingException+delim+"HDS Billing Exception~"+billingExceptionCommentsHDS+delim+"PO Number Exception~"+pONumException+delim;
+	}
+}
+if(result <> ""){ 
+	res = "";
+	splitString = split(result, delim);
+	for each in splitString {//to concatenate only those comments which have value
+		eachSplit = split(each, "~"); //split with ~ to inorder to separate the label and comment
+		//if (each <> "" AND NOT(isnull(each))){
+		if (eachSplit[1]<> "" AND NOT(isnull(eachSplit[1]))){//check eachSplit[1] as it holds the comment
+			res = res+each+pipeDelim; //to delimit with pipeDelim
+		}		
+	}	
+	result = substring(res, 0, len(res)-3); //to remove the last pipeDelim
+}
+
+return result;

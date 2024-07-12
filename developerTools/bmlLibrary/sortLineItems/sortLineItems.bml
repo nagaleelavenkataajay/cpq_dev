@@ -1,0 +1,126 @@
+/* Util -> sortLineItems
+stringsDict
+integersDict
+floatsDict
+docNums
+
+Returns the new state of the doc num array
+*/
+DELIMITER = "@.@";
+SEQUENCE_NUMBER = "_sequence_number";
+PARENT_DOC_NUM = "_parent_doc_number";
+PART_NUMBER = "_part_number";
+PART_ORDER_STRING = "poPriority_concur";
+
+retDocNums = string[];
+sortedDocNums = string[];
+seqToDocDict = dict("string");
+// Create new doc num array, we will be sorting this
+sizeOfDocsIndex = 1;
+sizeOfDocsArr = Integer[];
+
+for docNum in docNums{
+	append( sizeOfDocsArr, sizeOfDocsIndex );
+	sizeOfDocsIndex = sizeOfDocsIndex + 1;
+	// Get Seq Num
+	seqNum = get( integersDict, docNum + DELIMITER + SEQUENCE_NUMBER );
+
+	put( seqToDocDict, seqNum, docNum );
+}
+
+
+// Generate two docs arrs.  One is for returnining, one is for looping over
+// Order by sequence number
+for docs in sizeOfDocsArr{
+	docNum = get( seqToDocDict, docs );	
+	append( retDocNums, docNum );
+	append( sortedDocNums, docNum );
+}
+// Loop through all models
+for eachModel in sortedDocNums{
+	partsOrderString = "";
+
+	existingPartsArr = string[];
+	// Get the parent doc num
+	parentDocNum = get( stringsDict, eachModel + DELIMITER + PARENT_DOC_NUM );
+	if ( containskey( stringsDict, eachModel + DELIMITER + PARENT_DOC_NUM ) == true AND parentDocNum <> "" ){
+		continue;
+	}
+	// Get line item order from the dictionary
+	if( containskey ( stringsDict, eachModel + DELIMITER + PART_ORDER_STRING )){
+		partsOrderString = get( stringsDict, eachModel + DELIMITER + PART_ORDER_STRING );
+	}
+	else{
+		continue;
+	}
+	sequenceNumber = get( integersDict, eachModel + DELIMITER + SEQUENCE_NUMBER );
+	// Account for the first line item in the sequence
+	sequenceNumber = sequenceNumber + 1;
+	if(endswith(partsOrderString, "***")) {
+		partsOrderString = substring(partsOrderString, 0, len(partsOrderString) - 3); 
+	}
+
+
+	partsOrderArr = split( partsOrderString, "***" );
+	// Clean up partsOrderArr which may contain other PIs which don't exist in the quote
+	for eachLine in sortedDocNums {
+		partNumber = get( stringsDict, eachLine + DELIMITER + PART_NUMBER );
+		if(partNumber <> "") {
+			append(existingPartsArr, partNumber);
+		}
+	}
+
+
+
+	toRemove = integer[];
+	//Need this because as you loop through a remove you must account that the first thing removed will be 
+	//replaced by the next item in the array. 
+	correctIndexAfterRemove = sizeofarray(toRemove);
+	for eachPart in partsOrderArr {
+		if(eachPart <> "" AND findinarray(existingPartsArr, eachPart) == -1) {
+			append(toRemove, findinarray(partsOrderArr, eachPart) - correctIndexAfterRemove);
+		}
+		correctIndexAfterRemove = sizeofarray(toRemove);
+	}
+	
+
+	for index in toRemove {
+		remove(partsOrderArr, index);
+	}
+
+	
+	for eachLine in sortedDocNums{
+		lineParentDocNum = get( stringsDict, eachLine + DELIMITER + PARENT_DOC_NUM );
+		if ( lineParentDocNum <> eachModel ){
+			continue;
+		}
+		// Get part number
+		partNumber = get( stringsDict, eachLine + DELIMITER + PART_NUMBER );
+		currentSequenceNumber = get( integersDict, eachLine + DELIMITER + SEQUENCE_NUMBER );
+		// Get index from array
+		partIndex = findinarray ( partsOrderArr, partNumber );
+		if ( partIndex == -1 ){
+			continue;
+		}
+		newSequenceNumber = sequenceNumber + partIndex;
+		// Save as sequence number + base
+		put( integersDict, eachLine + DELIMITER + SEQUENCE_NUMBER, newSequenceNumber );
+		sequenceDif = newSequenceNumber - currentSequenceNumber;
+		
+		// Overwrite doc number in doc array
+		index = findinarray ( retDocNums, eachLine );
+		replacedDocNum = "";
+		saveDocIndex = index + sequenceDif;
+		replacedDocNum = retDocNums[saveDocIndex];
+		if(sizeofarray(retDocNums) > saveDocIndex) {
+		  retDocNums[saveDocIndex] = eachLine;
+		}
+		if(NOT(isnull(replacedDocNum))) {
+			retDocNums[index] = replacedDocNum;
+		}
+		put( integersDict, replacedDocNum + DELIMITER + SEQUENCE_NUMBER, currentSequenceNumber );
+	}	
+}	
+
+// Set doc number array as the overwritten array
+return retDocNums;

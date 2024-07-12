@@ -1,0 +1,21 @@
+{
+  "name" : "Form Attribute Value String",
+  "variableName" : "formAttrValueStr",
+  "description" : "This util forms return string of individual attribute and is passed to setAttributes Commerce Library",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "dictionary",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "key",
+    "type" : "String"
+  }, {
+    "name" : "docNumber",
+    "type" : "String"
+  }, {
+    "name" : "value",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,88 @@
+/* commerce -> manageNextBillDates
+stringsDict - dict("string")
+attributesDict - dict("string")
+.............................................
+*/
+TERMINATE_ACTION = "TERMINATE";
+CORE_SERVICE = "Core Service";
+SETUP_FEE = "Setup";
+DELIMITER = "@.@";
+ASSET_ACTION = "assetAction_line";
+//CSYS-95436
+assetCoreNBDDict = dict("string");
+//uniqueCoreBaseDict = dict("string");
+coreNBDDict = dict("string"); //CSYS-87864 (LN. 12/4/2017)
+
+for item in line_process {
+    docNum = item._document_number;
+    parentDocNum = item._parent_doc_number;
+    assetString = item.assetString_line;
+	assetAction = "";
+    if(containskey(stringsDict, docNum + DELIMITER + ASSET_ACTION)){
+		assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+	}
+	else{
+		assetAction = item.assetAction_line;
+	}
+    poCat = item.poCategory_line;
+    pid = item._part_number;
+    
+    if (assetString <> "") {
+        if (containskey(assetBillingDict, pid) AND poCat == CORE_SERVICE) {
+            nextBillingDate = get(assetBillingDict, pid);
+            if (assetAction == TERMINATE_ACTION) {
+                put(coreNBDDict, parentDocNum, nextBillingDate);
+            } //CSYS-95436
+            else {
+                put(assetCoreNBDDict, parentDocNum, nextBillingDate);
+            }
+        }
+    }
+}
+
+for item in line_process {
+	docNum = item._document_number;
+    parentDocNum = item._parent_doc_number;
+    pid = item._part_number;
+    assetString = item.assetString_line;
+    itemType = item.piItemType_line;
+    assetAction = "";
+	subscriptionID = item.subscriptionID_line; //CSYS-100827 (OK. 10-15-2020)
+	
+	if(containskey(stringsDict, docNum + DELIMITER + ASSET_ACTION)){
+		assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+	}
+	else{
+		assetAction = item.assetAction_line;
+	}
+    nextBillingDate = item.nextBillingDate_line;
+    
+	
+	if (assetString <> "") {
+        if (containskey(assetBillingDict, pid)) {
+            nextBillingDate = get(assetBillingDict, pid);
+        }
+		
+		//CSYS-100827 (OK. 10-15-2020) get the asset subscriptionID from assetBillingDict
+		if (containskey(assetBillingDict, pid + "subscriptionID")) {
+			subscriptionID = get(assetBillingDict, pid + "subscriptionID");
+			utilResultString = util.formAttrValueStr(attributesDict, "subscriptionID_line", docNum, subscriptionID);
+        }
+    }
+	//CSYS-87864 (LN. 12/4/2017)
+    //CSYS-95436
+    if (itemType <> SETUP_FEE) {
+        if (containskey(coreNBDDict, parentDocNum) AND assetAction <> TERMINATE_ACTION) {
+            nextBillingDate = get(coreNBDDict, parentDocNum);
+        }
+        elif(containskey(assetCoreNBDDict, parentDocNum) AND assetAction == TERMINATE_ACTION) {
+            nextBillingDate = get(assetCoreNBDDict, parentDocNum);
+        }
+    } else {
+        nextBillingDate = "";
+    }
+
+    utilResultString = util.formAttrValueStr(attributesDict, "nextBillingDate_line", docNum, nextBillingDate);
+}
+
+return "";

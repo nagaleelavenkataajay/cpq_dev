@@ -1,0 +1,11 @@
+{
+  "name" : "ExpenseIt Auto Switch",
+  "variableName" : "expenseItAutoSwitch",
+  "description" : "Per CSYS-89642 a new script to assist the config rule \"Auto Switch Expense It\" until Oracle can fix the browser issue.  This script will indicate the user they have lost the ExpenseIt product due to a core switch and feed them a soft validation about the scenario.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "poId_line", "piItemType_line", "assetAction_line", "poCategory_line", "coreOffering_line", "_part_number", "_parent_doc_number", "lineDescription_line", "_document_number", "implementationMethod_line" ],
+  "mainDocAttributes" : [ "assetsString_quote" ],
+  "systemAttributes" : [ ]
+}

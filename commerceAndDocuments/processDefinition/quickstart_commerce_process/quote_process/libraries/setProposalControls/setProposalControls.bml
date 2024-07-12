@@ -1,0 +1,46 @@
+j2 = json("{}");
+
+//check if qty column need to display, and decide dynamic column width and font size
+displayQty = 0;
+if (proposalQuantityFlag_quote){displayQty = 0;}
+else{displayQty = 0;}
+
+//check if setup fee column need to display
+displaySetupFee = 0;
+if ((totalSetupNet_quote>0) or (implementationPartner_quote<>"" and setupLineExists_quote))
+{displaySetupFee = 1;}
+
+//check if pre prod fee column need to display
+displayPreProdFee = 0;
+if (totalPreprodNet_quote>0){displayPreProdFee = 1;}
+
+totalColCnt = 5;
+columnCnt = totalColCnt + displayQty + displaySetupFee + displayPreProdFee;
+
+//setup BMQL parameters
+pTemplateName = "Proposal Current";
+if (actionName<>"generateProposal"){  //WORD version
+	pTemplateName = "Proposal Table Word";
+}
+pLanguage = "ENGLISH";
+pXSLcodeBlock = "ALL";
+
+//rs is a result set
+rs = BMQL("select controlName, value1, value2, value3 from DocDesignerControls where templateName = $pTemplateName and language= $pLanguage and XSLcodeBlock = $pXSLcodeBlock");
+
+for r in rs{
+	k1 = get(r,"controlName");  //
+	v1 = get(r,"value1");
+	v2 = get(r,"value2");
+	v3 = get(r,"value3");
+	
+	jsonput(j2,k1,v1);  //default, less columns, use regular column width, font size
+	if (columnCnt==6){  //more columns, use smaller column width, smaller font
+		jsonput(j2,k1,v2);  //more columns, use smaller column width, smaller font
+	}
+	if (columnCnt>6){  //more columns, use smaller column width, smaller font
+		jsonput(j2,k1,v3);  //more columns, use smaller column width, smaller font
+	}
+}
+
+return j2;

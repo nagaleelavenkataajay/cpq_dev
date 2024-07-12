@@ -1,0 +1,39 @@
+/* util.getServicesUOM
+
+recPOArray - Array sized to number of entries in the attr
+
+*/
+retArr = String[];
+unitsDict = dict("string");
+
+/* Must replace all nulls with empty strings */
+recPoString = join( recPOArray, "***" );
+recPoString = replace( recPoString, "null", "" );
+newRecPO = split( recPoString, "***" );
+// Run through each po in the array and find its UOM
+if(sizeofarray(recPOArray)>0)
+{
+	if(isnull(recPOArray[0]))
+	{
+		retArr[0]="";
+	}
+	else
+	{
+		UOMRecordSet = bmql("select custom_field1, units from _parts where custom_field1 in $newRecPO");
+		for uom in UOMRecordSet
+		{
+			put(unitsDict, get(uom,"custom_field1"), get(uom,"units"));
+		}
+		for each in newRecPO
+		{ 
+			if ( containskey (unitsDict, each ) ){
+				append(retArr, get(unitsDict,each));
+			}
+			else{
+				append( retArr, "" );
+			}
+		}
+	}	
+}
+
+return retArr;

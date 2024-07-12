@@ -1,0 +1,18 @@
+/*
+  convert2DListToDict
+  param:
+    input2DList     - string[][];
+    returnDict      - String dictionary
+    returnDictKey   - String[]
+  return 
+    string
+*/
+
+result = "";
+
+for row in input2DList {
+  put( returnDict, row[0], row[1]);
+  append(returnDictKey, row[0]);
+} 
+
+return result;

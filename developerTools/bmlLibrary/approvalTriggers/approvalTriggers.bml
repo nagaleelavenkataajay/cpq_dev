@@ -1,0 +1,176 @@
+/******************************************************************************
+* Triggering script.
+* Takes the following parameters:
+*
+*  generic parameters:
+*
+*	historyMsgArray(string[]) - cells are[all history messages, in the correct order - based on ApprovalHierarchy table]
+*	previousApprovalSequencer(string) - the previous revision's approval sequance string.
+*	REVnum(integer) - the current revision number.
+*
+*
+*  implementation specific:
+*
+*	
+******************************************************************************/
+//debugging tools:
+debug = false;
+debug1 = false;
+
+ret = "";
+
+/***************************************************************************\
+|              GENERIC ATTRIBUTES AND ACTIONS - DO NOT CHANGE               |
+\***************************************************************************/
+AppFlag_varName = string[];
+AppMsg_varName = string[];
+Hierarchy_array = integer[];
+PRVapprovalArray = string[];
+reasonNameArray = string[];
+
+approverGroupArray = string[];
+approverLoginVarArray = string[];
+approverLoginValueArray = string[];
+//sequenceArray = string[];
+
+pop=false;
+if(previousApprovalSequencer == ""){
+	pop=true;
+}else{
+	PRVapprovalArray = split(previousApprovalSequencer,"^_^");
+}
+key_dict = dict("integer");
+reasonNum = 0;
+rez = bmql("SELECT Sequence, ReasonName, FlagVarName, MSG_varName, HR_level, ApproverGroup, emailVar FROM ApprovalHierarchy ORDER BY HR_level");// ORDER BY HR_level  ORDER BY Level");
+for entry in rez{
+	append(AppFlag_varName,get(entry,"FlagVarName"));
+	append(AppMsg_varName,get(entry,"MSG_varName"));
+	append(Hierarchy_array,getint(entry,"HR_level"));
+	append(approverGroupArray, get(entry, "ApproverGroup"));
+	append(reasonNameArray, get(entry, "ReasonName"));
+	append(approverLoginVarArray, get(entry, "emailVar"));
+	//append(sequenceArray, get(entry,"FlagVarName") + "@_@" + string(getint(entry,"HR_level")) + "@_@" + get(entry, "ApproverGroup") + "@_@");
+	put(key_dict,get(entry,"ReasonName"),getint(entry,"Sequence"));
+	if(pop){PRVapprovalArray[reasonNum]="N";}
+	reasonNum =reasonNum + 1;
+}
+reason_Key = string[reasonNum];//{"","","","","","","",""};//an array of reasons flags - MUST EQUAL NUMBER OF REASONS.
+//approvalMsgArray = string[reasonNum];//{"","","","","","","",""};//an array of reason messages - MUST EQUAL NUMBER OF REASONS.
+size = range(reasonNum);
+for i in size{
+	reason_Key[i] = "";
+	//approvalMsgArray[i] = "";
+}
+/***************************************************************************\
+|          END OF GENERIC ATTRIBUTES AND ACTIONS - change start             |
+\***************************************************************************/
+
+/******************************************************************************************\
+|                                  MANUAL HARD CODED VALUES                                |
+\******************************************************************************************/
+//create an attribute per reason (with logical name) and assign the corresponding Key_dict value:
+//reason1 = get(key_dict,"reason1");
+
+//reason2 = get(Key_dict,"reason2");
+
+/******************************************************************************************\
+|                               END OF MANUAL HARD CODED VALUES                            |
+\******************************************************************************************/
+
+/*******************************************************************************************************\
+|actual triggering: 																					|
+|																										|
+| For each reason use the script's parameted to evaluate the reason.									|
+| if the reason should be fired - place the scripted message into the corresponding cell				|
+| of the "approvalMsgArray" array.																				|
+| 																										|
+|	For example:																						|
+|	if(reason1 == condition met){																		|
+|		approvalMsgArray[reason1] = approvalMsgArray[reason1] + "reason 1 is me because " + meaningfull_value + ".";	|
+|	}																									|
+|																										|
+| This will enable tracking if the reason is required after revision.									|
+|																										|
+\*******************************************************************************************************/
+
+// Get the login values from the dictionary
+for loginVar in approverLoginVarArray {
+  if(containskey(approverLoginDict, loginVar)) {
+    tempApproverLoginValue = get(approverLoginDict, loginVar);
+    if(len(tempApproverLoginValue) > 0) {
+      append(approverLoginValueArray, tempApproverLoginValue);
+    } else {
+      append(approverLoginValueArray, "NA");
+    }
+  } else {
+    append(approverLoginValueArray, "NA");
+  }
+}
+/**********************************************************\
+|               END OF EDITABLE SECTION                    |
+\**********************************************************/
+for app in size {
+
+	if(approvalMsgArray[app] <> historyMsgArray[app] AND approvalMsgArray[app] <> "" AND approverLoginValueArray[app] <> "NA"){//if the history changed always set to Q.
+		reason_Key[app] = "Q"; 
+	}else{
+		if(PRVapprovalArray[app]=="N" OR PRVapprovalArray[app]=="A" OR approvalMsgArray[app] == "" OR approverLoginValueArray[app] == "NA"){//if the history is the same and the reason was approved in the last revision:
+			reason_Key[app] = "N";//request the reason again.
+		}else{
+			reason_Key[app] = "Q";
+		}
+	}
+}
+
+
+Pflag = false;//Pending flag - true once the first reason is set to pending.
+sequencer = "";
+//reasonSequence = join(sequenceArray, "^_^");
+
+size = range(sizeofarray(reason_Key));
+HR_level = 1;
+
+allPending = "";
+currentPending = "";
+
+for i in size {
+	if(reason_Key[i] == "N"){								//if this reason is not required;
+		sequencer = sequencer + "N^_^";							//set the sequencer to N
+		ret = ret + "1~" + AppFlag_varName[i] + "~NA|";			//and the flag to "NA"
+	} 
+	elif(reason_Key[i] == "Q" AND HR_level <> Hierarchy_array[i] AND Pflag){					//if reason is required AND it is not the first reason:
+		sequencer = sequencer + "Q^_^"; 						//set the sequencer to Q
+		ret = ret + "1~" + AppFlag_varName[i] + "~queueing|";	//and the flag to "queueing"
+		/*if(allPending <> "") {
+		  allPending = allPending + ",";
+		}
+		allPending = allPending + approverVarArray[i];*/
+		
+	}
+	else{													//if the reason is required AND it is the first reason:
+		sequencer = sequencer + "P^_^";							//set the sequencer to "A"
+		ret = ret + "1~" + AppFlag_varName[i] + "~pending|";	//and the trigger to "pending"
+		HR_level = Hierarchy_array[i];
+		/*if(currentPending <> "") {
+		  currentPending = currentPending + ",";
+		}
+		currentPending = currentPending + approverVarArray[i];
+		if(allPending <> "") {
+		  allPending = allPending + ",";
+		}
+		allPending = allPending + approverVarArray[i];*/
+		
+		Pflag = true;											//set the flag to true.
+	}
+	ret = ret + "1~" + AppMsg_varName[i] + "~" + approvalMsgArray[i] + "|";
+}
+
+/*
+
+put(miscStrDict, "allPending", allPending);
+put(miscStrDict, "currentPending", currentPending);*/
+
+sequencer = substring(sequencer,0,-3); //trim the last delimiter;
+ret = ret + "1~sequence_quote~" + sequencer + "|";
+//ret = ret + "1~approvalSequence_quote~" + reasonSequence + "|";
+return ret;

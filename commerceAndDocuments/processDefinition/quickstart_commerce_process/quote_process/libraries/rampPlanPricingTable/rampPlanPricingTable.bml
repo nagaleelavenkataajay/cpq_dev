@@ -1,0 +1,478 @@
+//CSYS-100165 (OK. 9-9-2020) This function builds the Ramp Plan pricing Table.
+
+// HTML and Styling
+tdOpen = "<td>";
+tdClose = "</td>";
+thClass = "<th class='list-label' style='padding: 10px;'>"; 
+thProductClass = "<th class='list-label' style='padding: 10px; width: 200px'>"; 
+tdClass = "<td class='view-text' align='right'>";
+tdAlignRight = "<td align='right'>";
+tdClassTotal = "<td class='view-text' style='font-weight: bold; border-top: 1px solid black !important'>";
+tdAlignRightTotal = "<td align='right' style='border-top: 1px solid black !important'>";
+trCoreClass = "<tr style='background: #FFE4B8;' class='line-item child-line-item line-item-show'>";
+
+docNumList = string[];
+rampTableHeader = "";
+rampTableBody = "";
+quoteLevelrampTable = "";
+fromMonthDict = dict("string");
+toMonthDict = dict("string");
+transactionDict = dict("string");
+transactionArray = string[];
+toMonthArray = string[];
+fromMonthArray = string[];
+fromMonthArray1 = string[];
+overrideRampDocNum = dict("string");
+BASE_FEE = "Base";
+INC_TYPE = "Incremental";
+FROM = "from";
+TO = "to";
+RAMP_TRANSACTIONS = "transactions";
+stringsDict = dict("string");
+floatsDict = dict("float");
+quoteCurrency = quoteCurrency_quote;
+baseFeeNetArray = string[];
+incFeeNetArray = string[];
+baseFeeDict = dict("string");
+incFeeDict = dict("string");
+floatsDict = dict("float");
+billingCycle = billingCycle_quote;
+modelDocNumList = integer[];
+coreNumberDict = dict("string");
+overrideTranxDict = dict("string");
+overrideToMonthDict = dict("string");
+overrideFromMonthDict = dict("string");
+rampBaseFeeNetArray = string[];
+rampIncFeeNetArray = string[];
+rampBaseFeeDict = dict("string");
+rampIncFeeDict = dict("string");
+rampTable = "";
+lineLevelRampTable = "";
+rampFromMonth = string[];
+lineLevelTableBody = "";
+lineRampMonthArray = string[];
+descriptionDict = dict("string");
+poIdDict = dict("string");
+parentDocNumDict = dict("string");
+coreServiceDict = dict("string");
+docNumDict = dict("string");
+modelDocNumDict = dict("string");
+seqNumArray = integer[];
+seqNumForOverrideArray = integer[];
+duplicateCheakArray = string[];
+TERMINATE_ACTION = "TERMINATE";
+conversionRate = 0.0;
+
+currencyInfoDict = util.getCurrencyData( quoteCurrency );
+
+if ( containskey( currencyInfoDict, "error" ) <> true ){
+    numDecimals = util.customAtoi(get( currencyInfoDict, "numDecimals" ), 0);  
+    CURRENCY_SYMBOL = get( currencyInfoDict, "currencySymbol" );
+	conversionRate  = atof(get( currencyInfoDict, "conversionRate" ));
+}
+
+if ( conversionRate == 0.0 ){
+    conversionRate = 1.0;
+}
+
+//CSYS-104304 (OK. 11-10-2021) Start - To support Parent child relation for Intelligent Audit SKU's with SLA SKU's
+for line in line_process {
+	poID = line._part_custom_field1;
+	overrideRamp = line.overrideDefaultRampPlan_line;
+	itemType = line.piItemType_line;
+	assetAction = line.assetAction_line;
+	
+	if (itemType == BASE_FEE AND assetAction <> TERMINATE_ACTION) {
+		if (poID == "8224086") {	// Intelligent Audit - essentials			
+			put(poIdDict, "Intelligent Audit - essentials", overrideRamp);				
+		}
+		if (poID == "8224070") {	// Intelligent Audit - Advanced			
+			put(poIdDict, "Intelligent Audit - Advanced", overrideRamp);				
+		}
+		
+		if (poID == "644") {		//Policy Audit		
+			put(poIdDict, "Policy Audit", overrideRamp);				
+		}
+		if (poID == "997") {	    //Receipt Audit			
+			put(poIdDict, "Receipt Audit", overrideRamp);
+		}
+	}
+}
+//CSYS-104304 - End
+//CSYS-105025 (SV. 19-01-2022) Added the below quote to get the number of ramps at qutote level Start
+quoteRampDetails = rampPlanDetails_quote;
+quoteRampFromMonth = util.getXMLNodeValues(quoteRampDetails, FROM);
+numOfQuoteLevelRamps = sizeofarray(quoteRampFromMonth);
+//CSYS-105025 End
+
+for line in line_process {
+	
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	seqNum = line._sequence_number;
+	seqNumStr = string(seqNum);
+	itemType = line.piItemType_line;
+	pi = line._part_number;
+	assetAction = line.assetAction_line;
+	poID = line._part_custom_field1;
+	lineItemRampPlan = line.rampPlanDetails_line;
+	lineDescription = line.lineDescription_line;
+	poCategory = line.poCategory_line;
+	outputPOCategory = line.outputPOCategory_line;
+	overrideRamp = line.overrideDefaultRampPlan_line;
+	numCommittedTransaction = line.numCommittedTransaction_line;
+	put(stringsDict, docNum, lineDescription);
+	rampFlag = line.rampFlag_line;//CSYS-105025 (SV. 19-01-2022) Added to get the value of line level rap flag
+	
+	if (pi <> "") {
+		if (itemType == BASE_FEE AND assetAction <> TERMINATE_ACTION) {
+			if (poCategory == "Core Service") {
+				if (findinarray(duplicateCheakArray, "*" + parentDocNum + "*") == -1) {
+					append(duplicateCheakArray, "*" + parentDocNum + "*");				
+					append(modelDocNumList, atoi(parentDocNum));
+					put(coreServiceDict, parentDocNum, lineDescription);
+				}
+			}
+			
+			if (poID == "4388629") {
+				overrideRamp = get(poIdDict, "Policy Audit");
+				
+				//CSYS-104304 (OK. 11-10-2021) To support Parent child relation for Intelligent Audit SKU's with SLA SKU's
+				if (containskey(poIdDict, "Intelligent Audit - Advanced" ) == true ) { 
+					overrideRamp = get(poIdDict, "Intelligent Audit - Advanced");
+				}
+				
+				put(descriptionDict, docNum, overrideRamp);				
+			}
+			if (poID == "4388615") {
+				overrideRamp = get(poIdDict, "Receipt Audit");
+				
+				//CSYS-104304 (OK. 11-10-2021) To support Parent child relation for Intelligent Audit SKU's with SLA SKU's
+				if (containskey(poIdDict, "Intelligent Audit - essentials" ) == true ) { 
+					overrideRamp = get(poIdDict, "Intelligent Audit - essentials");
+				}
+				
+				put(descriptionDict, docNum, overrideRamp);
+			}
+			if (poID <> "4388615" OR poID <> "4388629") {
+				put(descriptionDict, docNum, overrideRamp);
+			}
+			overrideRamp = get(descriptionDict, docNum);
+			
+			if (numCommittedTransaction_quote <> numCommittedTransaction) {
+				overrideRamp = "true";
+			}
+			//CSYS-105025 (SV. 19-01-2022) Added the bwlo condition to build the separate ramp pricing tables for no. of Quote ramps >1 and when ramp flag is "N" and to avoid FAVR and ICP products Start
+			if(rampFlag == "N" AND poId <> "566" AND poId <> "416635" and poId <> "4722310" AND numOfQuoteLevelRamps > 1){
+				overrideRamp = "noRampRequired";
+			}			
+			//CSYS-105025 End
+			//get the ramp details for quote level ramp when there is no override ramp 
+			if (overrideRamp == "") {
+				append(seqNumArray, seqNum);
+				put(docNumDict, string(seqNum), docNum);
+				put(modelDocNumDict, docNum, parentDocNum);
+				lineRampFromMonth = util.getXMLNodeValues(lineItemRampPlan, FROM);
+				lineRampToMonth = util.getXMLNodeValues(lineItemRampPlan, TO);
+				lineRampToMonthsTrxn = util.getXMLNodeValues(lineItemRampPlan, RAMP_TRANSACTIONS);
+				lineRampBaseFee = util.getXMLNodeValues(lineItemRampPlan, "baseFeeNetUSD");				
+				lineRampIncFee = util.getXMLNodeValues(lineItemRampPlan, "increFeeNetUSD");
+				cnt = 0;
+						
+				for key in lineRampFromMonth {				
+					rampLevels = key;				
+					if (findinarray(fromMonthArray, key) == -1) {
+						append(fromMonthArray, key);
+					}
+					
+					baseFee = lineRampBaseFee[cnt];
+					if (findinarray(baseFeeNetArray, "*" + docNum + "*" + rampLevels) == -1) {
+						append(baseFeeNetArray, "*" + docNum + "*" + rampLevels);
+						put(baseFeeDict, "*" + docNum + "*" + rampLevels, baseFee);
+					}
+					
+					incFee = lineRampIncFee[cnt];
+					if (findinarray(incFeeNetArray, "*" + docNum + "*" + rampLevels) == -1) {
+						append(incFeeNetArray, "*" + docNum + "*" + rampLevels);
+						put(incFeeDict, "*" + docNum + "*" + rampLevels, incFee);
+					}
+					cnt = cnt + 1;			
+				}
+				
+				for key in lineRampToMonth {
+					if (findinarray(toMonthArray, key) == -1) {
+						append(toMonthArray, key);
+					}
+				}
+				
+				for key in lineRampToMonthsTrxn {
+					append(transactionArray, key);			
+				}
+			}
+			//get the ramp details for line level ramp when there is overrideRamp
+			else {
+				num = 0;
+				append(seqNumForOverrideArray, seqNum);
+				put(overrideRampDocNum, string(seqNum), docNum);
+				put(parentDocNumDict, docNum, parentDocNum);
+				rampFromMonth = util.getXMLNodeValues(lineItemRampPlan, FROM);
+				rampToMonth = util.getXMLNodeValues(lineItemRampPlan, TO);
+				rampToMonthsTrxn = util.getXMLNodeValues(lineItemRampPlan, RAMP_TRANSACTIONS);
+				rampBaseFee = util.getXMLNodeValues(lineItemRampPlan, "baseFeeNetUSD");				
+				rampIncFee = util.getXMLNodeValues(lineItemRampPlan, "increFeeNetUSD");
+				for val in rampFromMonth {
+					monthValue1 = val;
+					put(overrideFromMonthDict, "*" + docNum + "*" + string(num), monthValue1);
+					append(lineRampMonthArray, "*" + docNum + "*" + string(num));
+					baseFeeValue = rampBaseFee[num];
+					if (findinarray(rampBaseFeeNetArray, "*" + docNum + "*" + string(num)) == -1) {
+						append(rampBaseFeeNetArray, "*" + docNum + "*" + string(num));
+						put(rampBaseFeeDict, "*" + docNum + "*" + string(num), baseFeeValue);
+					}
+					
+					incFeeValue = rampIncFee[num];
+					if (findinarray(rampIncFeeNetArray, "*" + docNum + "*" + string(num)) == -1) {
+						append(rampIncFeeNetArray, "*" + docNum + "*" + string(num));
+						put(rampIncFeeDict, "*" + docNum + "*" + string(num), incFeeValue);
+					}
+					num = num + 1;					
+				}
+				num = 0;
+				for val in rampToMonth {
+					monthValue2 = val;
+					put(overrideToMonthDict, "*" + docNum + "*" + string(num), monthValue2);
+					num = num + 1;
+				}
+				num = 0;
+				for val in rampToMonthsTrxn {
+					transactionValue = val;
+					put(overrideTranxDict, "*" + docNum + "*" + string(num), transactionValue);
+					num = num + 1;
+				}
+			}
+		}
+	}
+}
+
+count1 = 0;
+month = 1;
+
+if (billingCycle == "Quarterly") {
+	month = 3 ;
+}
+if (billingCycle == "Semi-Annually") {
+	month = 6 ;
+}
+if (billingCycle == "Annually") {
+	month = 12 ;
+}
+sort(modelDocNumList, "asc");
+sort(seqNumForOverrideArray, "asc");
+sort(seqNumArray, "asc");
+count = 1;
+monthlyCost = "";
+baseNetPrice = "";
+IncNetPrice = "";
+
+// Build the ramp table for quote level ramps with out Override Ramp 
+for model in modelDocNumList {
+	modelNum = string(model);
+	number = 1;
+	lineLevelRampTable = "";	
+	coreName = get(coreServiceDict, modelNum);
+	for value in fromMonthArray {
+		index = findinarray(fromMonthArray, value);
+		from = value;
+		to = toMonthArray[index];
+		trxn = transactionArray[index];
+		rampTableBody = "";	
+		key = string(count);
+		if (findinarray(fromMonthArray1, value + modelNum) == -1) {
+			append(fromMonthArray1, value + modelNum);			
+			costColumnName = "Per Report Cost";
+			overageCostColumnName = "Overage Cost Per Report";	
+			header = "Ramp " + string(number) + " : From Month " + from + " to Month " + to ;
+		
+			rampTableHeader = 
+			"<table frame='box' cellpadding='6' cellspacing='0' align='center'>" + 
+			// Table Header for quote level Ramp
+			"<thead class='line-item-grid-header'>" + 
+				"<tr style='background: #4bd786;'>" + 
+					tdOpen + header + tdClose + 
+					tdOpen + tdClose + 
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+				"</tr>" + 
+				"<tr class='line-item child-line-item line-item-show'>" + 
+					thProductClass + "Product" + "</th>" +
+					thClass + "Transactions" + "</th>" +				
+					thClass + "Monthly Cost" + "</th>" + 	 		 //Base Extended Net Price 
+					thClass + costColumnName + "</th>" +			 //Base Net Price
+					thClass + overageCostColumnName + "</th>" +  	 //Incremental Net Price
+				"</tr>" + 
+			"</thead>" +
+			"<tbody class='line-item-grid-body'>";		
+		}
+		
+		for record in seqNumArray {
+			seq = string(record);
+			docNum = get(docNumDict, seq);			
+			parentDocNum = get(modelDocNumDict, docNum);
+			lineDesc = get(stringsDict, docNum); 
+			lineDesc = lineDesc + "		@" ;			
+			overrideRamp = get(descriptionDict, docNum);
+			
+			if (parentDocNum == modelNum) {	
+				
+				monthlyCostStr = get(baseFeeDict, "*" + docNum + "*" + value);
+				if (monthlyCostStr <> "") {
+					monthlyCostStr = replace(monthlyCostStr , ",", "");
+					monthlyCostFloat = (atof(monthlyCostStr)) / month;
+					
+					if (quoteCurrency <> "USD") {
+						monthlyCostFloat = monthlyCostFloat * conversionRate;
+						//monthlyCostFloat = round(monthlyCostFloat, numDecimals);
+					}
+					
+					monthlyCost = formatascurrency(monthlyCostFloat, quoteCurrency);
+					baseNetPrice = formatascurrency(monthlyCostFloat / (atoi(trxn)),quoteCurrency);					
+				}								
+				IncNetPriceStr = get(incFeeDict, "*" + docNum + "*" + value);
+				if (IncNetPriceStr <> "") {
+					IncNetPriceStr = replace(IncNetPriceStr , ",", "");
+					IncNetPriceFloat = atof(IncNetPriceStr);
+						
+					if (quoteCurrency <> "USD") {
+						IncNetPriceFloat = IncNetPriceFloat * conversionRate;
+						//IncNetPriceFloat = round(IncNetPriceFloat, numDecimals);
+					}
+					
+					IncNetPrice = formatascurrency(IncNetPriceFloat, quoteCurrency);
+				}
+				
+				rampTableBody = rampTableBody +	
+				//Table body for quote level Ramp
+				"<tr class='line-item child-line-item line-item-show'>" + 
+					tdOpen + lineDesc + tdClose +
+					tdClass + trxn + tdClose +
+					tdClass + monthlyCost + tdClose + 	//Monthly Cost (Base Extended Net price)
+					tdClass + baseNetPrice + tdClose + 		//Per Report Cost (Base Net price)
+					tdClass + IncNetPrice + tdClose + 	//Overage Cost Per Report (Incremental Net Price)
+				"</tr>";
+			}
+		}
+		
+		quoteLevelrampTable = get(stringsDict, "*" + modelNum + "*" + key + "Table");
+		
+		if (isnull(quoteLevelrampTable)) {
+			quoteLevelrampTable = "<div align='center' style='color:#003F71; font-weight:bold; font-size:12px;'>" + "Ramp Plan Pricing Details For " + coreName + " Core Service " + "</div>";
+		}
+		
+		quoteLevelrampTable = quoteLevelrampTable + rampTableHeader + rampTableBody +
+		"</tbody>" + 
+		"</table>" + "</br>";
+
+		count = count + 1;
+		key = string(count);
+		put(stringsDict, "*" + modelNum + "*" + key + "Table", quoteLevelrampTable);
+		number = number + 1;	
+	}
+	
+	// Build the ramp table for line level ramps when OverrideRamp is set to True
+	for res in seqNumForOverrideArray {
+		seqNumValue = string(res);
+		docNum = get(overrideRampDocNum, seqNumValue);
+		count2 = 0;
+		modelDocNum = get(parentDocNumDict, docNum);
+		if (modelDocNum == modelNum) {
+			costColumnName = "Per Report Cost";
+			overageCostColumnName = "Overage Cost Per Report";
+			lineDesc = get(stringsDict, docNum);
+			lineLevelTableBody = "";
+			
+			lineLevelTableHeader = 
+			"<table frame='box' cellpadding='6' cellspacing='0' align='center'>" + 
+			// Table Header
+			"<thead class='line-item-grid-header'>" + 
+				"<tr style='background: #4bd786;'>" + 
+					tdOpen + lineDesc + tdClose + 
+					tdOpen + tdClose + 
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+				"</tr>" + 
+				"<tr class='line-item child-line-item line-item-show'>" + 
+					thProductClass + "Ramp Months" + "</th>" +
+					thClass + "Transactions" + "</th>" +				
+					thClass + "Monthly Cost" + "</th>" + 	 		 //Base Extended Net Price 
+					thClass + costColumnName + "</th>" +			 //Base Net Price
+					thClass + overageCostColumnName + "</th>" +  	 //Incremental Net Price
+				"</tr>" + 
+			"</thead>" +
+			"<tbody class='line-item-grid-body'>";
+
+			for ramp in lineRampMonthArray {
+				rampValue = ramp;
+				if (find (rampValue, "*" + docNum + "*") <> -1) {
+					fromMonth = get(overrideFromMonthDict, "*" + docNum + "*" + string(count2));
+					toMonth = get(overrideToMonthDict, "*" + docNum + "*" + string(count2));
+					transactionCount = get(overrideTranxDict, "*" + docNum + "*" + string(count2));
+					baseFeeValue = get(rampBaseFeeDict, "*" + docNum + "*" + string(count2));
+					incFeeValue = get(rampIncFeeDict, "*" + docNum + "*" + string(count2));
+					count2 = count2 + 1;
+					
+					rampLevel = " From Month " + fromMonth + " to Month " + toMonth;
+					
+					monthlyCostStr = replace(baseFeeValue , ",", "");			
+					monthlyCostFloat = (atof(monthlyCostStr)) / month;	
+
+					if (quoteCurrency <> "USD") {
+						monthlyCostFloat = monthlyCostFloat * conversionRate;
+						//monthlyCostFloat = round(monthlyCostFloat, numDecimals);
+					}
+					
+					monthlyCost = formatascurrency(monthlyCostFloat, quoteCurrency);
+										
+					if (transactionCount == "0" OR transactionCount == "" OR isnull(transactionCount)) {
+						baseNetPrice = formatascurrency(monthlyCostFloat, quoteCurrency);
+					}
+					else {
+						baseNetPrice = formatascurrency(monthlyCostFloat / (atoi(transactionCount)),quoteCurrency);
+					}
+					
+					if (incFeeValue <> "") {					
+						incFeeValue = replace(incFeeValue , ",", "");
+						IncNetPriceFloat = atof(incFeeValue);
+						
+						if (quoteCurrency <> "USD") {
+							IncNetPriceFloat = IncNetPriceFloat * conversionRate;
+							//IncNetPriceFloat = round(IncNetPriceFloat, numDecimals);
+						}
+						IncNetPrice = formatascurrency(IncNetPriceFloat, quoteCurrency);
+					}
+					lineLevelTableBody = lineLevelTableBody +	
+					//Table body
+					"<tr class='line-item child-line-item line-item-show'>" + 
+						tdOpen + rampLevel + tdClose +
+						tdClass + transactionCount + tdClose +
+						tdClass + monthlyCost + tdClose + 	//Monthly Cost (Base Extended Net price)
+						tdClass + baseNetPrice + tdClose + 		//Per Report Cost (Base Net price)
+						tdClass + IncNetPrice + tdClose + 	//Overage Cost Per Report (Incremental Net Price)
+					"</tr>";
+				}
+			}
+			
+			lineLevelRampTable = lineLevelRampTable + lineLevelTableHeader + lineLevelTableBody +
+			"</tbody>" + 
+			"</table>" + "</br>";
+			
+		}
+	}
+	
+	//final ramp table 
+	rampTable = rampTable + quoteLevelrampTable + lineLevelRampTable;
+}
+
+
+return rampTable;

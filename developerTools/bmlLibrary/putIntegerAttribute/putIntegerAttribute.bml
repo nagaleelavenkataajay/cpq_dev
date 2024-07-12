@@ -1,0 +1,5 @@
+key = docNum + delimiter + commerceField;
+
+put(integersDict, key, value);
+
+return true;

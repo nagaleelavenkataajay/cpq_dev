@@ -1,0 +1,14 @@
+{
+  "name" : "Calculate Monthly Offset before Submit",
+  "variableName" : "calculateMonthlyOffsetBeforeSubmit",
+  "description" : "CSYS-105667 (LIN - 01-03-2022) -Set MonthlyOffSet flag before submit is performed.",
+  "libraryFunctions" : [ "util.customAtoi", "util.formAttrValueStr" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "assetAction_line", "piItemType_line", "lineDescription_line", "_part_number", "_document_number", "coreOffering_line", "implementationMethod_line" ],
+  "mainDocAttributes" : [ "ownerBU_quote", "ownerTheater_quote", "ownerMarket_quote", "contractingEntity_quote", "quoteType_quote", "orderEffectiveDate_quote", "referralStatus_quote", "referringPartnerCategory_quote" ],
+  "systemAttributes" : [ ]
+}

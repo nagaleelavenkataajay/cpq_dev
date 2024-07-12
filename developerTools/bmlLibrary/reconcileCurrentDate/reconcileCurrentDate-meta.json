@@ -1,0 +1,12 @@
+{
+  "name" : "Reconcile Current Date",
+  "variableName" : "reconcileCurrentDate",
+  "description" : "Reconciles the current date with timezone parameter. Returns a string dictionary with the following components: current date, current day, current month, current year.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "timezone",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

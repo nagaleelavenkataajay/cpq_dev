@@ -1,0 +1,214 @@
+//CSYS-104790 (SV. 09-12-2021) To calculate the Forecasted ARR for three years
+
+// HTML and Styling
+result = "";
+
+BASE_FEE = "Base";
+INC_TYPE = "Incremental";
+FROM = "from";
+TO = "to";
+RAMP_TRANSACTIONS = "transactions";
+//stringsDict = dict("string");
+floatsDict = dict("float");
+quoteCurrency = quoteCurrency_quote;
+baseFeeNetArray = string[];
+incFeeNetArray = string[];
+baseFeeDict = dict("string");
+incFeeDict = dict("string");
+floatsDict = dict("float");
+billingCycle = billingCycle_quote;
+modelDocNumList = integer[];
+coreNumberDict = dict("string");
+rampFromMonth = string[];
+TERMINATE_ACTION = "TERMINATE";
+conversionRate = 0.0;
+DELIMITER = "@.@";
+RAMP_PLAN_DETAIL = "rampPlanDetails_line";
+QUOTE_DOC_NUM = "1";
+
+currencyInfoDict = util.getCurrencyData( quoteCurrency );
+
+if ( containskey( currencyInfoDict, "error" ) <> true ){
+    numDecimals = util.customAtoi(get( currencyInfoDict, "numDecimals" ), 0);  
+    CURRENCY_SYMBOL = get( currencyInfoDict, "currencySymbol" );
+	conversionRate  = atof(get( currencyInfoDict, "conversionRate" ));
+}
+
+if ( conversionRate == 0.0 ){
+    conversionRate = 1.0;
+}
+
+totalYear1ARR = 0.0;
+totalYear2ARR = 0.0;
+totalYear3ARR = 0.0;
+divisionFactor = 1;
+
+if (billingCycle == "Quarterly") {
+	divisionFactor = 3 ;
+}
+if (billingCycle == "Semi-Annually") {
+	divisionFactor = 6 ;
+}
+if (billingCycle == "Annually") {
+	divisionFactor = 12 ;
+}
+for line in line_process {
+	ValYear1 = 0.0;
+	ValYear2 = 0.0;
+	ValYear3 = 0.0;
+	noOfMonth1 = 0.0;
+	noOfMonth2 = 0.0;
+	noOfMonth3 = 0.0;
+	docNum = line._document_number;		
+	itemType = line.piItemType_line;
+	pi = line._part_number;
+	assetAction = line.assetAction_line;
+	poID = line._part_custom_field1;	
+	lineDescription = line.lineDescription_line;	
+	overrideRamp = line.overrideDefaultRampPlan_line;
+	numCommittedTransaction = line.numCommittedTransaction_line;
+	lineItemRampPlan = util.getStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_DETAIL);
+	put(stringsDict, docNum, lineDescription);		
+	if (pi <> "") {			
+		if (itemType == BASE_FEE AND assetAction <> TERMINATE_ACTION) {
+			val1 = 0.0;
+			val2 = 0.0;
+			Val3 = 0.0;
+			val1EachRamp = 0.0;
+			val2EachRamp = 0.0;
+			val3EachRamp = 0.0;
+			count = 0;
+			x ="";
+			
+			lineRampBaseFee = util.getXMLNodeValues(lineItemRampPlan, "baseFeeNetUSD");	
+			
+			print "lineRampBaseFee= "; print lineRampBaseFee;
+			lineRampFromMonth = util.getXMLNodeValues(lineItemRampPlan, FROM);
+			lineRampToMonth = util.getXMLNodeValues(lineItemRampPlan, TO);
+			lineRampToMonthsTrxn = util.getXMLNodeValues(lineItemRampPlan, RAMP_TRANSACTIONS);
+			lineRampIncFee = util.getXMLNodeValues(lineItemRampPlan, "increFeeNetUSD");
+			for a in lineRampBaseFee{
+				toMonth = lineRampToMonth[count];
+				fromMonth = lineRampFromMonth[count];				
+				fee = 0.0;
+				fee = getcurrencyvalue(lineRampBaseFee[count], "USD");
+				if (quoteCurrency <> "USD") {
+					fee = fee * conversionRate;
+				}
+				if(toMonth <> "and beyond" AND atoi(fromMonth) < 37){					
+					if(atoi(fromMonth) <= 12){					
+						if((atoi(toMonth) - (atoi(fromMonth)-1)) > 12){print "noOfMonth1 = "; print noOfMonth1;
+							noOfMonth1 = 12-(atoi(fromMonth) -1);
+							if(atoi(toMonth) <=24){
+								noOfMonth2 = atoi(toMonth) - 12;								
+							}
+							else{
+								noOfMonth2 = 12;
+								if(atoi(toMonth) <=36){
+									noOfMonth3 = atoi(toMonth) - 24;
+								}
+								else{
+									noOfMonth3 = 12;
+								}
+							}
+						}
+						else{	
+							if(atoi(toMonth) <= 12){
+								noOfMonth1 = atoi(toMonth) - (atoi(fromMonth)-1);		
+							}
+							else{
+								noOfMonth1 = 12-(atoi(fromMonth) -1);
+								noOfMonth2 = atoi(toMonth)-12;
+							}
+						}
+						print "noOfMonth1 = "; print noOfMonth1;
+						print "noOfMonth2 = "; print noOfMonth2;
+						val1 = (noOfMonth1/divisionFactor) * fee;
+						val1EachRamp = val1EachRamp+val1;
+						val2 = (noOfMonth2/divisionFactor) * fee;
+						val2EachRamp = val2EachRamp+val2;
+						val3 = (noOfMonth3/divisionFactor) * fee;
+						val3EachRamp = val3EachRamp+val3;
+					}
+					if(atoi(fromMonth) > 12 AND atoi(fromMonth) <= 24){
+						if((atoi(toMonth) - (atoi(fromMonth)-1)) > 12){
+							noOfMonth2 = 24-(atoi(fromMonth) -1);
+							if(atoi(toMonth) <=36){
+								noOfMonth3 = atoi(toMonth) - 24;
+								print "noOfMonth3 = "+string(noOfMonth3);
+							}
+							else{
+								noOfMonth3 = 12;
+							}
+						}
+						else{
+							if(atoi(toMonth) <= 24){
+								noOfMonth2 = atoi(toMonth) - (atoi(fromMonth)-1);
+							}
+							else{
+								noOfMonth2 = 24-(atoi(fromMonth) -1);
+								noOfMonth3 = atoi(toMonth)-24;
+							}
+						}
+						print "noOfMonth2 = "; print noOfMonth2;
+						val2 = (noOfMonth2/divisionFactor) * fee;
+						val2EachRamp = val2EachRamp+val2;
+						val3 = (noOfMonth3/divisionFactor) * fee;
+						val3EachRamp = val3EachRamp+val3;
+					}
+					if(atoi(fromMonth) > 24 AND atoi(fromMonth) <= 36){
+						if((atoi(toMonth) - (atoi(fromMonth)-1)) > 12){
+							noOfMonth3 = 36-(atoi(fromMonth) -1);
+						}
+						else{
+							if(atoi(toMonth) <= 36){	
+								noOfMonth3 = atoi(toMonth) - (atoi(fromMonth)-1);
+							}
+							else{
+								noOfMonth3 = 36-(atoi(fromMonth) -1);
+							}
+						}
+						val3 = (noOfMonth3/divisionFactor) * fee;
+						val3EachRamp = val3EachRamp+val3;
+					}
+				}				
+				if(toMonth == "and beyond" AND atoi(fromMonth) < 37){
+					if(atoi(fromMonth) <= 12){
+						noOfMonth1 = 12-(atoi(fromMonth) -1) ;
+						val1 = (noOfMonth1/divisionFactor) * fee;
+						val1EachRamp = val1EachRamp+val1;
+						noOfMonth2 = 12;
+						val2 = (noOfMonth2/divisionFactor) * fee;					
+						val2EachRamp = val2EachRamp+val2;
+						val3EachRamp = val3EachRamp+val2;						
+					}					
+					elif(atoi(fromMonth) > 12 AND atoi(fromMonth) <= 24){
+						noOfMonth2 = 24-(atoi(fromMonth) -1) ;
+						val2 = (noOfMonth2/divisionFactor) * fee;
+						val2EachRamp = val2EachRamp+val2;						
+						noOfMonth3 = 12;
+						val3 = (noOfMonth3/divisionFactor) * fee;	
+						val3EachRamp = val3EachRamp+val3;		
+					}
+					else{
+						noOfMonth3 = 36-(atoi(fromMonth) -1) ;
+						val3 = (noOfMonth3/divisionFactor) * fee;
+						val3EachRamp = val3EachRamp+val3;
+					}					
+				}				
+				count = count +1;				
+			}
+				ValYear1 = ValYear1+val1EachRamp;
+				ValYear2 = ValYear2+val2EachRamp;
+				ValYear3 = ValYear3+val3EachRamp;			
+		}		
+	}
+	totalYear1ARR = totalYear1ARR+ValYear1;
+	totalYear2ARR = totalYear2ARR+ValYear2;
+	totalYear3ARR = totalYear3ARR+ValYear3;
+	
+} 
+utilResultString = util.formAttrValueStr(attributesDict, "forecastedARRYear1_quote", QUOTE_DOC_NUM, string(totalYear1ARR));
+utilResultString = util.formAttrValueStr(attributesDict, "forecastedARRYear2_quote", QUOTE_DOC_NUM, string(totalYear2ARR));
+utilResultString = util.formAttrValueStr(attributesDict, "forecastedARRYear3_quote", QUOTE_DOC_NUM, string(totalYear3ARR));
+return "";

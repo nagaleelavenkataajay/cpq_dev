@@ -1,0 +1,1066 @@
+/*
+====================================================================
+-----------------------------Change Log----------------------
+10/12/2015 - KA CSYS-52578
+      --Changed our variable disc to longDiscount_line for more decimal precision when calculating line ramp plan prices
+
+10/2/2013 - Matt Morman Case 170798
+      -Changed our variable disc, It originally pulled the discount_line value, now it is always the discountPercent_line
+      -We had to remove all of the checks to see what the discount type was, it will always be % so those are no longer necessary
+      -Please reference case #170798  for a list of changes
+      
+10/22/2013 - Heidi Basler PS Promos SOW
+      - added promoDiscPercent discounts wherever disc was being applied - promo was applied before disc
+
+11/21/2013 - Krishna Zaveri Case 00176332
+      - changed the key in get functions to match the key in the corresponding containskey functions
+====================================================================
+*/
+
+
+/* Parameters passed to this util
+stringsDict
+floatsDict
+integersDict
+docNum
+parentDocNum
+howManyRamps
+isGrouped
+billingCycleNumber
+CURRENCY_SYMBOL
+*/
+// CONSTANTS
+ 
+DELIMITER = "@.@";
+RAMP_PLAN_DETAIL = "rampPlanDetails_line";
+RAMP_PLAN_DETAIL_SAVE_XML = "rampPlanDetailXMLSave_line";
+RAMP_PARENT_NODE = "rampPlanDetail";
+RAMP_DELIMITER = "-_**_-";
+ROLL_UP = "rollUp_line";
+PRIMARY_BASE_FEE = "primaryBaseFee";
+//DISCOUNT_PERCENT = "discountPercent_line";
+DISCOUNT_PERCENT = "longDiscount_line"; //For CSYS-52578
+TRANSACTIONS = "numCommittedTransaction_line";
+EXT_NET_PRICE_NON_UNIFIED = "extNetPriceNonUnified_line";
+EXT_NET_PRICE_NON_UNIFIED_USD = "extNetPriceNonUnifiedUSD_line";
+INC_FEE_NON_UNIFIED_NET = "increFeeNonUnifiedNet";
+INC_FEE_NON_UNIFIED_NET_USD = "increFeeNonUnifiedNetUSD";
+EXT_LIST_PRICE_NON_UNIFIED = "extListPriceNonUnified_line";
+EXT_LIST_PRICE_NON_UNIFIED_USD = "extListPriceNonUnifiedUSD_line";
+LIST_PRICE_NON_UNIFIED = "listPriceNonUnified_line";
+LIST_PRICE_NON_UNIFIED_USD = "listPriceNonUnifiedUSD_line";
+BASE_LIST_PRICE_UNIFIED = "listPriceUnified";
+BASE_LIST_PRICE_UNIFIED_USD = "listPriceUnifiedUSD";
+EXT_LIST_PRICE_USD = "extListPriceUSD_line";//CSYS-86837
+
+
+EXT_NET_PRICE = "extendedNetPrice_line";
+EXT_NET_PRICE_UNIFIED = "extNetPriceUnified_line";
+PROD_BASED_PRICE_USD = "extProductBasedPriceUSD_line";
+EXT_NET_PRICE_USD = "extNetPriceUSD_line";
+NET_PRICE_USD = "netPriceUSD_line";
+NET_PRICE_UNIFIED_USD = "netPriceUnifiedUSD_line";
+EXT_NET_PRICE_UNIFIED_USD = "extNetPriceUnifiedUSD_line";
+INCREMENTAL_FEE_LIST = "incrementalFeeList";
+INCREMENTAL_FEE_LIST_USD = "incrementalFeeListUSD";
+INCREMENTAL_FEE_NET_USD = "incrementalFeeNetUSD";
+PROD_ROLL = "productBasedPriceRollUp";
+// Store the incremental fee for a PO for use with the base fee XML
+INCREMENTAL_FEE_FOR_PO = "incrementalFeeForPO";
+NUM_DECIMAL_USD = 2;
+EXT_PRODUCT_BASED_PRICE = "extProductBasedPrice_line";
+DISCOUNT = "discount_line";
+DISCOUNT_TYPE = "discountType_line";
+PROMO_DISC_PERCENT = "promoDiscPercent_line";
+
+TRUE_STR = "true";
+NET_PRICE = "netPriceEach_line";
+AMOUNT_DISCOUNT_TYPE = "Amt";
+INCREMENTAL_FEE_NET = "incrementalFeeNet";
+INC_FEE_LIST_XML = "increFeeList";
+INC_FEE_LIST_XML_USD = "increFeeListUSD";
+BASE_FEE_LIST_XML = "baseFeeList";
+BASE_FEE_LIST_XML_USD = "baseFeeListUSD";
+BASE_FEE_NET_XML = "baseFeeNet";
+BASE_FEE_NET_XML_USD = "baseFeeNetUSD";
+INC_FEE_NET_XML = "increFeeNet";
+INC_FEE_NET_XML_USD = "increFeeNetUSD";
+BASE_FEE_NET_NON_UNIFIED = "baseFeeNonUnifiedNet";
+BASE_FEE_NET_NON_UNIFIED_USD = "baseFeeNonUnifiedNetUSD";
+TRANSACTION_XML_NODE_NAME = "transactions";  //This value must match the node name of the "transactions" node on the Ramp Plan XML
+BASE_FEE_LIST_NON_UNIFIED_XML = "baseFeeListNonUnified";
+BASE_FEE_LIST_NON_UNIFIED_USD_XML = "baseFeeListNonUnifiedUSD";
+INC_FEE_LIST_NON_UNIFIED_XML = "incFeeListNonUnified";
+INC_FEE_LIST_NON_UNIFIED_USD_XML = "incFeeListNonUnifiedUSD";
+// Case 1240022 - Added by Muthu Murugan
+INCREMENTAL_FEE_NON_UNIFIED_LIST = "increFeeNonUnifiedList";
+INCREMENTAL_FEE_NON_UNIFIED_LIST_USD = "increFeeNonUnifiedListUSD";
+// Case 114135 - Added by Muthu Murugan
+TRANSACTION_BY_BC = "transactionsBC";
+//CSYS-37711 part 4:
+BASE_INC_KEY = "baseIncKey";
+ 
+//Constants for part custom field names
+PO_ID = "poId_line";
+PART_NUM = "_part_number"; 
+ASSET_ACTION = "assetAction_line";
+TERMINATE_ACTION = "TERMINATE";
+NONE_ACTION = "NONE";
+CONCUR_FAVR_PO_ID = "4722310";//CSYS-94166 (LN. 1-16-2019) 
+pi = ""; 
+poID = ""; 
+rollup = "";
+assetAction = "";
+incrementalDocNum = "";
+incrementalDiscount = 0.0;
+billingCycleNumberFloat = 0.0;
+prodBasedPriceSubline = 0.0;
+userProdBasedPriceSubline = 0.0; //CSYS-86116
+netPriceSubline = 0.0;
+prodBasedPriceSublineUSD = 0.0;
+netPriceSublineUSD = 0.0;
+incBasedPriceSubline = 0.0;
+incNetPriceSubline = 0.0;
+incBasedPriceSublineUSD = 0.0;
+incNetPriceSublineUSD = 0.0;
+prodRollup = 0.0;
+disc = 0.0;
+discType = "";
+promoDiscPercent = 0.0;
+subTransactions = 0;
+systemBaseFeeNet = 0.0; //CSYS-86116
+systemIncFeeNet = 0.0; //CSYS-86116
+systemIncFeeNetUSD = 0.0; //CSYS-95310
+baseFeeNonUnifiedAttr = 0.0;
+baseFeeNonUnifiedUSDAttr = 0.0;
+incFeeNonUnifiedAttr = 0.0;
+incFeeNonUnifiedUSDAttr = 0.0;
+baseFeeListNonUnifiedAttr = 0.0;
+baseFeeListNonUnifiedUSDAttr = 0.0;
+incFeeListNonUnifiedAttr = 0.0;
+incFeeListNonUnifiedUSDAttr = 0.0;
+incNetNewUniSubline = 0.0;//CSYS-104449
+incNetUniUSDSubline = 0.0;//CSYS-104449									
+//CSYS-86115 (KA. 10-16-2017):
+overrideRampPrice = "false";
+overrideCoreRampPrice = "false";
+baseCoreDocNum = "";
+UQGConcurDistinctExpense = "false";  //IESCNQRCPQ-600(OK. 4-26-2023)
+
+if(containskey(stringsDict, parentDocNum + DELIMITER + PRIMARY_BASE_FEE)){
+      baseCoreDocNum = get(stringsDict, parentDocNum + DELIMITER + PRIMARY_BASE_FEE);
+}
+ 
+retDict  = dict("string"); //This dictionary is returned to "attrivateValueDict" in Pricing Function
+if(containskey(stringsDict, docNum + DELIMITER + ROLL_UP)) {
+            rollup = get(stringsDict, docNum + DELIMITER + ROLL_UP);
+}
+if(containskey(stringsDict, docNum + DELIMITER + PO_ID)) {
+            poID = get(stringsDict, docNum + DELIMITER + PO_ID);
+}
+if(containskey(stringsDict, docNum + DELIMITER + ASSET_ACTION)) {
+                  assetAction = get(stringsDict, docNum + DELIMITER + ASSET_ACTION);
+}
+// TEMP FIX Case CSYS-36746 ATG 9/18/14 (also added variables for pi and PART_NUM)
+if(containskey(stringsDict, docNum + DELIMITER + PART_NUM)) {
+            pi = get(stringsDict, docNum + DELIMITER + PART_NUM);
+}
+//CSYS-95701 SN. Remove temp fix and check in new variable
+if(findinarray(travelAndExpenseWithTriplinkProductArr, pi) <> -1){
+	rollup = "No";
+}
+if(containskey(stringsDict, parentDocNum + RAMP_DELIMITER + poID + RAMP_DELIMITER + rollup + DELIMITER + INCREMENTAL_FEE_FOR_PO)) {
+            incrementalDocNum = get(stringsDict, parentDocNum + RAMP_DELIMITER + poID + RAMP_DELIMITER + rollup + DELIMITER + INCREMENTAL_FEE_FOR_PO);
+}
+if(containskey(floatsDict, incrementalDocNum + DELIMITER + DISCOUNT_PERCENT)){
+            incrementalDiscount = get(floatsDict, incrementalDocNum + DELIMITER + DISCOUNT_PERCENT) / 100;
+}
+
+//CSYS-86115 continued:
+if(containskey(stringsDict, docNum + DELIMITER + "overrideRampPrice")){
+      overrideRampPrice = get(stringsDict, docNum + DELIMITER + "overrideRampPrice");
+}
+if(containskey(stringsDict, baseCoreDocNum + DELIMITER + "overrideRampPrice")){
+      overrideCoreRampPrice = get(stringsDict, baseCoreDocNum + DELIMITER + "overrideRampPrice");
+}
+
+//IESCNQRCPQ-600(OK. 4-26-2023)
+if(containskey(stringsDict, poID + DELIMITER + "UQGConcurDistinctExpense")){
+	UQGConcurDistinctExpense = get(stringsDict, poID + DELIMITER + "UQGConcurDistinctExpense");
+}
+
+rampsArr = range( howManyRamps );
+index = 0;
+baseFeeNet =String[];
+baseFeeList = String[]; 
+baseFeeListUSD = String[];
+baseFeeNetUSD = String[];
+baseFeeNonUnified = String[];
+baseFeeNonUnifiedUSD = String[];
+incFeeNet =String[];
+incFeeList = String[];
+incFeeListUSD = String[];
+incFeeNetUSD = String[];
+incFeeNonUnified = String[];
+incFeeNonUnifiedUSD = String[];
+transactionArr = String[];
+transactionBCArr = String[];
+baseIncKeyArr = string[]; //CSYS-37711 part 4 continued
+baseFeeListNonUnified = String[];
+baseFeeListNonUnifiedUSD = String[];
+incFeeListNonUnified = String[];
+incFeeListNonUnifiedUSD = String[];
+baseFeeNetBCArr = String[];
+
+lineItemRampPlanStrArrDict = dict("string[]");
+
+//CSYS-94166 (LN. 1-16-2019) Force a Billing Cycle of 1 for Concur FAVR
+/*CSYS-98985, Phil S 04/05/2020, block CSYS-94166
+if(poID == CONCUR_FAVR_PO_ID){
+      billingCycleNumberFloat = integer(atof("1"));
+}
+else {
+    if (isnumber(billingCycleNumber) ) {
+          billingCycleNumberFloat = integer(atof(billingCycleNumber));
+    }
+}
+*/
+if (isnumber(billingCycleNumber) ) {
+    billingCycleNumberFloat = integer(atof(billingCycleNumber));
+}
+
+
+for ramp in rampsArr{
+            rampKey = docNum + RAMP_DELIMITER + string(index);
+            parentRampKey = baseCoreDocNum + RAMP_DELIMITER + string(index); //CSYS-86116
+           
+            if(containskey(integersDict, rampKey + DELIMITER +  TRANSACTIONS)){
+                        subTransactions = get(integersDict, rampKey + DELIMITER +  TRANSACTIONS);
+            }
+		
+            if(containskey(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED)){
+                        baseFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED);
+						
+            }
+            if(containskey(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED_USD)){
+                        baseFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED_USD);
+            }
+
+            //CSYS-86116 (retrieve the user entered ramp values from the core ramp):
+            if(containskey(floatsDict, parentRampKey + DELIMITER + "systemBaseFeeNet")){
+                        systemBaseFeeNet = get(floatsDict, parentRampKey + DELIMITER + "systemBaseFeeNet");
+            }
+            if(containskey(floatsDict, parentRampKey + DELIMITER + "systemIncFeeNet")){
+                        systemIncFeeNet = get(floatsDict, parentRampKey + DELIMITER + "systemIncFeeNet");
+            }
+            //CSYS-95310
+            if(containskey(floatsDict, parentRampKey + DELIMITER + "systemIncFeeNetUSD")){
+                        systemIncFeeNetUSD = get(floatsDict, parentRampKey + DELIMITER + "systemIncFeeNetUSD");
+            }
+            
+            //CSYS-86116 (Calculate baseFeeNonUnifiedNet and baseFeeNonUnifiedNetUSD for grouped line items where the core has user entered price):
+            if(isGrouped == TRUE_STR){
+                  if(systemBaseFeeNet <> 0.0 AND containskey(stringsDict, parentRampKey + DELIMITER + "userEnteredRampPricing")){
+                        userBaseFeeNet = get(floatsDict, parentRampKey + DELIMITER + "userBaseFeeNet");
+                        baseFeeNonUnifiedAttr = (baseFeeNonUnifiedAttr/systemBaseFeeNet) * userBaseFeeNet;
+                        baseFeeNonUnifiedUSDAttr = (baseFeeNonUnifiedUSDAttr/systemBaseFeeNet) * userBaseFeeNet;
+                  }
+            }
+            else{
+                  if(systemBaseFeeNet <> 0.0 AND containskey(stringsDict, rampKey + DELIMITER + "userEnteredRampPricing")){ 
+                        userBaseFeeNet = get(floatsDict, rampKey + DELIMITER + "userBaseFeeNet");
+                        baseFeeNonUnifiedAttr = (baseFeeNonUnifiedAttr/systemBaseFeeNet) * userBaseFeeNet;
+                        baseFeeNonUnifiedUSDAttr = (baseFeeNonUnifiedUSDAttr/systemBaseFeeNet) * userBaseFeeNet;
+                  }
+            }
+       
+            /*if(containskey(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET)){
+                        incFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET);
+            }
+            if(containskey(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET_USD)){
+                        incFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET_USD);                
+ 
+            }*/
+            if(containskey(floatsDict, rampKey + DELIMITER +  EXT_LIST_PRICE_NON_UNIFIED)){
+                        baseFeeListNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  EXT_LIST_PRICE_NON_UNIFIED);
+            }
+            if(containskey(floatsDict, rampKey + DELIMITER +  EXT_LIST_PRICE_NON_UNIFIED_USD)){
+                        baseFeeListNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  EXT_LIST_PRICE_NON_UNIFIED_USD);
+            }
+            //Added by Andre per fix from Muthu on 1/22/2013
+            if(containskey(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED)){
+                        incFeeListNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED);
+            }
+            if(containskey(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED_USD)){
+                        incFeeListNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED_USD);
+            }
+
+            //done adding
+            baseFeeNetBC = 0.0;
+            discType = "";
+            if(isGrouped == TRUE_STR) {
+                        //baseFeeList node:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  BASE_LIST_PRICE_UNIFIED)){
+                              prodBasedPriceSubline = get(floatsDict, rampKey + DELIMITER +  BASE_LIST_PRICE_UNIFIED);
+
+                              
+                        }
+                        //CSYS-82292 assign the asset base extended list price and only if it's the 1st base line item within the PO:
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetBaseExtListPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+                              prodBasedPriceSubline = get(floatsDict, poID + DELIMITER + "assetBaseExtListPrice");
+                        }
+
+                        //baseFeeNet node:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE)){
+                              netPriceSubline = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE);
+
+                              
+
+                        }
+                        //CSYS-82292
+                        elif(assetAction == NONE_ACTION AND containskey(floatsDict, docNum + DELIMITER + EXT_NET_PRICE)){
+                              netPriceSubline = get(floatsDict, docNum + DELIMITER + EXT_NET_PRICE);
+                        }
+
+                        //baseFeeListUSD node:
+                        // CSYS-95956 (LN. 6-10-2019) Commenting out the NONE check, for Enterprise Price Increase
+                        if(/*assetAction <> NONE_ACTION AND*/ containskey(floatsDict, rampKey + DELIMITER + BASE_LIST_PRICE_UNIFIED_USD)){
+                              //was using PROD_BASED_PRICE_USD
+                             prodBasedPriceSublineUSD = get(floatsDict, rampKey + DELIMITER +  BASE_LIST_PRICE_UNIFIED_USD);
+
+                             
+
+                        }
+                        //CSYS-82292 assign the asset base extended list price and only if it's the 1st base line item within the PO:
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetBaseExtListPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+
+                              prodBasedPriceSublineUSD = get(floatsDict, poID + DELIMITER + "assetBaseExtListPrice");
+                        }
+
+                        //baseFeeNetUSD node:
+                        // CSYS-95956 (LN. 6-10-2019) Commenting out the NONE check, for Enterprise Price Increase
+                        if(/*assetAction <> NONE_ACTION AND*/ containskey(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_UNIFIED_USD)){
+                              netPriceSublineUSD = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_UNIFIED_USD);
+                              
+                        }
+                        //CSYS-82292:
+                        //CSYS-86387 (LN. 11/4/2017) Using "EXT_NET_PRICE_USD" as the previous key value was populating a zero.
+                        elif(assetAction == NONE_ACTION AND containskey(floatsDict, docNum + DELIMITER + EXT_NET_PRICE_USD)){
+
+                              netPriceSublineUSD = get(floatsDict, docNum + DELIMITER + EXT_NET_PRICE_USD);
+                        }
+
+                        //increFeeList node:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_LIST)){
+
+                              incBasedPriceSubline = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_LIST);
+
+                              
+                        // Incremental Fee Nets for ramp plans use the PO's incremental line item to determine discount
+                        }
+                        //CSYS-82292 assign the asset inc extended list price and only if it's the 1st base line item within the PO:
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetIncExtListPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+
+                              incBasedPriceSubline = get(floatsDict, poID + DELIMITER + "assetIncExtListPrice");
+                        }
+
+                        //increFeeNet node:
+                        // CSYS-95956 (LN. 6-10-2019) Commenting out the NONE check, for Enterprise Price Increase
+                        if(/*assetAction <> NONE_ACTION AND*/ containskey(floatsDict, rampKey + DELIMITER +  NET_PRICE)){
+
+							if(containskey(floatsDict,docNum + DELIMITER +  "increFeeNonUnifiedNet")){
+								incNetNewUniSubline = get(floatsDict, docNum + DELIMITER +  "increFeeNonUnifiedNet");
+								incNetUniUSDSubline = get(floatsDict, docNum + DELIMITER +  "increFeeNonUnifiedNetUSD");
+								incNewNetPriceSubline = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED );
+								incNetPriceSubline = get(floatsDict, rampKey + DELIMITER +  NET_PRICE);								
+							  }else{
+								  incNetPriceSubline = get(floatsDict, rampKey + DELIMITER +  NET_PRICE);
+								  incNetNewUniSubline = get(floatsDict, rampKey + DELIMITER +  NET_PRICE);
+								  incNetUniUSDSubline = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED );
+								  incNewNetPriceSubline = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED );
+								  incNetPriceSubline = get(floatsDict, rampKey + DELIMITER +  NET_PRICE);								 
+							  }
+							  //CSYS-104449 - End						
+                        }
+                        //CSYS-82292 assign the asset inc extended net price and only if it's the 1st base line item within the PO:
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetIncExtNetPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+                              incNetPriceSubline = get(floatsDict, poID + DELIMITER + "assetIncExtNetPrice");							 
+                        }
+
+                        //increFeeListUSD node: 
+                        // CSYS-95956 (LN. 6-10-2019) Commenting out the NONE check, for Enterprise Price Increase
+                        if(/*assetAction <> NONE_ACTION AND*/ containskey(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_LIST_USD)){
+                              incBasedPriceSublineUSD = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_LIST_USD);
+                        }
+                        //CSYS-82292 assign the asset inc extended list price and only if it's the 1st base line item within the PO:
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetIncExtListPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+                              incBasedPriceSublineUSD = get(floatsDict, poID + DELIMITER + "assetIncExtListPrice");
+                        }
+
+                        //increFeeNetUSD node: 
+                        // CSYS-95956 (LN. 6-10-2019) Commenting out the NONE check, for Enterprise Price Increase
+                        if(/*assetAction <> NONE_ACTION AND*/ containskey(floatsDict, rampKey + DELIMITER +  NET_PRICE_UNIFIED_USD)){
+                              incNetPriceSublineUSD = get(floatsDict, rampKey + DELIMITER +  NET_PRICE_UNIFIED_USD);
+                        }
+                        //CSYS-82292 assign the asset inc extended net price and only if it's the 1st base line item within the PO:
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetIncExtNetPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+                              incNetPriceSublineUSD = get(floatsDict, poID + DELIMITER + "assetIncExtNetPrice");
+                        }
+
+
+                        if(containskey(floatsDict, rampKey + DELIMITER +  PROD_ROLL)){
+                              prodRollup = get(floatsDict, rampKey + DELIMITER +  PROD_ROLL);
+                        }                                  
+                        //Added by Andre per fix from Muthu on 1/22/2013
+                                    /* Matt Morman - Case 170798 - Changing to always get the discount percent 
+                        if(containskey(floatsDict, docNum + DELIMITER +  DISCOUNT)){
+                                    disc = get(floatsDict, docNum + DELIMITER +  DISCOUNT );
+                                                      
+
+                        } */         
+                        if(containskey(floatsDict, docNum + DELIMITER +  DISCOUNT_PERCENT)){
+                              disc = get(floatsDict, docNum + DELIMITER +  DISCOUNT_PERCENT);
+                              
+
+                        }
+                        /*if(containskey(stringsDict, rampKey + DELIMITER +  DISCOUNT_TYPE)){
+                                    discType = get(stringsDict, rampKey + DELIMITER +  DISCOUNT_TYPE );
+                        }*/
+                        //Done Adding by Andre
+                                    
+                                                
+                                    //netPriceSublineUSD = netPriceSublineUSD - (disc * netPriceSublineUSD/100);              //Heidi add 01/02/14
+                                    
+
+                                    
+                        //baseFeeNetBC = netPriceSubline * billingCycleNumberFloat;
+
+                        //incFeeListNonUnified node:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED)){
+                              incFeeListNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED);
+
+                              
+                              //incFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED);
+                        }
+                        //CSYS-82292:
+                        elif(assetAction == NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER + INCREMENTAL_FEE_NON_UNIFIED_LIST)){
+                              incFeeListNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER + INCREMENTAL_FEE_NON_UNIFIED_LIST);
+                        }
+
+                        //increFeeNonUnifiedNet node:
+                        // CSYS-95956 (LN. 6-10-2019) Commenting out the NONE check, for Enterprise Price Increase
+                        if(/*assetAction <> NONE_ACTION AND*/ containskey(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET)){
+                              incFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET);
+
+                              //CSYS-86116 (recalculate increFeeNonUnifiedNet based on user entered ramp price):
+                              if(systemIncFeeNet <> 0.0 AND containskey(stringsDict, parentRampKey + DELIMITER + "userEnteredRampPricing")){
+                                    userIncFeeNet = get(floatsDict, parentRampKey + DELIMITER + "userIncFeeNet");
+                                    incFeeNonUnifiedAttr = (incFeeNonUnifiedAttr/systemIncFeeNet) * userIncFeeNet; 
+                              }
+                        }
+                        //CSYS-82292:
+                        elif(assetAction == NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER + INC_FEE_NON_UNIFIED_NET)){
+                              incFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER + INC_FEE_NON_UNIFIED_NET);
+                        }
+
+                        //incFeeListNonUnifiedUSD node:     
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED_USD)){
+                              incFeeListNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED_USD);
+                              //incFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  LIST_PRICE_NON_UNIFIED_USD);
+                                           
+                        }    
+                        //CSYS-82292:
+                        elif(assetAction == NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER + INCREMENTAL_FEE_NON_UNIFIED_LIST_USD)){
+                              incFeeListNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER + INCREMENTAL_FEE_NON_UNIFIED_LIST_USD);
+                        }    
+
+                        //increFeeNonUnifiedNetUSD node (this is pulling from the base. Need to map inc price to POID then use here):
+                        if(/*assetAction <> NONE_ACTION AND*/ containskey(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET_USD)){
+                              incFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET_USD);      
+
+                              //CSYS-86116 (recalculate increFeeNonUnifiedNetUSD based on user entered ramp price):
+                              if(systemIncFeeNetUSD <> 0.0 AND containskey(stringsDict, parentRampKey + DELIMITER + "userEnteredRampPricing")){
+                                    userIncFeeNet = get(floatsDict, parentRampKey + DELIMITER + "incrementalFeeNetUSD");//CSYS-95310
+                                    incFeeNonUnifiedUSDAttr = (incFeeNonUnifiedUSDAttr/systemIncFeeNetUSD) * userIncFeeNet; 
+                              }
+
+                                     
+                        }     
+                        //CSYS-82292:
+                        elif(assetAction == NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER + INC_FEE_NON_UNIFIED_NET_USD)){
+                              incFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER + INC_FEE_NON_UNIFIED_NET_USD);
+                        }
+
+                        //if(containskey(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET)){
+                                    //incFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET );
+                                    // Fix for case 121738                                     
+                        /*            if(discType == AMOUNT_DISCOUNT_TYPE) {
+                                                incFeeNonUnifiedAttr = incFeeNonUnifiedAttr - disc;
+                                    } else {
+                                                      Matt Morman - Case 170798 - Changing to always get the discount percent*/
+                        //                       incFeeNonUnifiedAttr = incFeeNonUnifiedAttr - (disc * incFeeNonUnifiedAttr/100);
+                              // Mm end 170798      }
+                        //}
+                        //if(containskey(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET_USD)){
+                                    //incFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET_USD );
+                                    // Fix for case 121738                                     
+                        //            if(discType == AMOUNT_DISCOUNT_TYPE) {
+                        //                        incFeeNonUnifiedUSDAttr = incFeeNonUnifiedUSDAttr - disc;
+                        //            } else {
+                        //                        incFeeNonUnifiedUSDAttr = incFeeNonUnifiedUSDAttr - (disc * incFeeNonUnifiedUSDAttr/100);
+                        //          }
+                        //}
+            
+                        incrementalDiscountValue = round(incBasedPriceSubline * incrementalDiscount, 2); //CSYS-56717 2-8-2016 rounding the discount amount to 2 places
+                        incNetWithDiscount = incBasedPriceSubline - incrementalDiscountValue; 
+                        incrementalDiscountValueUSD = round(incBasedPriceSublineUSD * incrementalDiscount, 2); //CSYS-56717 2-8-2016 rounding the discount amount to 2 places
+                        incNetWithDiscountUSD = incBasedPriceSublineUSD - incrementalDiscountValueUSD; 
+                        append( baseFeeList, trim(replace(formatascurrency(prodBasedPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "" )) );
+                        
+                        //CSYS-86113 (KA. 10-16-2017): added the condition to prevent billingCycle from affecting the user entered price:
+                        if(overrideCoreRampPrice == TRUE_STR AND containskey(stringsDict, parentRampKey + DELIMITER + "userEnteredRampPricing")){
+                              //don't multiply by the billing cycle:
+                              append( baseFeeNet, trim(replace(formatascurrency(netPriceSubline), CURRENCY_SYMBOL, "" )));
+                              append( baseFeeNetUSD, string(netPriceSublineUSD));
+                              baseFeeNetBC = netPriceSubline;
+                        } else{ //business as usual:
+                              append( baseFeeNet, trim(replace(formatascurrency(netPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "" ))); 
+                              append( baseFeeNetUSD, string(netPriceSublineUSD * billingCycleNumberFloat));
+                              baseFeeNetBC = netPriceSubline * billingCycleNumberFloat;
+                        }
+                        
+						//IESCNQRCPQ-600(OK. 4-26-2023) When the UQG is "ConcurDistinctExpense" we need mutliply the Inc net fee with billing cycle
+						if (UQGConcurDistinctExpense == TRUE_STR) {	
+							append( incFeeList, trim(replace(formatascurrency( incBasedPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "" )) );
+							append( incFeeNet, trim(replace(formatascurrency(incNetPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "" )) );
+							append( incFeeListUSD, string(incBasedPriceSublineUSD * billingCycleNumberFloat));
+							append( incFeeNetUSD, string(incNetPriceSublineUSD * billingCycleNumberFloat));
+						}
+						else {
+							append( incFeeList, trim(replace(formatascurrency( incBasedPriceSubline), CURRENCY_SYMBOL, "" )) );
+							append( incFeeNet, trim(replace(formatascurrency(incNetPriceSubline), CURRENCY_SYMBOL, "" )) );
+							append( incFeeListUSD, string(incBasedPriceSublineUSD));
+							append( incFeeNetUSD, string(incNetPriceSublineUSD));
+                        }   
+                        
+                        /*append( baseFeeListUSD, util.fomatPrice(prodBasedPriceSublineUSD, "", NUM_DECIMAL_USD) );
+                        append( baseFeeNetUSD, util.fomatPrice(netPriceSublineUSD, "", NUM_DECIMAL_USD) );   
+                        append( incFeeListUSD, util.fomatPrice(incBasedPriceSublineUSD, "", NUM_DECIMAL_USD) );
+                        append( incFeeNetUSD, util.fomatPrice(incNetPriceSublineUSD, "", numDecimals) );*/ 
+                        
+                        append( baseFeeListUSD, string(prodBasedPriceSublineUSD * billingCycleNumberFloat));
+                        //append( baseFeeNetUSD, string(netPriceSublineUSD * billingCycleNumberFloat)); 
+
+						/*IESCNQRCPQ-600(OK. 4-26-2023) Comment out below 2 lines and added above
+                        append( incFeeListUSD, string(incBasedPriceSublineUSD));
+                        append( incFeeNetUSD, string(incNetPriceSublineUSD)); 
+						*/
+						
+                        //Added by Andre per fix from Muthu on 1/22/2013 
+                        /*if(discType == AMOUNT_DISCOUNT_TYPE) {
+                                    baseFeeNonUnifiedAttr = baseFeeNonUnifiedAttr - disc;
+                                    baseFeeNonUnifiedUSDAttr = baseFeeNonUnifiedUSDAttr - disc;
+                                    incFeeNonUnifiedAttr = incFeeNonUnifiedAttr - disc;
+                                    incFeeNonUnifiedUSDAttr = incFeeNonUnifiedUSDAttr - disc;
+                        } else {*/
+                                    baseFeeNonUnifiedAttr = baseFeeNonUnifiedAttr - round((disc * baseFeeNonUnifiedAttr/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places
+                                    
+                                    //incFeeNonUnifiedAttr = incFeeNonUnifiedAttr - (disc * incFeeNonUnifiedAttr/100);
+                                    baseFeeNonUnifiedUSDAttr = baseFeeNonUnifiedUSDAttr - round((disc * baseFeeNonUnifiedUSDAttr/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places
+                                    //incFeeNonUnifiedUSDAttr = incFeeNonUnifiedUSDAttr - (disc * incFeeNonUnifiedUSDAttr/100);
+ 
+                        //} //Done Adding by Andre
+            } else {
+                        
+                        //CSYS-86387 (LN. 11/4/2017) Need to ensure asset pricing is set on the Ramp:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  EXT_PRODUCT_BASED_PRICE)){
+                              prodBasedPriceSubline = get(floatsDict, rampKey + DELIMITER +  EXT_PRODUCT_BASED_PRICE );
+                             
+                        }
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetBaseExtListPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+                              prodBasedPriceSubline = get(floatsDict, poID + DELIMITER + "assetBaseExtListPrice");
+                              baseFeeListNonUnifiedAttr = get(floatsDict, poID + DELIMITER + "assetBaseExtListPrice");
+                        }
+                        //CSYS-86387: 
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  PROD_BASED_PRICE_USD)){
+                              prodBasedPriceSublineUSD = get(floatsDict, rampKey + DELIMITER +  PROD_BASED_PRICE_USD );
+                              
+                        }
+                        elif(assetAction == NONE_ACTION AND containskey(floatsDict, docNum + DELIMITER + EXT_LIST_PRICE_USD)){
+                              prodBasedPriceSublineUSD = get(floatsDict, docNum + DELIMITER +  EXT_LIST_PRICE_USD );
+                              baseFeeListNonUnifiedUSDAttr = get(floatsDict, docNum + DELIMITER +  EXT_LIST_PRICE_USD );
+                        }
+                        //Changed to use docNum instead of rampKey for cases 00179273 and  00179737 -BI
+                        if(containskey(floatsDict, docNum + DELIMITER +  DISCOUNT_PERCENT)){
+                              disc = get(floatsDict, docNum + DELIMITER +  DISCOUNT_PERCENT );
+                        }           
+                        if(containskey(stringsDict, rampKey + DELIMITER +  DISCOUNT_TYPE)){
+                              discType = get(stringsDict, rampKey + DELIMITER +  DISCOUNT_TYPE );
+                        } 
+                                    //Add by Heidi 10/03/13
+                        if(containskey(floatsDict, docNum + DELIMITER +  PROMO_DISC_PERCENT)){
+                              promoDiscPercent = get(floatsDict, docNum + DELIMITER +  PROMO_DISC_PERCENT );
+                        }                 
+                     
+                                    // End Heidi add
+                                    
+                       /*if(discType == AMOUNT_DISCOUNT_TYPE) {
+                                    netPriceSubline = prodBasedPriceSubline - disc;
+                                    // Fix for case 117077 - No discount % or amount is being stored in floatsDict for ramp keys
+                                    netPriceSublineUSD = prodBasedPriceSublineUSD - disc;
+                        } else {
+                                    */
+                        //CSYS-86387 (LN. 11/1/2017) Exclude NONE_ACTION codes from undergoing the discount calculation, discounts are off due to asset sync rounding up to a whole number.      
+                        if(assetAction <> NONE_ACTION){
+                              //CSYS-86115 (KA. 10-16-2017): added the condition to prevent line level discount from affecting user entered price:
+                              if(overrideRampPrice == TRUE_STR AND containskey(stringsDict, rampKey + DELIMITER + "userEnteredRampPricing")){
+                              //netPriceSubline = prodBasedPriceSubline - newDisc;
+                                    netPriceSubline = get(floatsDict, rampKey + DELIMITER + "userExtProductBasedPrice");
+                                    netPriceSublineUSD = get(floatsDict, rampKey + DELIMITER + "userExtProductBasedPriceUSD");
+                                    baseFeeNetBC = netPriceSubline;//CSYS-94451 (LN. 1-14-2019) 									
+                              }
+                              else{
+									//CSYS-97907
+									if (containskey(floatsDict, docNum + DELIMITER + "zeroListOverride" + EXT_NET_PRICE)){
+										netPriceSubline = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "zeroListOverride" + EXT_NET_PRICE);
+										netPriceSublineUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE);										
+									}
+									else{
+										netPriceSubline = prodBasedPriceSubline - round((promoDiscPercent * prodBasedPriceSubline/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places          //Heidi modified 10/4/13 to add promo discount to ramp plan
+										netPriceSubline = netPriceSubline - round((disc * netPriceSubline/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places                            //and apply promo before user-entered discount
+										
+										// Fix for case 117077
+										netPriceSublineUSD = prodBasedPriceSublineUSD - round((promoDiscPercent * prodBasedPriceSublineUSD/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places
+										netPriceSublineUSD = netPriceSublineUSD - round((disc * netPriceSublineUSD/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places
+										
+                                    }
+									baseFeeNetBC = netPriceSubline * billingCycleNumberFloat;//CSYS-94451 (LN. 1-14-2019) 
+                              }
+
+                        } else {
+                              //CSYS-86387: 
+                              if(containskey(floatsDict, docNum + DELIMITER +  EXT_NET_PRICE)){
+                                    netPriceSubline = get(floatsDict, docNum + DELIMITER +  EXT_NET_PRICE);									
+                                                      //CSYS-95575
+                                                      baseFeeNetBC = netPriceSubline * billingCycleNumberFloat;
+                              }
+                              
+                              if(containskey(floatsDict, docNum + DELIMITER + EXT_NET_PRICE_USD)){
+                                    netPriceSublineUSD = get(floatsDict, docNum + DELIMITER + EXT_NET_PRICE_USD);
+                              }
+                        }            
+
+                       // MM end 170798 }
+                                    
+                        // Fix for case 117077
+                        /*if(containskey(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_USD)){
+                                    netPriceSublineUSD = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_USD );
+                        }*/
+                        //increFeeNet node:
+                        //CSYS-86387 (LN. 11/1/2017) When dealing with an Add-On NONE_ACTION code use the asset Incremental List and map to IncFeeList
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_LIST)){
+                            incBasedPriceSubline = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_LIST );
+						}
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetIncExtListPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+
+                                    incBasedPriceSubline = get(floatsDict, poID + DELIMITER + "assetIncExtListPrice");
+                        }
+                        //CSYS-86387 (LN. 11/1/2017) When dealing with an Add-On NONE_ACTION code use the asset Incremental Net and map to IncFeeNet
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NET)){
+                              incNetPriceSubline = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NET );
+
+                        }
+                        elif (assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetIncExtNetPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId")) {
+                                    incNetPriceSubline = get(floatsDict, poID + DELIMITER + "assetIncExtNetPrice");
+                        }
+
+                        //CSYS-86387:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_LIST_USD)){
+                                    incBasedPriceSublineUSD = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_LIST_USD );
+                        }
+                        elif (assetAction == NONE_ACTION AND containskey(floatsDict, incrementalDocNum + DELIMITER + EXT_LIST_PRICE_USD)) {
+                                    incBasedPriceSublineUSD = get(floatsDict, incrementalDocNum + DELIMITER + EXT_LIST_PRICE_USD);
+                        }
+                        //CSYS-86387:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NET_USD)){
+                                    incNetPriceSublineUSD = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NET_USD );
+                        }
+                        elif (assetAction == NONE_ACTION AND containskey(floatsDict, incrementalDocNum + DELIMITER + EXT_NET_PRICE_USD)) {
+                                    incNetPriceSublineUSD = get(floatsDict, incrementalDocNum + DELIMITER + EXT_NET_PRICE_USD);
+                        }
+                                    
+
+                        if(containskey(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED)){
+                                   baseFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED );
+                                    // Fix for case 117077                                     
+                                  /* if(discType == AMOUNT_DISCOUNT_TYPE) {
+                                                baseFeeNonUnifiedAttr = baseFeeNonUnifiedAttr - disc;
+                                    } else {
+                                                      Matt Morman - Case 170798 - Changing to always get the discount percent*/
+                                    baseFeeNonUnifiedAttr = baseFeeNonUnifiedAttr - round((promoDiscPercent * baseFeeNonUnifiedAttr/100), 2);   //CSYS-56717 2-8-2016 rounding the price to 2 places  //Heidi modified 10/4/13 to include promo discount
+                                    baseFeeNonUnifiedAttr = baseFeeNonUnifiedAttr - round((disc * baseFeeNonUnifiedAttr/100), 2);   //CSYS-56717 2-8-2016 rounding the price to 2 places                    //and apply promo discount before user-entered discount
+                                                 // MM end 170798  }
+                        }
+                        if(containskey(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED_USD)){
+                                    baseFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  EXT_NET_PRICE_NON_UNIFIED_USD );
+                                    // Fix for case 117077                                     
+                                    /*if(discType == AMOUNT_DISCOUNT_TYPE) {
+                                                baseFeeNonUnifiedUSDAttr = baseFeeNonUnifiedUSDAttr - disc;
+                                    } else {
+                                    Matt Morman - Case 170798 - Changing to always get the discount percent*/
+                                    baseFeeNonUnifiedUSDAttr = baseFeeNonUnifiedUSDAttr - round((promoDiscPercent * baseFeeNonUnifiedUSDAttr/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places       //Heidi modified 10/4/13 to include promo discount
+                                    baseFeeNonUnifiedUSDAttr = baseFeeNonUnifiedUSDAttr - round((disc * baseFeeNonUnifiedUSDAttr/100), 2);             //CSYS-56717 2-8-2016 rounding the price to 2 places                   //and apply promo discount before user-entered discount
+                                   // MM end 170798 }
+                        } 
+                                    
+                                    
+                                    
+                        // Changed by Muthu Murugan Case 124022
+                        //if(containskey(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET)){
+                        //incFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET );
+                        //CSYS-86387:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NON_UNIFIED_LIST)){
+                                    incFeeListNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NON_UNIFIED_LIST);
+                                    incFeeNonUnifiedAttr = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NON_UNIFIED_LIST);
+                        }
+                        elif( assetAction == NONE_ACTION AND containskey(floatsDict, poID + DELIMITER + "assetIncExtListPrice")
+                        AND containskey(stringsDict, docNum + DELIMITER + "firstBaseofPoId") ){
+
+                                    incFeeListNonUnifiedAttr = get(floatsDict, poID + DELIMITER + "assetIncExtListPrice");
+                        }
+                        //CSYS-86387:
+                        if(assetAction <> NONE_ACTION AND containskey(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NON_UNIFIED_LIST_USD)){
+                                    incFeeListNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NON_UNIFIED_LIST_USD);
+                                    incFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  INCREMENTAL_FEE_NON_UNIFIED_LIST_USD);
+                        } 
+                        elif (assetAction == NONE_ACTION AND containskey(floatsDict, incrementalDocNum + DELIMITER + EXT_LIST_PRICE_USD)) {
+                                    incFeeListNonUnifiedUSDAttr = get(floatsDict, incrementalDocNum + DELIMITER + EXT_LIST_PRICE_USD);
+                        }         
+                                    // Fix for case 121738                                     
+                                    /*if(discType == AMOUNT_DISCOUNT_TYPE) {
+                                                incFeeNonUnifiedAttr = incFeeNonUnifiedAttr - disc;
+                                    } else {
+                                                      Matt Morman - Case 170798 - Changing to always get the discount percent*/
+                                    incFeeNonUnifiedAttr = incFeeNonUnifiedAttr - round((promoDiscPercent * incFeeNonUnifiedAttr/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places       //Heidi modified 10/4/13 to include promo discount
+                                    incFeeNonUnifiedAttr = incFeeNonUnifiedAttr - round((disc * incFeeNonUnifiedAttr/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places                   //and apply promo discount before user-entered discount
+
+                                   // MM end 170798 }
+ 
+                        //}
+                        //if(containskey(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET_USD)){
+                                    //incFeeNonUnifiedUSDAttr = get(floatsDict, rampKey + DELIMITER +  INC_FEE_NON_UNIFIED_NET_USD );
+                                    // Fix for case 121738                                     
+                                    /* if(discType == AMOUNT_DISCOUNT_TYPE) {
+                                                incFeeNonUnifiedUSDAttr = incFeeNonUnifiedUSDAttr - disc;
+                                    } else {
+                                                      Matt Morman - Case 170798 - Changing to always get the discount percent */
+                                    incFeeNonUnifiedUSDAttr = incFeeNonUnifiedUSDAttr - round((promoDiscPercent * incFeeNonUnifiedUSDAttr/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places          //Heidi modified 10/4/13 to include promo discount
+                                    incFeeNonUnifiedUSDAttr = incFeeNonUnifiedUSDAttr - round((disc * incFeeNonUnifiedUSDAttr/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places                            //and apply promo before user-entered discount
+ 
+                        //          }
+
+                        // MM end170798 }
+                                    
+                        //CSYS-94451 (LN. 1-14-2019) Commenting this out and added it above.  It appears that this is multiplying by Bill Cycle on User Entered Pricing and this is incorrect.
+                        //baseFeeNetBC = netPriceSubline * billingCycleNumberFloat;  
+                        
+                        
+                        
+                        // Only set the net price to the actual net on the final ramp
+                        if ( index == howManyRamps - 1 ){
+                                    
+							//CSYS-97907
+							if (containskey(floatsDict, incrementalDocNum + DELIMITER + "zeroListOverride" + EXT_NET_PRICE)) {
+								incNetWithDiscount = get(floatsDict, incrementalDocNum + DELIMITER + EXT_NET_PRICE);
+								incNetWithDiscountUSD = get(floatsDict, incrementalDocNum + DELIMITER + EXT_NET_PRICE_USD);
+							}
+							else{
+								// Apply incremental item discounts
+								incNetWithDiscount = incBasedPriceSubline - round((promoDiscPercent * incBasedPriceSubline/100), 2);  //CSYS-56717 2-8-2016 rounding the price to 2 places                    //Heidi modified 10/4/13 to include promo discount
+								incrementalDiscountValue = round(incNetWithDiscount * incrementalDiscount, 2); //CSYS-56717 2-8-2016 rounding the discount amount to 2 places
+								incNetWithDiscount = incNetWithDiscount - incrementalDiscountValue; 
+								incNetWithDiscountUSD = incBasedPriceSublineUSD - round((promoDiscPercent * incBasedPriceSublineUSD/100), 2); ///CSYS-56717 2-8-2016 rounding the price to 2 places           //Heidi modified 10/4/13 to include promo discount
+								incrementalDiscountValueUSD = round(incNetWithDiscountUSD * incrementalDiscount, 2); //CSYS-56717 2-8-2016 rounding the discount amount to 2 places
+								incNetWithDiscountUSD = incNetWithDiscountUSD - incrementalDiscountValueUSD; 
+							}								
+							/*append( incFeeNetUSD, util.fomatPrice(incNetWithDiscountUSD, "", NUM_DECIMAL_USD) );
+							append( baseFeeNetUSD, util.fomatPrice(netPriceSublineUSD, "", NUM_DECIMAL_USD) );*/
+							
+							
+							append( baseFeeNetUSD, string(netPriceSublineUSD * billingCycleNumberFloat));
+							
+							append( baseFeeNet, trim(replace(formatascurrency(baseFeeNetBC), CURRENCY_SYMBOL, "" )));
+													
+							//CSYS-86387 (LN. 11/1/2017) For Add-on's need to ensure the Inc Net Fee on the asset is set to the IncFeeNet node 
+							//IESCNQRCPQ-600(OK. 4-26-2023) When the UQG is "ConcurDistinctExpense" we need mutliply the Inc net fee with billing cycle
+							if (UQGConcurDistinctExpense == TRUE_STR) {
+								if (assetAction == NONE_ACTION) {
+									append( incFeeNet, trim(replace(formatascurrency(incNetPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "")));
+									append( incFeeNetUSD, string(incNetPriceSublineUSD * billingCycleNumberFloat));
+								}
+								else{
+									append( incFeeNet, trim(replace(formatascurrency(incNetWithDiscount * billingCycleNumberFloat), CURRENCY_SYMBOL, "" ))); 
+									append( incFeeNetUSD, string(incNetWithDiscountUSD * billingCycleNumberFloat));
+								}
+							}
+							else {
+								if (assetAction == NONE_ACTION) {
+									
+									append( incFeeNet, trim(replace(formatascurrency(incNetPriceSubline), CURRENCY_SYMBOL, "")));
+									append( incFeeNetUSD, string(incNetPriceSublineUSD));
+								}
+								else{
+									append( incFeeNet, trim(replace(formatascurrency(incNetWithDiscount), CURRENCY_SYMBOL, "" ))); 
+									append( incFeeNetUSD, string(incNetWithDiscountUSD));
+								}
+							}
+                        }
+                        else{
+                                    
+									//CSYS-97907
+									if (containskey(floatsDict, incrementalDocNum + DELIMITER + "zeroListOverride" + EXT_NET_PRICE)) {
+										incNetWithDiscount = get(floatsDict, incrementalDocNum + DELIMITER + EXT_NET_PRICE);
+										incNetWithDiscountUSD = get(floatsDict, incrementalDocNum + DELIMITER + EXT_NET_PRICE_USD);
+									}
+									else{
+										incNetWithDiscount = incBasedPriceSubline - round((promoDiscPercent * incBasedPriceSubline/100), 2);  //CSYS-56717 2-8-2016 rounding the price to 2 places                                            //Heidi modified 10/4/13 to include promo discount
+										incrementalDiscountValue = round(incNetWithDiscount * incrementalDiscount, 2); //CSYS-56717 2-8-2016 rounding the discount amount to 2 places
+										incNetWithDiscount = incNetWithDiscount - incrementalDiscountValue; 
+										incNetWithDiscountUSD = incBasedPriceSublineUSD - round((promoDiscPercent * incBasedPriceSublineUSD/100), 2); //CSYS-56717 2-8-2016 rounding the price to 2 places
+										incrementalDiscountValueUSD = round(incBasedPriceSublineUSD * incrementalDiscount, 2); //CSYS-56717 2-8-2016 rounding the discount amount to 2 places
+										incNetWithDiscountUSD = incBasedPriceSublineUSD - incrementalDiscountValueUSD;                                                                                           
+									}	
+									//Heidi modified 10/4/13 to include promo discount
+                                    
+                                    /*append( incFeeNetUSD, util.fomatPrice(incNetWithDiscountUSD, "", NUM_DECIMAL_USD) );
+                                    append( baseFeeNetUSD, util.fomatPrice(netPriceSublineUSD, "", NUM_DECIMAL_USD) );*/
+                                    
+                                    //append( incFeeNetUSD, string(incNetWithDiscountUSD));
+                                    //append( baseFeeNetUSD, string(netPriceSublineUSD * billingCycleNumberFloat));
+                                    
+                                    
+                                    
+                                    //CSYS-86115:
+                                    if(overrideRampPrice == TRUE_STR AND containskey(stringsDict, rampKey + DELIMITER + "userEnteredRampPricing")){ //if user elected to overwrite the baseFeeNet/increFeeNet:
+                                          append( baseFeeNet, trim(replace(formatascurrency(netPriceSubline), CURRENCY_SYMBOL, "" )));
+                                          append( baseFeeNetUSD, string(netPriceSublineUSD));
+                                          append( incFeeNet, trim(replace(formatascurrency(incNetPriceSubline), CURRENCY_SYMBOL, "" )) );
+										  
+                                          append( incFeeNetUSD, string(incNetPriceSublineUSD));
+                                    } else{
+                                          append( baseFeeNet, trim(replace(formatascurrency(netPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "" )));
+                                          append( baseFeeNetUSD, string(netPriceSublineUSD * billingCycleNumberFloat));
+										  
+										  //IESCNQRCPQ-600(OK. 4-26-2023) When the UQG is "ConcurDistinctExpense" we need mutliply the Inc net fee with billing cycle
+											if (UQGConcurDistinctExpense == TRUE_STR) {
+												append( incFeeNet, trim(replace(formatascurrency(incNetWithDiscount * billingCycleNumberFloat), CURRENCY_SYMBOL, "" )) );
+												append( incFeeNetUSD, string(incNetWithDiscountUSD * billingCycleNumberFloat));
+											}
+											else{
+												append( incFeeNet, trim(replace(formatascurrency(incNetWithDiscount), CURRENCY_SYMBOL, "" )) );										
+												append( incFeeNetUSD, string(incNetWithDiscountUSD));
+											}
+                                    }
+
+                        }
+                        /*append( incFeeListUSD, util.fomatPrice(incBasedPriceSublineUSD, "", NUM_DECIMAL_USD) );
+                        append( baseFeeListUSD, util.fomatPrice(prodBasedPriceSublineUSD, "", NUM_DECIMAL_USD) );*/
+                        
+						//IESCNQRCPQ-600(OK. 4-26-2023) When the UQG is "ConcurDistinctExpense" we need mutliply the Inc net fee with billing cycle
+						if (UQGConcurDistinctExpense == TRUE_STR) {
+							append( incFeeListUSD, string(incBasedPriceSublineUSD * billingCycleNumberFloat));
+							append( incFeeList, trim(replace(formatascurrency( incBasedPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "" )) );
+						}
+						else {
+							append( incFeeListUSD, string(incBasedPriceSublineUSD));
+							append( incFeeList, trim(replace(formatascurrency( incBasedPriceSubline), CURRENCY_SYMBOL, "" )) );
+						}
+                        
+                        append( baseFeeListUSD, string(prodBasedPriceSublineUSD * billingCycleNumberFloat));
+                        
+                        append( baseFeeList, trim(replace(formatascurrency(prodBasedPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "") ));
+						
+                        //Heidi added 10/22/13
+                        //for non-bundled lines, the non-unified base fee and inc fee should equal the base fee net and inc fee net:
+                        baseFeeNonUnifiedAttr = netPriceSubline;
+						
+                        baseFeeNonUnifiedUSDAttr = netPriceSublineUSD;
+
+                        //CSYS-86116:
+                        if(containskey(stringsDict, rampKey + DELIMITER + "userEnteredRampPricing")){
+                              userIncFeeNet = get(floatsDict, rampKey + DELIMITER + "userIncFeeNet");
+                              userIncFeeNetUSD = get(floatsDict, rampKey + DELIMITER + "incrementalFeeNetUSD");//CSYS-95310
+                              
+                              incFeeNonUnifiedAttr = userIncFeeNet;
+                              incFeeNonUnifiedUSDAttr = userIncFeeNetUSD;//CSYS-95310
+                        }
+                        else{ //business as usual:
+                              incFeeNonUnifiedAttr = incNetWithDiscount;
+                              incFeeNonUnifiedUSDAttr = incNetWithDiscountUSD;
+                        }
+                        
+            }
+
+
+            /*append( incFeeListNonUnifiedUSD, util.fomatPrice(incFeeListNonUnifiedUSDAttr, "", NUM_DECIMAL_USD ));
+            append( baseFeeNonUnifiedUSD, util.fomatPrice(baseFeeNonUnifiedUSDAttr, "", NUM_DECIMAL_USD) );
+            append( incFeeNonUnifiedUSD, util.fomatPrice(incFeeNonUnifiedUSDAttr, "", NUM_DECIMAL_USD) );
+            append( baseFeeListNonUnifiedUSD, util.fomatPrice(baseFeeListNonUnifiedUSDAttr, "", NUM_DECIMAL_USD ));*/
+			
+			//IESCNQRCPQ-600(OK. 4-26-2023) When the UQG is "ConcurDistinctExpense" we need mutliply the Inc net fee with billing cycle
+			if (UQGConcurDistinctExpense == TRUE_STR) {
+				append( incFeeListNonUnifiedUSD, string(incFeeListNonUnifiedUSDAttr * billingCycleNumberFloat));
+			}
+			else {
+				append( incFeeListNonUnifiedUSD, string(incFeeListNonUnifiedUSDAttr));
+			}
+			
+            //CSYS-88198 (fix baseFeeNonUnifiedNet and baseFeeNonUnifiedNetUSD for non-Monthly quotes. KA. 12-14-2017):
+            if( (isGrouped == TRUE_STR AND containskey(stringsDict, parentRampKey + DELIMITER + "userEnteredRampPricing")) 
+            OR (isGrouped <> TRUE_STR AND containskey(stringsDict, rampKey + DELIMITER + "userEnteredRampPricing")) ){
+                  //do not multiply by billing cycle:
+                  append( baseFeeNonUnified, trim(replace(formatascurrency(baseFeeNonUnifiedAttr), CURRENCY_SYMBOL, "") ));        
+                  append( baseFeeNonUnifiedUSD, string(baseFeeNonUnifiedUSDAttr));
+            } else{
+                  //business as usual
+                  append( baseFeeNonUnified, trim(replace(formatascurrency(baseFeeNonUnifiedAttr * billingCycleNumberFloat), CURRENCY_SYMBOL, "") ));        
+                  append( baseFeeNonUnifiedUSD, string(baseFeeNonUnifiedUSDAttr * billingCycleNumberFloat));
+            }
+
+            //CSYS-86387 
+            if(assetAction <> NONE_ACTION){
+				if (UQGConcurDistinctExpense == TRUE_STR) {
+					append( incFeeNonUnifiedUSD, string(incFeeNonUnifiedUSDAttr * billingCycleNumberFloat));
+					append( incFeeNonUnified, trim(replace(formatascurrency(incFeeNonUnifiedAttr * billingCycleNumberFloat), CURRENCY_SYMBOL, "") ));   
+				}
+				else {
+                  append( incFeeNonUnifiedUSD, string(incFeeNonUnifiedUSDAttr));
+                  append( incFeeNonUnified, trim(replace(formatascurrency(incFeeNonUnifiedAttr), CURRENCY_SYMBOL, "") ));   
+				}				  
+            } else {
+				
+				//IESCNQRCPQ-600(OK. 4-26-2023) When the UQG is "ConcurDistinctExpense" we need mutliply the Inc net fee with billing cycle
+				if (UQGConcurDistinctExpense == TRUE_STR) {
+					if(incNetNewUniSubline <> 0){
+						append( incFeeNonUnified, trim(replace(formatascurrency(incNetNewUniSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "") ));
+					}
+					else{
+						append( incFeeNonUnified, trim(replace(formatascurrency(incNetPriceSubline * billingCycleNumberFloat), CURRENCY_SYMBOL, "") ));
+					}
+					  
+					if(incNetUniUSDSubline <> 0){
+						append( incFeeNonUnifiedUSD, string(incNetUniUSDSubline * billingCycleNumberFloat));
+					}
+					else{
+						append( incFeeNonUnifiedUSD, string(incNetPriceSublineUSD * billingCycleNumberFloat));
+					}
+				}
+				else { //IESCNQRCPQ-600 - End
+                  //CSYS-104449 - Start
+				  if(incNetNewUniSubline <> 0){
+                  append( incFeeNonUnified, trim(replace(formatascurrency(incNetNewUniSubline), CURRENCY_SYMBOL, "") ));
+				  }
+				  else{
+				  append( incFeeNonUnified, trim(replace(formatascurrency(incNetPriceSubline), CURRENCY_SYMBOL, "") ));
+				  }
+				  
+				  if(incNetUniUSDSubline <> 0){
+                  append( incFeeNonUnifiedUSD, string(incNetUniUSDSubline));
+				  }
+				  else{
+				  append( incFeeNonUnifiedUSD, string(incNetPriceSublineUSD));
+				  }
+				  
+				  //CSYS-104449 - End
+				}				  
+            }
+            
+            append( baseFeeListNonUnifiedUSD, string(baseFeeListNonUnifiedUSDAttr * billingCycleNumberFloat));
+            append( transactionArr, string( subTransactions ));
+			
+			//IESCNQRCPQ-631(OK. 5-5-2023) When the UQG is "ConcurDistinctExpense" we need send transaction count without mutltipling with billing cycle
+			if (UQGConcurDistinctExpense == TRUE_STR) {
+				append( transactionBCArr , string(subTransactions));
+			}
+			else {
+				append( transactionBCArr , string(subTransactions* billingCycleNumberFloat));
+			}
+			
+            append( baseFeeListNonUnified, trim(replace(formatascurrency(baseFeeListNonUnifiedAttr * billingCycleNumberFloat), CURRENCY_SYMBOL, "") ));
+			
+			//IESCNQRCPQ-600(OK. 4-26-2023) When the UQG is "ConcurDistinctExpense" we need mutliply the Inc net fee with billing cycle
+			if (UQGConcurDistinctExpense == TRUE_STR) {
+				append( incFeeListNonUnified, trim(replace(formatascurrency(incFeeListNonUnifiedAttr * billingCycleNumberFloat), CURRENCY_SYMBOL, "" )));
+			}
+			else {
+				append( incFeeListNonUnified, trim(replace(formatascurrency(incFeeListNonUnifiedAttr), CURRENCY_SYMBOL, "" )));
+			}
+			
+            append( baseFeeNetBCArr, trim(replace(formatascurrency(baseFeeNetBC), CURRENCY_SYMBOL, "" )));
+                  
+                  if (containskey(incToBaseDict, pi) AND assetAction <> TERMINATE_ACTION){ //CSYS-37711 part 4 continued
+                        append( baseIncKeyArr, get(incToBaseDict, pi)); //map the incremental PI to its base
+                  }
+                  else {
+                        append( baseIncKeyArr, "");
+                  }
+                  
+            index = index + 1;
+}
+
+//CSYS-85637 09/20/2017 - Reverting code to original ramp logic
+//CSYS-83099 08/17/17
+/*
+if (containskey(stringsDict, "firstRampZero")){
+      if (get(stringsDict, "firstRampZero") == "Yes"){
+            baseFeeListUSD[0] = "0.00";
+            baseFeeNetUSD[0] = "0.00";
+            incFeeListUSD[0] = "0.00";
+            incFeeNetUSD[0] = "0.00";
+            baseFeeNonUnifiedUSD[0] = "0.00";
+            incFeeNonUnifiedUSD[0] = "0.00";
+            baseFeeListNonUnifiedUSD[0] = "0.00";
+            incFeeListNonUnifiedUSD[0] = "0.00";
+            baseFeeList[0] = "0.00";
+            baseFeeNet[0] = "0.00";
+            incFeeList[0] = "0.00";
+            baseFeeNonUnified[0] = "0.00";
+            incFeeNonUnified[0] = "0.00";
+            baseFeeListNonUnified[0] = "0.00";
+            incFeeListNonUnified[0] = "0.00";
+            baseFeeNetBCArr[0] = "0.00";
+      }
+}
+*/ 
+put(lineItemRampPlanStrArrDict, BASE_FEE_LIST_XML_USD, baseFeeListUSD);
+put(lineItemRampPlanStrArrDict, BASE_FEE_NET_XML_USD, baseFeeNetUSD);
+put(lineItemRampPlanStrArrDict, INC_FEE_LIST_XML_USD, incFeeListUSD);
+put(lineItemRampPlanStrArrDict, INC_FEE_NET_XML_USD, incFeeNetUSD);
+put(lineItemRampPlanStrArrDict, BASE_FEE_NET_NON_UNIFIED_USD, baseFeeNonUnifiedUSD);
+put(lineItemRampPlanStrArrDict, INC_FEE_NON_UNIFIED_NET_USD, incFeeNonUnifiedUSD);
+put(lineItemRampPlanStrArrDict, BASE_FEE_LIST_NON_UNIFIED_USD_XML, baseFeeListNonUnifiedUSD);
+put(lineItemRampPlanStrArrDict, INC_FEE_LIST_NON_UNIFIED_USD_XML, incFeeListNonUnifiedUSD);
+put(lineItemRampPlanStrArrDict, BASE_FEE_LIST_XML, baseFeeList);
+put(lineItemRampPlanStrArrDict, BASE_FEE_NET_XML, baseFeeNet);
+put(lineItemRampPlanStrArrDict, INC_FEE_LIST_XML, incFeeList);
+put(lineItemRampPlanStrArrDict, INC_FEE_NET_XML, incFeeNet);
+put(lineItemRampPlanStrArrDict, BASE_FEE_NET_NON_UNIFIED, baseFeeNonUnified);
+put(lineItemRampPlanStrArrDict, INC_FEE_NON_UNIFIED_NET, incFeeNonUnified);
+put(lineItemRampPlanStrArrDict, BASE_FEE_LIST_NON_UNIFIED_XML, baseFeeListNonUnified);
+put(lineItemRampPlanStrArrDict, INC_FEE_LIST_NON_UNIFIED_XML, incFeeListNonUnified);
+put(lineItemRampPlanStrArrDict, "baseFeeNetBC", baseFeeNetBCArr);
+put(lineItemRampPlanStrArrDict, TRANSACTION_XML_NODE_NAME, transactionArr);
+// Case 114135 - Added by Muthu Murugan
+put(lineItemRampPlanStrArrDict, TRANSACTION_BY_BC, transactionBCArr);
+put(lineItemRampPlanStrArrDict, BASE_INC_KEY, baseIncKeyArr); //CSYS-37711 part 4 continued
+ 
+return lineItemRampPlanStrArrDict;

@@ -1,0 +1,205 @@
+/*CSYS-89642 (LN. 3-29-3018)  
+----------------------------
+This script handles an Add-On Bussines quoting scenario where an ExpenseIt Asset exists and there has been a Core switch where a differing ExpenseIt product should be swapped out. The reason this script is even needed is due to a browser incompatibility issue related to a similar Configuartion Rule. We will leverage this logic until Oracle can fix the issue.
+----------------------------
+*/
+
+ASSET_DELIMITER = "@@";
+INTERNAL_DELIMITER = "$$";
+DELIMITER = "@.@";
+TERMINATE_ACTION = "TERMINATE";
+CREATE_ACTION = "CREATE";
+MODIFY_ACTION = "MODIFY";//CSYS-95752 SN. 08-2019
+CORE_SERVICE = "Core Service";
+EXTENDED_SERVICE = "Extended Service";
+BASE_ITEM = "Base";
+TRUE_STR = "true";
+createDict = dict("string");
+terminateDict = dict("string");
+modifyDict = dict("string");//CSYS-95752 SN. 08-2019
+
+PO1 = "525040";//ExpenseIt Pro for Concur Expense
+PO2 = "525071"; //ExpenseIt Pro for Concur Travel & Expense
+
+PO1AssetFound = false; //ExpenseIt Pro for Concur Expense found or not
+PO2AssetFound = false; //ExpenseIt Pro for Concur Travel & Expense found or not
+
+//Setting up constants for the applicable core switch arrays
+TO_DELIMITER = "_to_";
+EXPENSE_CORE = "Expense";
+EXPWTL_CORE = "Expense with TripLink";
+TE_CORE = "Travel & Expense";
+TEWTL_CORE = "Travel & Expense with TripLink";
+STANDARD = "Standard";//CSYS-95752 SN. 08-2019
+PROFESSIONAL = "Professional";//CSYS-95752 SN. 08-2019
+PREMIUM = "Premium";//CSYS-95752 SN. 08-2019
+
+//Store all the applicable core switches for auto switching to ExpenseIt Pro for Concur Expense:
+applicableExpenseToTravelCoreSwitches = string[]{
+									TE_CORE + TO_DELIMITER + EXPENSE_CORE, /*Travel & Expense to Expense*/
+								  	TE_CORE + TO_DELIMITER + EXPWTL_CORE, /*Travel & Expense to Expense with TripLink*/
+								  	TEWTL_CORE + TO_DELIMITER + EXPENSE_CORE, /*Travel & Expense with TripLink to Expense*/
+								  	TEWTL_CORE + TO_DELIMITER + EXPWTL_CORE /*Travel & Expense with Triplink to Expense with TripLink*/
+							     	};
+
+//Store all the applicable core switched for auto switching to ExpenseIt Pro for Concur Travel & Expense
+applicableTravelToExpenseCoreSwitches = string[]{
+								  	EXPENSE_CORE + TO_DELIMITER + TE_CORE, /*Expense to Travel & Expense*/
+								  	EXPENSE_CORE + TO_DELIMITER + TEWTL_CORE, /*Expense to Travel & Expense with TripLink*/
+							      	EXPWTL_CORE + TO_DELIMITER + TE_CORE, /*Expense with TripLink to Travel & Expense*/
+								  	EXPWTL_CORE + TO_DELIMITER + TEWTL_CORE /*Expense with TripLink to Travel & Expense*/
+							     	};
+
+//CSYS-95752 SN. 08-2019
+applicableEditionSwitches = string[]{
+                            //Standard to Professional 
+                            STANDARD + "_" + EXPENSE_CORE + TO_DELIMITER + PROFESSIONAL + "_" + EXPENSE_CORE, 
+                            STANDARD + "_" + TE_CORE + TO_DELIMITER + PROFESSIONAL + "_" + TE_CORE,
+                            STANDARD + "_" + EXPWTL_CORE + TO_DELIMITER + PROFESSIONAL + "_" + EXPWTL_CORE,
+                            STANDARD + "_" + TEWTL_CORE + TO_DELIMITER + PROFESSIONAL + "_" + TEWTL_CORE,
+                            //Standard to Premium  
+                            STANDARD + "_" + EXPENSE_CORE + TO_DELIMITER + PREMIUM + "_" + EXPENSE_CORE, 
+                            STANDARD + "_" + TE_CORE + TO_DELIMITER + PREMIUM + "_" + TE_CORE,
+                            STANDARD + "_" + EXPWTL_CORE + TO_DELIMITER + PREMIUM + "_" + EXPWTL_CORE,
+                            STANDARD + "_" + TEWTL_CORE + TO_DELIMITER + PREMIUM + "_" + TEWTL_CORE,
+                            //Professional to Standard
+                            PROFESSIONAL + "_" + EXPENSE_CORE + TO_DELIMITER + STANDARD + "_" + EXPENSE_CORE,
+                            PROFESSIONAL + "_" + TE_CORE + TO_DELIMITER + STANDARD + "_" + TE_CORE,
+                            PROFESSIONAL + "_" + EXPWTL_CORE + TO_DELIMITER + STANDARD + "_" + EXPWTL_CORE,
+                            PROFESSIONAL + "_" + TEWTL_CORE + TO_DELIMITER + STANDARD + "_" + TEWTL_CORE,
+                            //Professional to Premium
+                            PROFESSIONAL + "_" + EXPENSE_CORE + TO_DELIMITER + PREMIUM + "_" + EXPENSE_CORE,
+                            PROFESSIONAL + "_" + TE_CORE + TO_DELIMITER + PREMIUM + "_" + TE_CORE,
+                            PROFESSIONAL + "_" + EXPWTL_CORE + TO_DELIMITER + PREMIUM + "_" + EXPWTL_CORE,
+                            PROFESSIONAL + "_" + TEWTL_CORE + TO_DELIMITER + PREMIUM + "_" + TEWTL_CORE,
+                            //Premium to Standard 
+                            PREMIUM + "_" + EXPENSE_CORE + TO_DELIMITER + STANDARD + "_" + EXPENSE_CORE,
+                            PREMIUM + "_" + TE_CORE + TO_DELIMITER + STANDARD + "_" + TE_CORE,
+                            PREMIUM + "_" + EXPWTL_CORE + TO_DELIMITER + STANDARD + "_" + EXPWTL_CORE, 
+                            PREMIUM + "_" + TEWTL_CORE + TO_DELIMITER + STANDARD + "_" + TEWTL_CORE,
+                            //Premium to Professional 
+                            PREMIUM + "_" + EXPENSE_CORE + TO_DELIMITER + PROFESSIONAL + "_" + EXPENSE_CORE, 
+                            PREMIUM + "_" + TE_CORE + TO_DELIMITER + PROFESSIONAL + "_" + TE_CORE,
+                            PREMIUM + "_" + EXPWTL_CORE + TO_DELIMITER + PROFESSIONAL + "_" + EXPWTL_CORE,
+                            PREMIUM + "_" + TEWTL_CORE + TO_DELIMITER + PROFESSIONAL + "_" + TEWTL_CORE
+                            };
+
+assetArr = split(assetsString_quote, ASSET_DELIMITER); //split the entire assets delimited string
+assetArrSize = range(sizeofarray(assetArr));
+
+//First determine if there is an existing ExpenseIt Asset on the asset string
+for eachAsset in assetArrSize {
+
+    assetDetail = split(assetArr[eachAsset], INTERNAL_DELIMITER); //split each asset
+
+    if (assetDetail[1] == PO1) {
+    	PO1AssetFound = true; //ExpenseIt Pro for Concur Expense found
+    	break;
+    }
+    elif(assetDetail[1] == PO2) {
+    	PO2AssetFound = true; //ExpenseIt Pro for Concur Travel & Expense found
+    	break;
+    }
+    
+}
+
+
+//Second loop through the line item grid to store information at the Model level to leverage in the second loop
+for line in line_process {
+	poId = line.poId_line;
+	piItemType = line.piItemType_line; 
+	assetAction = line.assetAction_line;
+	poCategory = line.poCategory_line;
+	pi = line._part_number;
+	lineDescription = line.lineDescription_line;
+	parentDocNum = line._parent_doc_number;
+	coreOffering = line.coreOffering_line;
+	edition = line.implementationMethod_line; //CSYS-95752 SN. 08-2019
+
+
+	if( pi <> "" AND piItemType == BASE_ITEM ){//Ignore model lines, look for all base products on the grid
+
+		if( poCategory == CORE_SERVICE ){//Look to Core Service products
+
+			if( assetAction == CREATE_ACTION ){//Find any net new core service products on the grid
+				put( createDict, "createCoreService" + DELIMITER + parentDocNum, parentDocNum );//store the parent document number (model document number) for net new core
+				put( createDict, "createCoreOffering" + DELIMITER + parentDocNum, coreOffering );//store the core product name
+				put( createDict, "createCoreOfferingEdition" + DELIMITER + parentDocNum, edition + "_" + coreOffering);//CSYS-95752 SN. 08-2019, store editon for the core product name
+
+			}
+
+			if( assetAction == TERMINATE_ACTION ){//Find any terminated/cancelled core service products on the grid
+				coreOffer = split(lineDescription, " - ");
+				terminateCoreOffering = coreOffer[0];
+				terminateEdition = coreOffer[1];//CSYS-95752 SN. 08-2019
+
+
+				put( terminateDict, "terminateCoreService" + DELIMITER + parentDocNum, parentDocNum );//store the parent document number (model document number) for terminated core
+				put( terminateDict, "terminateCoreOffering" + DELIMITER + parentDocNum, terminateCoreOffering );//store the core product name
+				put( terminateDict, "terminateCoreOfferingEdition" + DELIMITER + parentDocNum, terminateEdition + "_" + terminateCoreOffering);//CSYS-95752 SN. 08-2019, store editon for the core product name
+			}
+		}
+
+		if( poCategory == EXTENDED_SERVICE AND assetAction == CREATE_ACTION ) {//Look to net new extended services on the grid
+			if( poId == PO1 ) {//If the ExpenseIt Pro for Concur Expense proeduct is found, store 'true' in the dictionary (leveraged later)
+				put( createDict, "createExpenseItForConcurExpense" + DELIMITER + parentDocNum, TRUE_STR );
+			}
+
+			if( poId == PO2 ){//If the ExpenseIt Pro for Concur Travel & Expense proeduct is found, store 'true' in the dictionary (leveraged later)
+				put( createDict, "createExpenseItForConcurTravelExpense" + DELIMITER + parentDocNum, TRUE_STR );
+			}
+		}	
+		//CSYS-95752 SN. 08-2019
+        if( poCategory == EXTENDED_SERVICE AND assetAction == MODIFY_ACTION ) {//Look to modified extended services on the grid
+            if( poId == PO1 ) {//If the ExpenseIt Pro for Concur Expense proeduct is found, store 'true' in the dictionary (leveraged later)
+                put( modifyDict, "modifyExpenseItForConcurExpense" + DELIMITER + parentDocNum, TRUE_STR );
+            }
+
+            if( poId == PO2 ){//If the ExpenseIt Pro for Concur Travel & Expense proeduct is found, store 'true' in the dictionary (leveraged later)
+                put( modifyDict, "modifyExpenseItForConcurTravelExpense" + DELIMITER + parentDocNum, TRUE_STR );
+            }
+        } 	
+	}
+}
+
+
+//Lastly, loop over the line items on last time to do assessment on the Model, where all previsous information is mapped to via dictionaries
+for line in line_process {
+	pi = line._part_number;
+	docNum = line._document_number;
+
+	if( pi == "" AND containskey(createDict, "createCoreService" + DELIMITER + docNum) AND containskey(terminateDict, "terminateCoreService" + DELIMITER + docNum) ){//If this Model has a CREATE/TERMINATE core service on the grid, continue
+
+		createCoreServParDocNum = get( createDict, "createCoreService" + DELIMITER + docNum );//Retrieve the current net new core parent document number
+		terminateCoreServParDocNum = get( terminateDict, "terminateCoreService" + DELIMITER + docNum );//Retrieve the current terminated core parent document number
+		createCoreService = get( createDict, "createCoreOffering" + DELIMITER + docNum );//Retrieve the current net new core name
+		terminateCoreService = get( terminateDict, "terminateCoreOffering" + DELIMITER + docNum );//Retrieve the current terminated core name
+		
+		createCoreServiceEdition = get( createDict, "createCoreOfferingEdition" + DELIMITER + docNum ); //CSYS-95752 SN. 08-2019
+        terminateCoreServiceEdition = get( terminateDict, "terminateCoreOfferingEdition" + DELIMITER + docNum ); //CSYS-95752 SN. 08-2019
+
+		currentCoreScenario = terminateCoreService + TO_DELIMITER + createCoreService;//Creating a key to indicate the current core scenario, Ex: Expense to Travel & Expense							     				
+		currentCoreEditionScenario = terminateCoreServiceEdition + TO_DELIMITER + createCoreServiceEdition; //CSYS-95752 SN. 08-2019
+
+		if(createCoreServParDocNum == terminateCoreServParDocNum){//If this is within the same model, continue
+
+			//If the current core scenario is found in the applicableExpenseToTravelCoreSwitches array AND the ExpenseIt Pro for Concur Travel & Expense is an asset AND ExpenseIt Pro for Concur Expense is not on the grid
+			if(findinarray(applicableExpenseToTravelCoreSwitches, currentCoreScenario) <> -1  AND PO2AssetFound AND NOT(containskey(createDict, "createExpenseItForConcurExpense" + DELIMITER + docNum)) ){
+				return "Add ExpenseIt for Expense";
+			}
+
+			//If the current core scenario is found in the applicableTravelToExpenseCoreSwitches array AND the ExpenseIt Pro for Concur Expense is an asset AND ExpenseIt Pro for Concur Travel & Expense is not on the grid
+			if(findinarray(applicableTravelToExpenseCoreSwitches, currentCoreScenario) <> -1 AND PO1AssetFound AND NOT(containskey(createDict, "createExpenseItForConcurTravelExpense" + DELIMITER + docNum)) ){
+				return "Add ExpenseIt for Travel & Expense";
+			}
+
+			//CSYS-95752 SN. 08-2019
+            if(findinarray(applicableEditionSwitches, currentCoreEditionScenario) <> -1 AND (PO1AssetFound OR PO2AssetFound) AND NOT(containskey(modifyDict, "modifyExpenseItForConcurTravelExpense" + DELIMITER + docNum)) AND NOT(containskey(modifyDict, "modifyExpenseItForConcurExpense" + DELIMITER + docNum)) AND NOT(containskey(createDict, "createExpenseItForConcurTravelExpense" + DELIMITER + docNum)) AND NOT(containskey(createDict, "createExpenseItForConcurExpense" + DELIMITER + docNum))){
+                return "Add ExpenseIt";
+            }
+		}
+	}
+}
+
+
+return "";

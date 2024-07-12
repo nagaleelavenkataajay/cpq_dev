@@ -1,0 +1,353 @@
+// Commerce BML Library > emailNotificationGenerator//
+questionEmail = "FieldServices@concur.com";
+/*emailBody =	preparedByName_quote + " has submitted quote " + quoteNumber_quote + " for your review.\n"
+		+ "\n"
+		+ "Please Respond to this email with the word Approve or Reject in the first line.\n"
+		+ "Add any comments you may have on the second line.\n"
+		+ "\n";*/
+/*emailBody =	preparedByName_quote + " has submitted the following quote requesting pricing for particular products.\n"
+		+ "\n"
+		+ "Please review the following quote by following the link below.\n"
+		+ "After logging into the application, enter any custom pricing requested.\n"
+		+ "\n";*/
+/*if(len(SubmitComment) > 0){
+	emailBody = emailBody 	+ "Requester's Comment:\n"
+				+ "\t" + SubmitComment + "\n"
+				+ "\n";
+}
+if(len(ReasonDescription) > 0){
+	emailBody = emailBody 	+ "Reason for Approval:\n"
+			 	+ "\t" + ReasonDescription + "\n"
+				+ "\n";
+}*/
+approvalReason="";
+// approvalTable ="";
+FormattedapprovalReason = "";
+numberOfTransationsByCycle = 1;
+monthlyQuarterlyAnnually = 1;
+
+// Convert Monthly/Quarterly/Annually to a number so we can multiply by bill cycle
+if(billingCycle_quote == "Monthly"){
+	monthlyQuarterlyAnnually = 1;
+} elif(billingCycle_quote == "Quarterly"){
+	monthlyQuarterlyAnnually = 3;
+} elif(billingCycle_quote == "Annually"){
+	monthlyQuarterlyAnnually = 12;
+} elif(billingCycle_quote == "Semi-Annually"){  //CSYS90720, by PhilS, 09/22/2019 
+	monthlyQuarterlyAnnually = 6;
+}
+
+if(mgrFlag_quote == "pending") {
+	if(mgrApprovalHistory_quote <> "") { //If it's a revised quote, get only the diff for the approval message
+			if(find(mgrApprovalMessage_quote, mgrApprovalHistory_quote) <> -1) {
+				approvalReason = replace(mgrApprovalMessage_quote, mgrApprovalHistory_quote, "");
+				if(startswith(approvalReason,";")) {
+					approvalReason = substring(approvalReason, 2, len(approvalReason));
+				}
+				
+			} else {
+				approvalReason = mgrApprovalMessage_quote;
+			}
+		} else {
+			approvalReason = mgrApprovalMessage_quote;
+		}
+} elif(vpFlag_quote == "pending") {
+	if(vpApprovalHistory_quote <> "") { //If it's a revised quote, get only the diff for the approval message
+			if(find(vpApprovalMessage_quote, vpApprovalHistory_quote) <> -1) {
+				approvalReason = replace(vpApprovalMessage_quote, vpApprovalHistory_quote, "");
+				if(startswith(approvalReason,";")) {
+					approvalReason = substring(approvalReason, 2, len(approvalReason));
+				}
+				
+			} else {
+				approvalReason = vpApprovalMessage_quote;
+			}
+		} else {
+			approvalReason = vpApprovalMessage_quote;
+		}
+} elif(svpFlag_quote == "pending") {
+	if(svpApprovalHistory_quote <> "") { //If it's a revised quote, get only the diff for the approval message
+			if(find(svpApprovalMessage_quote, svpApprovalHistory_quote) <> -1) {
+				approvalReason = replace(svpApprovalMessage_quote, svpApprovalHistory_quote, "");
+				if(startswith(approvalReason,";")) {
+					approvalReason = substring(approvalReason, 2, len(approvalReason));
+				}
+				
+			} else {
+				approvalReason = svpApprovalMessage_quote;
+			}
+		} else {
+			approvalReason = svpApprovalMessage_quote;
+		}
+} elif(gmFlag_quote == "pending") {
+	if(gmApprovalHistory_quote <> "") { //If it's a revised quote, get only the diff for the approval message
+			if(find(gmApprovalMessage_quote, gmApprovalHistory_quote) <> -1) {
+				approvalReason = replace(gmApprovalMessage_quote, gmApprovalHistory_quote, "");
+				if(startswith(approvalReason,";")) {
+					approvalReason = substring(approvalReason, 2, len(approvalReason));
+				}
+				
+			} else {
+				approvalReason = gmApprovalMessage_quote;
+			}
+		} else {
+			approvalReason = gmApprovalMessage_quote;
+		}
+} elif(evpFlag_quote == "pending") {
+	 if(evpApprovalHistory_quote <> "") { //If it's a revised quote, get only the diff for the approval message
+			 if(find(evpApprovalMessage_quote, evpApprovalHistory_quote) <> -1) {
+				 approvalReason = replace(evpApprovalMessage_quote, evpApprovalHistory_quote, "");
+				 if(startswith(approvalReason,";")) {
+					 approvalReason = substring(approvalReason, 2, len(approvalReason));
+				 }
+				
+			 } else {
+				 approvalReason = evpApprovalMessage_quote;
+			 }
+		 } else {
+			 approvalReason = evpApprovalMessage_quote;
+		 }
+} elif(cfoFlag_quote == "pending") {
+	if(cfoApprovalHistory_quote <> "") { //If it's a revised quote, get only the diff for the approval message
+			if(find(cfoApprovalMessage_quote, cfoApprovalHistory_quote) <> -1) {
+				approvalReason = replace(cfoApprovalMessage_quote, cfoApprovalHistory_quote, "");
+				if(startswith(approvalReason,";")) {
+					approvalReason = substring(approvalReason, 2, len(approvalReason));
+				}
+				
+			} else {
+				approvalReason = cfoApprovalMessage_quote;
+			}
+		} else {
+			approvalReason = cfoApprovalMessage_quote;
+		}
+//CSYS-48808 start
+} elif(sapFlag_quote == "pending") {
+	if(sapApprovalHistory_quote <> "") { //If it's a revised quote, get only the diff for the approval message
+			if(find(sapApprovalMessage_quote, sapApprovalHistory_quote) <> -1) {
+				approvalReason = replace(sapApprovalMessage_quote, sapApprovalHistory_quote, "");
+				if(startswith(approvalReason,";")) {
+					approvalReason = substring(approvalReason, 2, len(approvalReason));
+				}
+				
+			} else {
+				approvalReason = sapApprovalMessage_quote;
+			}
+		} else {
+			approvalReason = sapApprovalMessage_quote;
+		}
+//CSYS-48808 end
+//CSYS-78785 start
+} elif(miscFlag_quote == "pending") {
+	if(miscApprovalHistory_quote <> "") { //If it's a revised quote, get only the diff for the approval message
+			if(find(miscApprovalMessage_quote, miscApprovalHistory_quote) <> -1) {
+				approvalReason = replace(miscApprovalMessage_quote, miscApprovalHistory_quote, "");
+				if(startswith(approvalReason,";")) {
+					approvalReason = substring(approvalReason, 2, len(approvalReason));
+				}
+				
+			} else {
+				approvalReason = miscApprovalMessage_quote;
+			}
+		} else {
+			approvalReason = miscApprovalMessage_quote;
+		}
+}
+//CSYS-78785 end
+
+//CSYS-97101 SN. 
+if (permanentTestEnvironmentApprovalMessage_quote <> "" or NOT(isnull(permanentTestEnvironmentApprovalMessage_quote))) {
+	approvalReason = approvalReason +  " " + permanentTestEnvironmentApprovalMessage_quote + ";";
+}
+print "SHREYA";
+print approvalReason;
+if(find(approvalReason, ";") == -1){
+	FormattedapprovalReason = approvalReason + "\n";
+}	
+
+if(find(approvalReason, ";") <> -1) {
+	approvalArr = split(approvalReason,"; ");
+	// approvalReason = replace(approvalReason, "; ", "\t\t\n");
+	
+	// approvalTable = "<TABLE><TR><TD WIDTH='65%'>Approval Reason</TD><TD WIDTH='35%'>Highest Level Approver</TD></TR>";
+	for reason in approvalArr {
+		/*FormattedapprovalReason = FormattedapprovalReason + substring(reason,0,find(reason,"- Final Approver")-1);
+		lenReason = 50-find(reason,"- Final Approver");
+		if (lenReason < 0) {lenReason = 1; } // if reason message lenght is higher than 91, 0 space is required
+		spacer = range(lenReason);
+		for i in spacer {
+			FormattedapprovalReason = FormattedapprovalReason + " ";  	// add spaces to line up approval reasons and highest approval level
+		}
+		FormattedapprovalReason = FormattedapprovalReason + substring(reason,find(reason,"- Final Approver"),len(reason)) + "\t\t\n";*/
+	 	// approvalTable = approvalTable + "<TR><TD>" + substring(reason,0,find(reason,"Final Approver")-1) +"</TD><TD>" + substring(reason,find(reason,"Final Approver")+16,len(reason)) +"</TD></TR>";
+		
+		FormattedapprovalReason = FormattedapprovalReason + reason + "\t\t\n";
+	}
+	// approvalTable = approvalTable + "</TABLE>";
+}
+
+/* line up approval reasons, Added by Alon Goldman 6-18-2012 */
+
+/* end of line up formatting */
+
+emailBody = "";
+emailBody = emailBody + "Quote Approval Status: " + status_quote + "\n"
+			+ "\n";
+emailBody = emailBody + "Reason for Approval: " + "\n\n" + FormattedapprovalReason + "   ";
+
+/* Commented out per Barbara 5.25.12
+if (find(approvalReason, "Discount") <> -1){
+	emailBody = emailBody + "\n\n\tMax Discount: " + string(greatestLineDisc_quote) +"% (Item Type = " + highestDiscountItemType_quote + ")";
+}		
+*/
+if(lastApproverReq_quote <> ""){ //added condition for CSYS-50840. KA. 9-22-2015.
+	emailBody = emailBody 	+ "\nFinal Approver: " + lastApproverReq_quote 
+			+ "\n";	
+}
+else{
+	emailBody = emailBody 	+ "\nFinal Approver: " + "you are the final approver" 
+			+ "\n";	
+}
+		
+emailBody = emailBody 	+ "\nQuote Information:\n"
+			+ "\n";
+/* if(ReasonName == "Discount Above Threshold" OR ReasonName == "Total Margin Below Threshold"){
+	emailBody = emailBody 	+ "\tTotal Quote Margin:       " + string(totalMarginPercent_quote) + "%\n"
+				+ "\tTotal Quote Margin:     $ " + string(totalMarginDollar_quote) + "\n"
+				+ "\tTotal Quote Discount:   $ " + string(totalDiscount_quote) + "\n";
+}*/
+
+numberOfTransationsByCycle = numCommittedTransaction_quote * monthlyQuarterlyAnnually;
+
+emailBody = emailBody 	+ "\tAccount Name:\t\t\t" 		+ account_quote + "\n"
+			+ "\tQuote Type:\t\t\t" 		+ quoteType_quote + "\n"
+			+ "\tOpportunity Name:\t\t" 	+ opportunityName_quote + "\n"
+			+ "\tOpportunity Owner:\t\t" 	+ opportunityOwner_quote + "\n"
+			+ "\tOpportunity Owner BU:\t" + ownerBU_quote + "\n"
+			+ "\tQuote Number:\t\t" 		+ quoteNumber_quote + "\n"
+			+ "\tOrder Effective Date:\t\t"	+ substring(orderEffectiveDate_quote, 0, 10) + "\n"; //CSYS-49999. KA. 9-14-2015;
+			
+			//CSYS-49999, parse Next Bill Date. KA. 9-14-2015
+			ASSET_DELIMITER = "@@";
+			INTERNAL_DELIMITER = "$$";
+			
+			assetsArry = split(assetsString_quote,ASSET_DELIMITER);//split the entire assets delimited string
+			size = range(sizeofarray(assetsArry));
+			
+			NBDate = "";
+			for i in size {
+				assetDetail = split(assetsArry[i],INTERNAL_DELIMITER);//split each asset
+				
+				if (len(assetDetail[15]) > 0){
+					NBDate = assetDetail[15];
+					break;
+				}
+			}
+			
+			if(len(NBDate) > 0){
+				emailBody = emailBody 	+ "\tBilling Start Date:"
+						 	+ "\t\t" + NBDate + "\n";				
+			}
+			//END parsing of Next Bill Date	
+			//CSYS-99634 (SV. 23-06-2020): Added Credit Status
+			emailBody = emailBody + "\tCredit Status:" + "\t\t\t" + creditStatus_quote + "\n";
+			
+			emailBody = emailBody + "\n" + "\tTotal Set Up Fee:\t\t$" 		+ string(totalSetupNet_quote) + "\n"
+			+ "\tTotal Base Fee:\t\t\t$" 		+ string(totalBaseFeeNet_quote) + "\n"
+			+ "\tTotal Incremental Fee:\t\t$" 	+ string(totalIncrementalNet_quote) + "\n"
+			+ "\tTotal Pre Prod Fee:\t\t$" 		+ string(totalPreprodNet_quote) + "\n"
+			+ "\tTotal Net ARR:\t\t\t$" 		+ string(totalArrNet_quote) + "\n"
+			+ "\tQuote Total Sales ARR:\t\t$" 	+ string(quoteTotalSalesARR_quote) + "\n"
+			+ "\n"					
+			+ "\tBilling Cycle:\t\t\t" 		+ billingCycle_quote + "\n"
+			+ "\t# of Trnx by Billing Cycle:\t" 	+ string(numberOfTransationsByCycle) + "\n"
+			+ "\tTerm (no. of months):\t\t" 	+ termNumMonths_quote + "\n"
+			+ "\tPayment Terms:\t\t" 		+ terms_quote + "\n"
+			+ "\tPayment Method:\t\t" 		+ paymentMethod_quote + "\n"
+			+ "\tSpecial Terms:\t\t\t" 		+ specialTerms_quote + "\n"
+			+ "\n";
+			if(len(SAP_MAR_ID_quote) > 0){ //CSYS-49999. KA. 9-14-2015
+				emailBody = emailBody 	+ "\tSAP MAR ID:"
+						 	+ "\t\t\t" + SAP_MAR_ID_quote + "\n"
+							+ "\n";				
+			}				
+			
+			if(len(SubmitComment) > 0){
+				emailBody = emailBody 	+ "\tRequester Comment:\n"
+							+ "\t\t" + SubmitComment + "\n"
+							+ "\n";
+			}
+			if(len(ReasonDescription) > 0){
+				emailBody = emailBody 	+ "\tApproval Comment:\n"
+						 	+ "\t\t" + ReasonDescription + "\n"
+							+ "\n";
+			}
+			
+			emailBody = emailBody + "\tApproval History:\n";
+			
+			for approvalItem in approval_history_submit_quote{
+				if ( approvalItem[0] <> "" AND not(isnull(approvalItem[0]))){
+					userMsgSplit = split(approvalItem[1], "~");
+					if (userMsgSplit[3]+"" == "null") {
+						userMsgSplit[3] = "";
+					}
+					else {
+						userMsgSplit[3] = " - " + userMsgSplit[3];
+					}
+					emailBody = emailBody + "\t\t" + replace(approvalItem[0], "_quote", "") + ": " + userMsgSplit[0] + " - " + userMsgSplit[2] + userMsgSplit[3] + "\n";
+				}
+			}
+
+			emailBody = emailBody + "\n\n";
+			
+			emailBody = emailBody 	+ "\tLink to Quote:\t\t" + TransactionURL + "\n\n";
+			
+			//IESCNQRCPQ-1011 SV. 29-8-2023 Updated the initialization of the variable oppURL to opportunityLink_quote and commented the setion of the code below which was updating oppURL
+			oppURL = opportunityLink_quote; 
+			//company = lower(_system_supplier_company_name);
+			
+			/***** CSYS-43832 start *****/
+			/* recSet = bmql("select BMIInstance, SFDCInstance, MyDomainPrefix from siteInfo WHERE BMIInstance=$company");
+			for rec in recSet{
+				bmiInstance = lower(trim(get(rec,"BMIInstance")));
+				//sfdcInstance = trim(get(rec,"SFDCInstance"));
+				myDomainPrefix = trim(get(rec,"MyDomainPrefix"));
+
+				if(company == bmiInstance){
+					//oppURL = "https://" + trim(get(rec,"SFDCInstance")) + ".salesforce.com/" + crmOpportunityId_quote;
+
+					// CSYS-81517 (KA. 5-23-2017): My Domain has changed the URL structure. 
+					// Therefore, comment out the above line and use the following line:
+
+					//if(company == "concur"){
+						//oppURL = "https://" + myDomainPrefix + ".my.salesforce.com/" + crmOpportunityId_quote;
+						oppURL = "https://" + myDomainPrefix + ".sandbox.vf.force.com/" + crmOpportunityId_quote;
+				}
+			} */
+			
+			//NOPE:
+			/*if(startswith(TransactionURL, "https://bigmachines.na")) {
+				emailBody = emailBody 	+ "\tLink to Opportunity:		https://na4.salesforce.com/" + crmOpportunityId_quote + "\n\n";
+			}
+				else {
+					emailBody = emailBody 	+ "\tLink to Opportunity:		https://cs17.salesforce.com/" + crmOpportunityId_quote + "\n\n";
+			}*/
+			
+			//YEP:
+			emailBody = emailBody 	+ "\tLink to Opportunity:\t" + oppURL + "\n\n";
+			/***** CSYS-43832 end *****/
+			
+			emailBody = emailBody + "To approve or reject this quote, please click on the Quote Link to access the approval tab in Big Machines.  Alternatively, reply to this email with the key word \"Approve\" or \"Reject\" on the first line of the message.  The second line in the email reply may be used for comments, which will auto-populate in the quote approval history." + "\n\n";
+						
+			emailBody = emailBody + "\n"
+			+ "Please contact your Manager or email " + questionEmail + " if you have questions or need assistance. Cheers." + "\n";
+//				+ "\n"
+//			+ "(This is an auto-generated email that is unable to receive replies. DO NOT REPLY TO THIS EMAIL.)" + "\n";
+/*+ "\tTotal ARR:		$" + string(totalArrNet_quote) + "\n"
+			+ "\tTotal Set up Fees:		$ " + string("") + "\n"
+			+ "\tTotal Quote Value:		$ " + string(total_quote) + "\n"
+			+ "\n"*/
+// add in the xsl view of the Quote
+//xslName = "quote_pdf_bmClone_21";
+//return emailBody + "$,$" + xslName;
+return emailBody;

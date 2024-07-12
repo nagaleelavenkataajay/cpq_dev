@@ -1,0 +1,437 @@
+//calculatePromotion
+// promotionsDataDict
+// Key: promoCode + "@.@" + pi
+// Value: requiredPO + "@.@" + businessUnit + "@.@" + market + "@.@" + accountSegment + "@.@" + revenueGroup + "@.@" + region + "@.@" + coreOffering + "@.@" + implementationMethod + "@.@" + customerType + "@.@" + quoteType + "@.@" + serviceModel + "@.@" + autoApply + "@.@" + startDate + "@.@" + endDate + "@.@" + promotionCategory + "@.@" + promoType + "@.@" + promoValue + "@.@" + addlDiscDisAllowed + "@.@" +  promoStartPeriod + "@.@" + promoEndPeriod + "@.@" + ownerTheater + "@.@" + ownerTeam + "@.@" + accountVertical
+
+resultsDict = dict("string");
+// Constants
+CORE_OFFERING = "coreOffering_line"; //added by KA for CSYS-49056
+PARENT_DOC_NUM = "_parent_doc_number"; //added by KA for CSYS-77853
+QUOTE_DOC_NUM = "1";
+PART_NUM = "_part_number";
+DELIMITER = "@.@"; // same delimiter as used in pricing
+ACCOUNT_REGION = "ownerRegion_quote";
+BUSINESS_UNIT = "ownerBU_quote";
+ACCOUNT_SEGMENT = "segment_quote";
+MARKET_HEADER = "ownerMarket_quote";
+QUOTE_TYPE = "quoteType_quote";
+REVENUE_GROUP = "ownerRevenueGroup_quote";
+CUSTOMER_TYPE = "customerType_quote";
+CONVERSION_RATE = "conversionRate_quote";
+IMPLEMENTATION_METHOD = "implementationMethod_line";
+LIST_PRICE = "listPrice_line";
+EXT_LIST_PRICE = "extendedList_line";
+NET_PRICE = "netPriceEach_line";
+EXT_NET_PRICE = "extendedNetPrice_line";
+PROMO_CODE = "promotionCode_line";
+PROMO_DISC_PERCENT = "promoDiscPercent_line";
+PROMO_PRICE = "promoPrice_line";
+PROMO_DETAILS = "promotionDetails_line";
+PROMO_DETAILS_STR = "promotionDetailsStr_line";
+ADDL_DISC_DISALLOWED = "addlDiscDisallowed_line";
+NET_PRICE_NON_UNIFIED = "netPriceNonUnified_line";
+EXT_NET_PRICE_NON_UNIFIED = "extNetPriceNonUnified_line";
+//THEATER = "ownerTheater_quote";
+//OWNER_TEAM = "ownerTeam_quote";
+//ACCOUNT_VERTICAL = "accountVertical_quote";
+LIST_PRICE_NON_UNIFIED = "listPriceNonUnified_line";
+EXT_LIST_PRICE_NON_UNIFIED = "extListPriceNonUnified_line";
+
+HUNDRED_PERCENT = 100.0;
+
+// Variables
+parentDocNum = "";
+pi = "";
+region = "";
+businessUnit = "";
+segment = "";
+market = "";
+revenueGroup = "";
+customerType = "";
+quoteType = "";
+implementationMethod = "";
+conversionRate = 1.0;
+listPrice = 0.0;
+netPriceEach = 0.0;
+extListPrice = 0.0;
+extNetPrice = 0.0;
+timeBasedPromoXml = "";
+timeBasedPromoString = "";
+extNetPriceNonUnified = 0.0;
+skipCoreLine = "FALSE";
+skipExtSvcLine = "FALSE";
+itemType = "";  //CSYS-107087 (OK. 20-09-2022)
+quoteCurrency = "";  //CSYS-107087 (OK. 20-09-2022)
+
+// Get the parentDocNum
+parentDocNumKey = lineDocNum + DELIMITER + PARENT_DOC_NUM;
+if(containskey(stringsDict, parentDocNumKey)) {
+	parentDocNum = get(stringsDict, parentDocNumKey);
+}
+
+// Get the region
+regionKey = QUOTE_DOC_NUM + DELIMITER + ACCOUNT_REGION;
+if(containskey(stringsDict, regionKey)) {
+	region = get(stringsDict, regionKey);
+}
+// Get the business unit
+businessUnitKey = QUOTE_DOC_NUM + DELIMITER + BUSINESS_UNIT;
+if(containskey(stringsDict, businessUnitKey)) {
+	businessUnit = get(stringsDict, businessUnitKey);
+}
+// Get the account segment
+segmentKey = QUOTE_DOC_NUM + DELIMITER + ACCOUNT_SEGMENT;
+if(containskey(stringsDict, segmentKey)) {
+	segment = get(stringsDict, segmentKey);
+}
+// Get the market
+marketKey = QUOTE_DOC_NUM + DELIMITER + MARKET_HEADER;
+if(containskey(stringsDict, marketKey)) {
+	market = get(stringsDict, marketKey);
+}
+// Get the revenue group
+revenueGroupKey = QUOTE_DOC_NUM + DELIMITER + REVENUE_GROUP;
+if(containskey(stringsDict, revenueGroupKey)) {
+	revenueGroup = get(stringsDict, revenueGroupKey);
+}
+// Get the customer type
+customerTypeKey = QUOTE_DOC_NUM + DELIMITER + CUSTOMER_TYPE;
+if(containskey(stringsDict, customerTypeKey)) {
+	customerType = get(stringsDict, customerTypeKey);
+}
+// Get the quote type
+quoteTypeKey = QUOTE_DOC_NUM + DELIMITER + QUOTE_TYPE;
+if(containskey(stringsDict, quoteTypeKey)) {
+	quoteType = get(stringsDict, quoteTypeKey);
+}
+
+// Get the pi correspoding to the given document number
+piKey = lineDocNum + DELIMITER + PART_NUM;
+if(containskey(stringsDict, piKey)) {
+	pi = get(stringsDict, piKey);
+}
+// Get the implementationMethod correspoding to the given document number
+implMethodKey = lineDocNum + DELIMITER + IMPLEMENTATION_METHOD;
+if(containskey(stringsDict, implMethodKey)) {
+	implementationMethod = get(stringsDict, implMethodKey);
+}
+// Get the listPrice correspoding to the given document number
+listPriceKey = lineDocNum + DELIMITER + LIST_PRICE_NON_UNIFIED;
+if(containskey(floatsDict, listPriceKey)) {
+	listPrice = get(floatsDict, listPriceKey);
+}
+// Get the extended listPrice correspoding to the given document number
+extListPriceKey = lineDocNum + DELIMITER + EXT_LIST_PRICE_NON_UNIFIED;
+if(containskey(floatsDict, extListPriceKey)) {
+	extListPrice = get(floatsDict, extListPriceKey);
+}
+// Get the netPriceEach correspoding to the given document number
+netPriceKey = lineDocNum + DELIMITER + NET_PRICE;
+if(containskey(floatsDict, netPriceKey)) {
+	netPriceEach = get(floatsDict, netPriceKey);
+}
+// Get the listPrice correspoding to the given document number
+extNetPriceKey = lineDocNum + DELIMITER + EXT_NET_PRICE;
+if(containskey(floatsDict, extNetPriceKey)) {
+	extNetPrice = get(floatsDict, extNetPriceKey);
+}
+// Get the conversion rate
+conversionRateKey = QUOTE_DOC_NUM + DELIMITER + EXT_NET_PRICE;
+if(containskey(floatsDict, conversionRateKey)) {
+	conversionRate = get(floatsDict, conversionRateKey);
+}
+// Get the netPriceEach correspoding to the given document number
+netPriceNonUnifiedKey = lineDocNum + DELIMITER + NET_PRICE_NON_UNIFIED;
+netPriceEaNonUnified = 0.0;
+if(containskey(floatsDict, netPriceNonUnifiedKey)) {
+	netPriceEaNonUnified = get(floatsDict, netPriceNonUnifiedKey);
+}
+// Get the listPrice correspoding to the given document number
+extNetPriceNonUnifiedKey = lineDocNum + DELIMITER + EXT_NET_PRICE_NON_UNIFIED;
+if(containskey(floatsDict, extNetPriceNonUnifiedKey)) {
+	extNetPriceNonUnified = get(floatsDict, extNetPriceNonUnifiedKey);
+}
+//CSYS-88388 - Start
+skipCoreKey = lineDocNum + DELIMITER + "skipCoreService";
+if(containskey(stringsDict, skipCoreKey)) {
+	skipCoreLine = get(stringsDict, skipCoreKey);
+}
+
+skipExtSvcKey = lineDocNum + DELIMITER + "skipExtendedService";
+if(containskey(stringsDict, skipExtSvcKey)) {
+	skipExtSvcLine = get(stringsDict, skipExtSvcKey);
+}
+//CSYS-88388 - End
+
+//CSYS-95048
+isExtServiceBundled = "false";
+if(containskey(stringsDict, lineDocNum + DELIMITER + "isExtServiceBundled")) {
+	isExtServiceBundled = get(stringsDict, lineDocNum + DELIMITER + "isExtServiceBundled");
+}
+
+//CSYS-107087 (OK. 20-09-2022) Start - Pulling data from pricing
+if(containskey(stringsDict, lineDocNum + DELIMITER + "piItemType_line")) {
+	itemType = get(stringsDict, lineDocNum + DELIMITER + "piItemType_line");
+}
+
+if(containskey(stringsDict, lineDocNum + DELIMITER + "quoteCurrency_quote")) {
+	quoteCurrency = get(stringsDict, lineDocNum + DELIMITER + "quoteCurrency_quote");
+}
+//CSYS-107087 - End
+
+//CSYS-99331, Phil S, 05/21/2020, consolidate BMI logic for promotion with extended service is bundled
+//for future promotion codes that compatible with extended service, please add promo codes to "PromoBundleComp" data table.
+promoBundleExtServComp ="";
+if(containskey(stringsDict, "promoBundleExtServComp_quote")) {
+	
+	promoBundleExtServComp = get(stringsDict, "promoBundleExtServComp_quote");
+}
+promoBundleExtServComp = get(stringsDict, "promoBundleExtServComp_quote");
+validBundlePromos = split(promoBundleExtServComp,",");
+
+
+
+appliedPromoTypeArr = String[];
+totalDiscountedList = listPrice;
+totalDiscountedNonUnified = netPriceEaNonUnified;
+
+for promoCodeApplied in promoCodeAppliedList {
+	
+	// Form the promotionsDataDict key
+	promoDataKey = promoCodeApplied + DELIMITER + pi;
+	promoValueArr = string[];
+	count = 1;
+	internalDesc = "";
+	if(containskey(tempPromoCodeAppliedDict, promoCodeApplied)){
+		internalDesc = get(tempPromoCodeAppliedDict, promoCodeApplied);
+	}
+	
+	if(containskey(promotionsDataDict, promoDataKey)) {
+		promoValueArr = get(promotionsDataDict, promoDataKey);
+		for promoValue in promoValueArr {
+			
+			promoValueData = split(promoValue, DELIMITER);
+			
+			//product must reside in a core that the promo is applicable to. Added next if statement for CSYS-49056. KA. 7-30-2015.
+			//core action code must be assessed if applicable. Added on to the next if statement for CSYS- 77853. KA. 3.6.2017.
+			if( (promoValueData[6] == "" OR get(stringsDict, lineDocNum + DELIMITER + CORE_OFFERING) == promoValueData[6]) AND
+				(promoValueData[23] == "" OR get(stringsDict, parentDocNum + DELIMITER + "coreActionCode") == promoValueData[23]) ){ 
+				promoType = promoValueData[15];
+				promoVal = promoValueData[16];
+
+				
+				addlDiscDisallowed = promoValueData[17];
+				
+				if ( findinarray(appliedPromoTypeArr, promoValueData[14]) <> -1 ){
+					
+					continue;
+				}
+				//CSYS-88388 - Start
+				if ((skipExtSvcLine == promoValueData[24]) OR (skipCoreLine == promoValueData[25])){
+					
+					continue;
+				}
+				//CSYS-88388 - End
+				//CSYS-95048
+				if ( promoCodeApplied <> "" AND NOT isnull(promoCodeApplied) AND findinarray(validBundlePromos, promoCodeApplied) == -1 AND isExtServiceBundled == "true"){
+					if (NOT containskey(stringsDict, QUOTE_DOC_NUM + DELIMITER + "displayExtServiceBundledMsg")){
+						utilResultFlag = util.putStringAttribute( stringsDict, QUOTE_DOC_NUM, DELIMITER, "displayExtServiceBundledMsg", "true" );
+					}
+					continue;
+				}
+				
+				
+				
+				// Standard Promotions -> Promo Start Period will be 0 and End Period will be 0 
+				if(promoValueData[18] == "0" AND /*promoValueData[19] == "0"*/ promoValueData[19] == "and beyond" ) { //this line modified for CSYS-69600. KA. 12-7-2016.
+					
+					if((len(promoValueData[1]) == 0 OR promoValueData[1] == businessUnit) AND (len(promoValueData[2]) == 0 OR promoValueData[2] == market) AND (len(promoValueData[3]) == 0 OR promoValueData[3] == segment) AND (len(promoValueData[4]) == 0 OR promoValueData[4] == revenueGroup) AND (len(promoValueData[5]) == 0 OR promoValueData[5] == region) AND (len(promoValueData[7]) == 0 OR promoValueData[7] == implementationMethod) AND (len(promoValueData[8]) == 0 OR promoValueData[8] == customerType) AND (len(promoValueData[9]) == 0 OR promoValueData[9] == quoteType)) {
+						
+						if(promoType == "%") {
+							promoDiscPerc = atof(promoVal);
+							//promoPrice = round(listPrice * promoDiscPerc/HUNDRED_PERCENT, 2);
+							promoPrice = totalDiscountedList * promoDiscPerc/HUNDRED_PERCENT;
+							totalDiscountedList = totalDiscountedList - promoPrice;
+							//promoPriceNonUnified = round(netPriceEaNonUnified * promoDiscPerc/HUNDRED_PERCENT, 2);
+							promoPriceNonUnified = totalDiscountedNonUnified * promoDiscPerc/HUNDRED_PERCENT;
+							totalDiscountedNonUnified = totalDiscountedNonUnified - promoPriceNonUnified;
+						} elif(promoType == "$") {
+							promoPrice = atof(promoVal);
+							promoPriceNonUnified = atof(promoVal);
+							if ( totalDiscountedList <> 0 ){
+								promoDiscPerc = round((totalDiscountedList - promoPrice)/totalDiscountedList * HUNDRED_PERCENT, 2);
+							}
+							else{
+								promoDiscPerc = 0.0;
+							}
+							totalDiscountedList = totalDiscountedList - promoPrice;
+							totalDiscountedNonUnified = totalDiscountedNonUnified - promoPriceNonUnified;
+						}
+						
+						promoPrice = listPrice - totalDiscountedList;
+						promoPriceNonUnified = netPriceEaNonUnified - totalDiscountedNonUnified;
+						//promoDiscPerc = (listPrice - promoPrice)/listPrice * HUNDRED_PERCENT;
+						if ( listPrice <> 0 ){
+							promoDiscPerc = promoPrice/listPrice * HUNDRED_PERCENT;
+						}
+						elif (itemType ==  "Setup" AND quoteCurrency <> "USD" AND listPrice == 0) { //CSYS-107087 (OK. 20-09-2022) Added elif condition to fix the issue with Non-USD CIP quote
+							promoDiscPerc = promoDiscPerc;
+						}
+						else{
+							promoDiscPerc = 0.0;
+						}
+						// If additional Discount Disallowed = "LINE"  OR "QUOTE" in the data table, just apply the promoPrice as netPriceEach
+						if(promoValueData[17] == "LINE" OR promoValueData[17] == "QUOTE") {
+							extNetPrice = extListPrice - (extListPrice * promoDiscPerc/HUNDRED_PERCENT);
+							extNetPriceNonUnified = extNetPriceNonUnified - (extNetPriceNonUnified * promoDiscPerc/HUNDRED_PERCENT);
+							netPriceEach = listPrice - promoPrice;
+							netPriceEaNonUnified = netPriceEaNonUnified - promoPriceNonUnified;
+							put(floatsDict, netPriceKey, netPriceEach);
+							put(floatsDict, extNetPriceKey, extNetPrice);
+							put(floatsDict, netPriceNonUnifiedKey, netPriceEaNonUnified);
+							put(floatsDict, extNetPriceNonUnifiedKey, extNetPriceNonUnified);
+						} else { // Otherwise, get the netPriceEach and apply the promoDiscount on top of it
+							netPriceEach = netPriceEach - (netPriceEach * promoDiscPerc/HUNDRED_PERCENT);
+							extNetPrice = extNetPrice - (extNetPrice * promoDiscPerc/HUNDRED_PERCENT);
+							netPriceEaNonUnified = netPriceEaNonUnified - (netPriceEaNonUnified * promoDiscPerc/HUNDRED_PERCENT);
+							extNetPriceNonUnified = extNetPriceNonUnified - (extNetPriceNonUnified * promoDiscPerc/HUNDRED_PERCENT);
+							put(floatsDict, netPriceKey, netPriceEach);
+							put(floatsDict, extNetPriceKey, extNetPrice);
+							put(floatsDict, netPriceNonUnifiedKey, netPriceEaNonUnified);
+							put(floatsDict, extNetPriceNonUnifiedKey, extNetPriceNonUnified);
+						}
+						put(floatsDict, lineDocNum + DELIMITER + PROMO_DISC_PERCENT, promoDiscPerc);
+						put(floatsDict, lineDocNum + DELIMITER + PROMO_PRICE, netPriceEach);
+						// Modified by lawrence fodge for use in calculateUnifiedPricing
+						
+						put( floatsDict, lineDocNum + DELIMITER + "promotionPriceAppliedToList", promoPrice );
+						put( floatsDict, lineDocNum + DELIMITER + "extPromotionPriceAppliedToList", (extListPrice * promoDiscPerc/HUNDRED_PERCENT));
+						append( appliedPromoTypeArr, promoValueData[14] );
+				
+						if ( containskey( stringsDict, lineDocNum + DELIMITER + PROMO_CODE ) AND get( stringsDict, lineDocNum + DELIMITER + PROMO_CODE ) <> "" ){
+							dictPromoCode = get( stringsDict, lineDocNum + DELIMITER + PROMO_CODE );
+							dictPromoCode = dictPromoCode + "," + promoCodeApplied;
+							put(stringsDict, lineDocNum + DELIMITER + PROMO_CODE, dictPromoCode);
+						}
+						else{
+							put(stringsDict, lineDocNum + DELIMITER + PROMO_CODE, promoCodeApplied);
+						}
+					}
+				} else { // Time-based promotions
+					if((len(promoValueData[1]) == 0 OR promoValueData[1] == businessUnit) AND (len(promoValueData[2]) == 0 OR promoValueData[2] == market) AND (len(promoValueData[3]) == 0 OR promoValueData[3] == segment) AND (len(promoValueData[4]) == 0 OR promoValueData[4] == revenueGroup) AND (len(promoValueData[5]) == 0 OR promoValueData[5] == region) AND (len(promoValueData[7]) == 0 OR promoValueData[7] == implementationMethod) AND (len(promoValueData[8]) == 0 OR promoValueData[8] == customerType) AND (len(promoValueData[9]) == 0 OR promoValueData[9] == quoteType)) {
+						tempTotalDiscountedList = 0.0;
+						if(promoType == "%") {					
+							promoDiscPerc = atof(promoVal);
+							//promoPrice = round(listPrice * promoDiscPerc/HUNDRED_PERCENT, 2);
+							promoPrice = totalDiscountedList * promoDiscPerc/HUNDRED_PERCENT;
+							
+							tempTotalDiscountedList = totalDiscountedList - promoPrice;
+							//promoPriceNonUnified = round(netPriceEaNonUnified * promoDiscPerc/HUNDRED_PERCENT, 2);
+							promoPriceNonUnified = totalDiscountedNonUnified * promoDiscPerc/HUNDRED_PERCENT;
+							totalDiscountedNonUnified = totalDiscountedNonUnified - promoPriceNonUnified;
+							
+						} elif(promoType == "$") {
+							promoPrice = atof(promoVal);
+							promoPriceNonUnified = atof(promoVal);
+							if ( totalDiscountedList <> 0 ){
+								promoDiscPerc = round((totalDiscountedList - promoPrice)/totalDiscountedList * HUNDRED_PERCENT, 2);
+							}
+							else{
+								promoDiscPerc = 0.0;
+							}
+							tempTotalDiscountedList = totalDiscountedList - promoPrice;
+							totalDiscountedNonUnified = totalDiscountedNonUnified - promoPriceNonUnified;
+						}
+						
+						promoPrice = listPrice - tempTotalDiscountedList;
+						promoPriceNonUnified = netPriceEaNonUnified - totalDiscountedNonUnified;
+						//rbr case 87124
+						/*if ( listPrice <> 0 ){
+							promoDiscPerc = promoPrice/listPrice * HUNDRED_PERCENT;
+						}
+						else{
+							promoDiscPerc = 0.0;
+						// }*/
+						// Form the time-based promotion details in xml format
+						// start promotion period#^#end promotion period#^#promo discount %#^#promo price$^$...
+						if(count == 1) {
+							timeBasedPromoXml = timeBasedPromoXml  + "<promoDetails>";
+						}
+						timeBasedPromoXml = timeBasedPromoXml + "<promo promoID='" + string(count) + "'>" + 
+												"<code>" +  promoCodeApplied + "</code>" + 
+												"<beginPeriod>" + promoValueData[18] + "</beginPeriod>" + 
+												"<endPeriod>" + promoValueData[19] + "</endPeriod>" + 
+												"<discPercent>" + string(promoDiscPerc) + "</discPercent>" + 
+												"<price>" + string(listPrice - promoPrice) + "</price>" +
+												"<INTERNAL_NAME>" + internalDesc + "</INTERNAL_NAME>" +
+												"</promo>";
+						
+						// Form the time-based promotion details string
+						// start promotion period#^#end promotion period#^#promo discount %#^#promo price$^$...
+						// added promoValueData[14] for CSYS-71065. KA. 11-1-2016.
+						timeBasedPromoString = timeBasedPromoString + promoValueData[14] + "#^#" + promoValueData[18] + "#^#" + promoValueData[19] + "#^#" + string(promoDiscPerc) + "#^#" + formatascurrency(((listPrice - promoPrice) * conversionRate)) + "$^$";
+						
+						
+						if(promoValueData[19] == "and beyond") { // last partition of time-based promotion has "and beyond" in the data table
+							// If additional Discount Disallowed = "LINE"  OR "QUOTE" in the data table, just apply the promoPrice as netPriceEach
+							
+							totalDiscountedList = tempTotalDiscountedList;
+							if(promoValueData[17] == "LINE" OR promoValueData[17] == "QUOTE") {
+								extNetPrice = extListPrice - (extListPrice * promoDiscPerc/HUNDRED_PERCENT);
+								extNetPriceNonUnified = extNetPriceNonUnified - (extNetPriceNonUnified * promoDiscPerc/HUNDRED_PERCENT);
+								netPriceEach = listPrice - promoPrice;
+								netPriceEaNonUnified = netPriceEaNonUnified - promoPriceNonUnified;
+								put(floatsDict, netPriceKey, netPriceEach);
+								put(floatsDict, extNetPriceKey, extNetPrice);
+								put(floatsDict, netPriceNonUnifiedKey, netPriceEaNonUnified);
+								put(floatsDict, extNetPriceNonUnifiedKey, extNetPriceNonUnified);
+							} else { // Otherwise, get the netPriceEach and apply the promoDiscount on top of it
+								netPriceEach = netPriceEach - (netPriceEach * promoDiscPerc/HUNDRED_PERCENT);
+								extNetPrice = extNetPrice - (extNetPrice * promoDiscPerc/HUNDRED_PERCENT);
+								netPriceEaNonUnified = netPriceEaNonUnified - (netPriceEaNonUnified * promoDiscPerc/HUNDRED_PERCENT);
+								extNetPriceNonUnified = extNetPriceNonUnified - (extNetPriceNonUnified * promoDiscPerc/HUNDRED_PERCENT);
+								
+								put(floatsDict, netPriceKey, netPriceEach);
+								put(floatsDict, extNetPriceKey, extNetPrice);
+								put(floatsDict, netPriceNonUnifiedKey, netPriceEaNonUnified);
+								put(floatsDict, extNetPriceNonUnifiedKey, extNetPriceNonUnified);
+							}
+								// Modified by lawrence fodge for use in calculateUnifiedPricing
+								// Modified by lawrence fodge for use in calculateUnifiedPricing
+							
+							put( floatsDict, lineDocNum + DELIMITER + "promotionPriceAppliedToList", promoPrice );
+							put( floatsDict, lineDocNum + DELIMITER + "extPromotionPriceAppliedToList", (extListPrice * promoDiscPerc/HUNDRED_PERCENT));
+							timeBasedPromoXml = timeBasedPromoXml  + "</promoDetails>";
+							//Commenting the next line out for CSYS-69600. KA. 12-7-2016.
+							//put(floatsDict, lineDocNum + DELIMITER + PROMO_DISC_PERCENT, promoDiscPerc); 
+							//^^^Time based promos should never update promoDiscPercent_line.
+							
+							put(floatsDict, lineDocNum + DELIMITER + PROMO_PRICE, netPriceEach);
+							put(floatsDict, lineDocNum + DELIMITER + NET_PRICE_NON_UNIFIED, promoPrice);
+							if ( containskey( stringsDict, lineDocNum + DELIMITER + PROMO_CODE ) AND get( stringsDict, lineDocNum + DELIMITER + PROMO_CODE ) <> "" ){
+								dictPromoCode = get( stringsDict, lineDocNum + DELIMITER + PROMO_CODE );
+								dictPromoCode = dictPromoCode + "," + promoCodeApplied;
+								put(stringsDict, lineDocNum + DELIMITER + PROMO_CODE, dictPromoCode);
+							}
+							else{
+								put(stringsDict, lineDocNum + DELIMITER + PROMO_CODE, promoCodeApplied);
+							}
+							put(stringsDict, lineDocNum + DELIMITER + PROMO_DETAILS_STR, timeBasedPromoString);
+							put(stringsDict, lineDocNum + DELIMITER + PROMO_DETAILS, timeBasedPromoXml);
+							append( appliedPromoTypeArr, promoValueData[14] );
+						}
+						count = count + 1;
+					}
+					
+				}
+				if(addlDiscDisallowed == "QUOTE" OR addlDiscDisallowed == "LINE") {
+					put(stringsDict, lineDocNum + DELIMITER + ADDL_DISC_DISALLOWED, "true");
+				} else {
+					put(stringsDict, lineDocNum + DELIMITER + ADDL_DISC_DISALLOWED, "false");
+				}
+			}
+		}
+	}
+  
+}
+return resultsDict;

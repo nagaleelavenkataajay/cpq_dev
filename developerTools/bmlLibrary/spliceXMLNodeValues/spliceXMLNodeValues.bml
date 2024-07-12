@@ -1,0 +1,24 @@
+result = "";
+
+openingTag = "<" + spliceNodeName;
+spliceNodeIndex = -1;
+spliceStartIndex = -1;
+spliceEndIndex = -1;
+
+remaining = originalXmlString;
+
+for newValue in newNodeValues {
+	spliceNodeIndex = find(remaining, openingTag);
+	spliceStartIndex = find(remaining, ">", spliceNodeIndex) + 1;	//Add 1, because otherwise this returns the index of the ">" in e.g. <transactions class="transactions">, and actually we want the index of where the value starts
+	spliceEndIndex = find(remaining, "</", spliceStartIndex);
+	
+	soFar = substring(remaining, 0, spliceStartIndex);
+
+	remaining = substring(remaining, spliceEndIndex);
+	
+	result = result + soFar + newValue;
+}
+
+result = result + remaining;
+
+return result;

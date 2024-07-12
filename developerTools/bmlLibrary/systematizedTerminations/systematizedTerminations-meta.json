@@ -1,0 +1,27 @@
+{
+  "name" : "x- Systematized Terminations",
+  "variableName" : "systematizedTerminations",
+  "description" : "MOVED TO COMMERCE LIBRARY.\n\nPer CSYS-40346, this util sets the attribute terminatedCoreMapping_line for use by the Document Engine, in order to systematize product terminations. Also, it builds out termination notes for the opportunity.",
+  "libraryFunctions" : [ "util.formAttrValueStr" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "seqNumArray",
+    "type" : "Integer[]"
+  }, {
+    "name" : "seqNumAttributeMappingDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "primeStringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "isCoreChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "isEditionChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

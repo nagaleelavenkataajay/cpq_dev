@@ -1,0 +1,160 @@
+/*
+	Commerce BML Library
+	validateBundleFlagForDynamicGrouping
+	------------------------------------
+	Params:
+		String action
+		String delimiter
+	Returns:
+		String validationMessage
+*/
+debug = false;
+debugStr = "";
+if (containskey(params, "debug")) {
+	debugStr = get(params, "debug");
+}
+if (debugStr == "true") {
+	debug = true;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 							CONSTANTS & VARIABLES							*/
+/* ------------------------------------------------------------------------ */
+//Return variables
+validationMessage = "";
+
+//Constants for part custom fields
+BUNDLE_FLAG = "custom_field19";
+
+//Constants for part custom field values
+BUNDLE_FLAG_TRUE = "Y";
+BUNDLE_FLAG_FALSE = "N";
+
+//Containers for line item attributes
+piList = string[];
+docNumList = string[];
+piDict = dict("string");
+seqNumDict = dict("integer");
+descriptionDict = dict("string");
+isPartOfPackageDict = dict("boolean");
+discountTypeDict = dict("string");
+modelNameDict = dict("string");
+modelHasGroupingDict = dict("string");
+discountdict = dict("float");
+addlDiscountDisallowedDict = dict("string");
+commentDict = dict("string");
+//Constants for attribute values
+AMOUNT_DISCOUNT = "Amt";
+PERCENT_DISCOUNT = "%";
+
+// Constants for dynamic variables in messages
+DYNAMIC_LINE_VALUE = "$lineNum$";
+CANNOT_DISC_LINE = "CANNOT_DISC_LINE";
+LINE_CANNOT_GROUP = "LINE_CANNOT_GROUP";
+INVALID_MODEL_DISC_TYPE = "INVALID_MODEL_DISC_TYPE";
+LINE_ABBR = "LINE";
+//Containers for object relationships
+partNumToBundleFlagDict = dict("string");
+language = "en";
+
+/* ------------------------------------------------------------------------ */
+/* 					Populate Error messages									*/
+/* ------------------------------------------------------------------------ */
+errorDict = dict("string");
+errorMsgs = bmql("SELECT messageCode, message FROM messageTable WHERE language = $language" );
+for error in errorMsgs{
+	put( errorDict, get( error, "messageCode" ), get( error, "message" ) );
+}
+
+/* ------------------------------------------------------------------------ */
+/* 					Obtain line item information							*/
+/* ------------------------------------------------------------------------ */
+
+for line in line_process {
+	docNum = line._document_number;
+	pi = line._part_number;
+	discountType = line.discountType_line;
+	seqNum = line._sequence_number;
+	description = line._part_desc;
+	isPartOfPackage = line.isPartOfPackage_line;
+	modelName = line._model_name;
+	modelHasGrouping = "";
+	discount = line.discount_line;
+	addlDiscountDisallowed = string(line.addlDiscDisallowed_line);
+	comment = line._line_item_comment;
+	if ( pi == "" ){
+		modelHasGrouping = line.modelHasGrouping_line;
+	}
+	
+	
+	put ( discountDict, docNum, discount );
+	append(docNumList, docNum);
+	put(discountTypeDict, docNum, discountType);
+	put(seqNumDict, docNum, seqNum);
+	append(piList, pi);
+	put(piDict, docNum, pi);
+	put(descriptionDict, docNum, description);
+	put(isPartOfPackageDict, docNum, isPartOfPackage);
+	put(modelNameDict, docNum, modelName);
+	put(modelHasGroupingDict, docNum, modelHasGrouping );
+	put( addlDiscountDisallowedDict, docNum, addlDiscountDisallowed );
+	put( commentDict, docNum, comment );
+}
+
+/* ------------------------------------------------------------------------ */
+/* 					Obtain part custom field records						*/
+/* ------------------------------------------------------------------------ */
+
+bundleFlagRecords = bmql("select part_number, custom_field19 from _parts where part_number in $piList");
+
+for bundleFlagRecord in bundleFlagRecords {
+	put(partNumToBundleFlagDict, get(bundleFlagRecord, "part_number"), get(bundleFlagRecord, BUNDLE_FLAG));
+}
+
+/* ======================================================================== */
+/* 					Run validations											*/
+/* ======================================================================== */
+for docNum in docNumList {
+	pi = get(piDict, docNum);
+	isPartOfPackage = get(isPartOfPackageDict, docNum);
+	bundleFlag = get(partNumToBundleFlagDict, pi);
+	seqNumStr = string(get(seqNumDict, docNum));
+	description = get(descriptionDict, docNum);
+	modelHasGrouping = get( modelHasGroupingDict, docNum );
+	discount = get( discountDict, docNum );
+	addlDiscountDisallowed = get( addlDiscountDisallowedDict, docNum );
+	comment = get( commentDict, docNum );
+	/* -------------------------------------------------------------------- */
+	/* 					Validate Model discount line						*/
+	/* -------------------------------------------------------------------- */
+	if (pi == "") {
+		modelName = get(modelNameDict, docNum);
+		discountType = get(discountTypeDict, docNum);
+		if (discountType <> PERCENT_DISCOUNT AND modelHasGrouping == "true") {
+		validation = get( errorDict, LINE_ABBR ) + ": " + get( errorDict, INVALID_MODEL_DISC_TYPE ) + "\n";
+		validation = replace( validation, DYNAMIC_LINE_VALUE, seqNumStr );
+		//	validationMessage = validationMessage + "Models can only be discounted by Percent (%). [Line #: " + seqNumStr + ", Model Name: " + modelName + ", Description: " + description + "]\n"; 
+		validationMessage = validationMessage + validation;
+		}
+	/* -------------------------------------------------------------------- */
+	/* 					Validate bundled line items							*/
+	/* -------------------------------------------------------------------- */
+	} else {
+		if (isPartOfPackage and bundleFlag == BUNDLE_FLAG_FALSE AND comment == "") {
+			validation = get( errorDict, LINE_ABBR ) + ": " + get( errorDict, LINE_CANNOT_GROUP ) + "\n";
+			validation = replace( validation, DYNAMIC_LINE_VALUE, seqNumStr );
+		//	validationMessage = validationMessage + "Attempt to group a product that cannot be bundled. [Line #:" + seqNumStr + ", Product Name: " + description + ", PI #: " + pi + ", Bundle Flag: " + bundleFlag + "]\n";
+			validationMessage = validationMessage + validation;
+		}
+		/* -------------------------------------------------------------------- */
+	/* 					Validate individual line discount						*/
+	/* -------------------------------------------------------------------- */
+		elif( addlDiscountDisallowed == "true" AND discount > 0 ){
+			validation = get( errorDict, LINE_ABBR ) + ": " + get( errorDict, CANNOT_DISC_LINE ) + "\n";
+			validation = replace( validation, DYNAMIC_LINE_VALUE, seqNumStr );
+			validationMessage = validationMessage + validation;
+		}
+	}
+}
+
+return validationMessage;

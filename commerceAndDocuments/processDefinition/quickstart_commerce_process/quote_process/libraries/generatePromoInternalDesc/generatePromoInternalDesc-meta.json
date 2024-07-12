@@ -1,0 +1,11 @@
+{
+  "name" : "Generate Promo Internal Desc for proposal",
+  "variableName" : "generatePromoInternalDesc",
+  "description" : "CSYS-104348, 104813. This used data table to generate promo description for proposals",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_document_number", "promotionCode_line", "promoInternalDesc_line" ],
+  "mainDocAttributes" : [ "outputLanguage_quote" ],
+  "systemAttributes" : [ ]
+}

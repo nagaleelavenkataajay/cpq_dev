@@ -1,0 +1,35 @@
+/* 
+ #############################################################################
+ formDelimitedString Util Library
+
+Parameters:
+dictionary (attribute dict)
+key (string)
+docNumber (string)
+value (string)
+
+Returns:
+string "Passed:formAttrValueStr~" used for debug purposes in commerce libraries.
+
+Description:
+Used to store all pricing related result strings into attributesDict dictionary
+
+Format:
+util.formAttrValueStr(attributesDict,key,documentNumber,value);
+
+Example:
+res = util.formAttrValueStr(attributesDict,"reviseFlag_quote",1,"false"); 
+
+ #############################################################################
+*/
+
+delim = "~";
+delimPipe = "|";
+combinedValue = "";
+
+dictKey = docNumber + delim + key;
+combinedValue = docNumber + delim + key + delim + value + delimPipe;
+put(dictionary,dictKey,combinedValue);
+//put(dictionary,key,combinedValue);
+
+return "";

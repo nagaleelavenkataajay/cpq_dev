@@ -1,0 +1,144 @@
+//CSYS-87914 (KA. 12-5-2017)
+//This util returns Ramp Discount info in a Dictionary of string arrays
+
+/*Parameters: 
+	lineItemRampPlan (rampPlanDetails_line)
+*/
+
+returnDict = dict("string[]");
+
+//Grab the ramp price values from the XML:
+rampBaseFeeListArray = util.getXMLNodeValues(lineItemRampPlan, "baseFeeList");
+rampBaseFeeNetArray = util.getXMLNodeValues(lineItemRampPlan, "baseFeeNet");
+rampIncFeeListArray = util.getXMLNodeValues(lineItemRampPlan, "increFeeList");
+rampIncFeeNetArray = util.getXMLNodeValues(lineItemRampPlan, "increFeeNet");
+
+//Arrays to store ramp discounts:
+baseFeeRampDiscountArray = string[];
+incFeeRampDiscountArray = string[];
+
+cnt = 0;
+for val in rampBaseFeeListArray{
+	rampBaseFeeList = val;
+	if(find(val, " ") <> -1){//SEK Currency fix
+		rampBaseFeeList = replace(rampBaseFeeList, " ", "");
+	}
+	if(find(val, "'") <> -1){//CHF Currency fix
+		rampBaseFeeList = replace(rampBaseFeeList, "'", "");
+	}
+
+	rampBaseFeeList = replace(rampBaseFeeList, ",", ""); //remove commas so rampBaseFeeList is an actual number in BML
+
+	rampBaseFeeNet = rampBaseFeeNetArray[cnt];
+	if(find(rampBaseFeeNetArray[cnt], " ") <> -1){
+		rampBaseFeeNet = replace(rampBaseFeeNet, " ", "");
+	}
+	if(find(rampBaseFeeNetArray[cnt], "'") <> -1){
+		rampBaseFeeNet = replace(rampBaseFeeNet, "'", "");
+	}
+
+	rampBaseFeeNet = replace(rampBaseFeeNet, ",", ""); //remove commas so rampBaseFeeNet is an actual number in BML
+	
+	rampBaseFeeDiscount = 0.0;
+
+	
+	if(isnumber(rampBaseFeeList) AND isnumber(rampBaseFeeNet) AND atof(rampBaseFeeList) > 0.0 /*AND atof(rampBaseFeeNet) > 0.0*/){
+		//CSYS-95876
+		//if(atof(rampBaseFeeNet) > 0.0){//CSYS-88429 (LN. 1/11/2018) Moved this piece of logic into it's own if statement so that in the event that a user enters a 0.0 BaseFeeNet the final ramp will still be appended and display in the UI
+
+			//Calculate base ramp discounts:
+			rampBaseFeeDiscount = round((1 - (atof(rampBaseFeeNet)/atof(rampBaseFeeList))) * 100, 2);
+			rampBaseFeeDiscountStr = string(rampBaseFeeDiscount);
+
+			discSplit = split(rampBaseFeeDiscountStr, ".");
+			if(len(discSplit[1]) == 1){
+				//add a zero if necessary:
+				rampBaseFeeDiscountStr = rampBaseFeeDiscountStr + "0";
+			}
+
+			append(baseFeeRampDiscountArray, rampBaseFeeDiscountStr);
+			
+		//}
+		/*
+		else {//CSYS-88429 (LN. 1/11/2018)
+			append(baseFeeRampDiscountArray, "0.00");
+		}*/
+		
+	}
+	
+	cnt = cnt + 1;
+}
+
+cnt = 0; //reset the counter
+for val in rampIncFeeListArray{
+	rampIncFeeList = val;
+	if(find(rampIncFeeList, " ") <> -1){
+		rampIncFeeList = replace(rampIncFeeList, " ", "");
+	}
+	if(find(rampIncFeeList, "'") <> -1){//CHF Currency fix
+		rampIncFeeList = replace(rampIncFeeList, "'", "");
+	}
+
+	rampIncFeeList = replace(val, ",", ""); //remove commas so rampIncFeeList is an actual number in BML
+
+	rampIncFeeNet = rampIncFeeNetArray[cnt];
+	if(find(rampIncFeeNet, " ") <> -1){
+		rampIncFeeNet = replace(rampIncFeeNet, " ", "");
+	}
+	if(find(rampIncFeeNet, "'") <> -1){
+		rampIncFeeNet = replace(rampIncFeeNet, "'", "");
+	}
+
+	rampIncFeeNet = replace(rampIncFeeNet, ",", ""); //remove commas so rampIncFeeNet is an actual number in BML
+	rampIncFeeDiscount = 0.0;
+
+	if(isnumber(rampIncFeeList) AND isnumber(rampIncFeeNet) /*AND atof(rampIncFeeList) > 0.0 /*AND atof(rampIncFeeNet) > 0.0*/){
+		//CSYS-95876
+		//if(atof(rampIncFeeNet) > 0.0){//CSYS-88429 (LN. 1/11/2018) Moved this piece of logic into it's own if statement so that in the event that a user enters a 0.0 IncFeeNet the final ramp will still be appended and display in the UI
+
+			//(CSYS-97399 KW. 8/14/19 - Adjusting ramp incremental discount if number equals 0)
+			if(atof(rampIncFeeList) > 0.0 ){
+
+
+				//Calculate incremental ramp discounts:
+				rampIncFeeDiscount = round((1 - (atof(rampIncFeeNet)/atof(rampIncFeeList))) * 100, 2);
+				rampIncFeeDiscountStr = string(rampIncFeeDiscount);
+
+				discSplit = split(rampIncFeeDiscountStr, ".");
+				if(len(discSplit[1]) == 1){
+					//add a zero if necessary:
+					rampIncFeeDiscountStr = rampIncFeeDiscountStr + "0";
+				}
+
+				append(incFeeRampDiscountArray, rampIncFeeDiscountStr);
+
+		        }
+		        
+		        if(atof(rampIncFeeList) == 0.0 ){
+			        rampIncFeeDiscountStr = string(rampIncFeeDiscount);
+
+			        discSplit = split(rampIncFeeDiscountStr, ".");
+			        if(len(discSplit[1]) == 1){
+				//add a zero if necessary:
+				rampIncFeeDiscountStr = rampIncFeeDiscountStr + "0";
+			        }
+			
+			        //append(incFeeRampDiscountArray, "0.00");
+			        append(incFeeRampDiscountArray,rampIncFeeDiscountStr);
+
+		        }
+
+	}
+
+	cnt = cnt + 1;
+}
+
+//Populate the return dictionary:
+put(returnDict, "rampBaseFeeListArray", rampBaseFeeListArray);
+put(returnDict, "rampBaseFeeNetArray", rampBaseFeeNetArray);
+put(returnDict, "rampIncFeeListArray", rampIncFeeListArray);
+put(returnDict, "rampIncFeeNetArray", rampIncFeeNetArray);
+put(returnDict, "baseFeeRampDiscountArray", baseFeeRampDiscountArray);
+put(returnDict, "incFeeRampDiscountArray", incFeeRampDiscountArray);
+
+return returnDict;

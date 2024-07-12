@@ -1,0 +1,15 @@
+{
+  "name" : "printInternalSection",
+  "variableName" : "printInternalSection",
+  "description" : "Prints a sub-subsection with tabbing.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "description",
+    "type" : "String"
+  }, {
+    "name" : "tabs",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

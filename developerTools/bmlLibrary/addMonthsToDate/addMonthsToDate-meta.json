@@ -1,0 +1,15 @@
+{
+  "name" : "Add Months To Date",
+  "variableName" : "addMonthsToDate",
+  "description" : "Adds a specified number of months to a date.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "inputDate",
+    "type" : "String"
+  }, {
+    "name" : "months",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

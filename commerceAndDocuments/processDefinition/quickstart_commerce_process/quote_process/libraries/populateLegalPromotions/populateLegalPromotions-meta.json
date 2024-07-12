@@ -1,0 +1,11 @@
+{
+  "name" : "Populate Legal Promotions",
+  "variableName" : "populateLegalPromotions",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "piItemType_line", "_document_number", "_part_number", "assetAction_line", "promotionSFDCCode_line", "promotionCode_line", "listPriceUSD_line", "promotionDetails_line", "promotionDetailsStr_line" ],
+  "mainDocAttributes" : [ "legalPromotion_quote", "ownerRegion_quote", "ownerBU_quote", "segment_quote", "ownerMarket_quote", "ownerRevenueGroup_quote", "ownerTheater_quote", "ownerTeam_quote", "accountVertical_quote", "customerType_quote", "quoteType_quote" ],
+  "systemAttributes" : [ ]
+}

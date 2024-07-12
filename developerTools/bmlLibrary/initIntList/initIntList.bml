@@ -1,0 +1,17 @@
+/*
+  initIntList 
+  param:
+    numElement      - integer
+    defaultValue    - integer
+  return 
+    integer[];
+*/
+result = integer[];
+
+list = range(numElement);
+
+for element in list {
+  result[element] = defaultValue;
+} 
+
+return result;

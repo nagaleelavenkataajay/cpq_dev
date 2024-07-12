@@ -1,0 +1,11 @@
+{
+  "name" : "approvalTraversed?",
+  "variableName" : "approvalTraversed",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "sequence_quote" ],
+  "systemAttributes" : [ ]
+}

@@ -1,0 +1,11 @@
+/* util -> getCountryIsoCode
+billingCountry - String
+*/
+countryIsoCode = "";
+billingCountryCodeResSet = bmql("SELECT metraNetCountry FROM countryCodeMapping WHERE bmiCountry = $billingCountry");
+for billingCountryCodeRes in billingCountryCodeResSet {
+	//countryIsoCode = get(billingCountryCodeRes, "	");//old
+	countryIsoCode = get(billingCountryCodeRes, "metraNetCountry");//correction dwc 20200825
+	
+}
+return countryIsoCode;

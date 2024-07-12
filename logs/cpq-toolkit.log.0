@@ -1,0 +1,27 @@
+Jul 08, 2024 10:35:26 PM com.bm.xchange.toolkit.cli.remote.http.auth.oauth.TokenManagerImpl getToken
+INFO: Refreshed access token at 2024-07-08T17:05:26.205652900Z.
+Jul 08, 2024 11:08:20 PM com.bm.xchange.toolkit.cli.remote.http.auth.oauth.TokenManagerImpl getToken
+INFO: Refreshed access token at 2024-07-08T17:38:20.156555100Z.
+Jul 08, 2024 11:14:05 PM com.bm.xchange.toolkit.cli.remote.http.auth.oauth.TokenManagerImpl getToken
+INFO: Refreshed access token at 2024-07-08T17:44:05.501656500Z.
+Jul 08, 2024 11:21:39 PM com.bm.xchange.toolkit.pull.cli.PullCLI runInternal
+SEVERE: Failed to prepare remote connection.
+com.bm.xchange.toolkit.net.http.client.UnexpectedResponseException: Timed out while waiting for the user to authorize
+	at com.bm.xchange.toolkit.net.auth.oauth.client.OAuthClientImpl.doAuthCodeFlow(OAuthClientImpl.java:87)
+	at com.bm.xchange.toolkit.cli.remote.http.auth.oauth.TokenManagerImpl.acquireNewToken(TokenManagerImpl.java:145)
+	at com.bm.xchange.toolkit.cli.remote.http.auth.oauth.TokenManagerImpl.getToken(TokenManagerImpl.java:129)
+	at com.bm.xchange.toolkit.cli.remote.http.auth.AuthParamManagerImpl.getTokenHeaderValue(AuthParamManagerImpl.java:323)
+	at com.bm.xchange.toolkit.cli.remote.http.auth.AuthParamManagerImpl.getAuthHeaderValue(AuthParamManagerImpl.java:160)
+	at com.bm.xchange.toolkit.cli.remote.http.auth.AuthParamManagerImpl.prepareAuth(AuthParamManagerImpl.java:146)
+	at com.bm.xchange.toolkit.pull.cli.PullCLI.runInternal(PullCLI.java:155)
+	at com.bm.xchange.toolkit.cli.spi.AbstractToolCLI.run(AbstractToolCLI.java:155)
+	at com.bm.xchange.toolkit.cli.DevToolkitCLI.runTool(DevToolkitCLI.java:130)
+	at com.bm.xchange.toolkit.cli.DevToolkitCLI.run(DevToolkitCLI.java:88)
+	at com.bm.xchange.toolkit.DevToolkitMain.main(DevToolkitMain.java:49)
+Caused by: java.util.concurrent.TimeoutException
+	at java.base/java.util.concurrent.CompletableFuture.timedGet(CompletableFuture.java:1960)
+	at java.base/java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2095)
+	at com.bm.xchange.toolkit.net.auth.oauth.client.endpoint.redirect.async.AsyncCallbackHandlerImpl.getToken(AsyncCallbackHandlerImpl.java:64)
+	at com.bm.xchange.toolkit.net.auth.oauth.client.OAuthClientImpl.doAuthCodeFlow(OAuthClientImpl.java:85)
+	... 10 more
+

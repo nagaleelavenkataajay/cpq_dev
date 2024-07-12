@@ -1,0 +1,49 @@
+/* util -> getXMLNode 
+
+xmlString - String
+xmlNodeName - String
+*/
+result = String[];
+
+// maximum number of elements
+loop = split(xmlString,"<" + xmlNodeName);
+rest = xmlString;
+
+attrTag = "<" + xmlNodeName + " ";
+noAttrTag = "<" + xmlNodeName + ">";
+emptyTag = "<" + xmlNodeName + "/>";
+endTag = "</" + xmlNodeName + ">";
+
+nodeTypes = String[]{attrTag,noAttrTag,emptyTag};
+nodeTypeRange = range(sizeofarray(nodeTypes));
+
+for i in loop {
+	nextNodeIndex = -1;
+	nextNodeType = -1;
+	
+	for j in nodeTypeRange {
+		index = find(rest,nodeTypes[j]);
+		if(index > -1 and (nextNodeIndex == -1 or nextNodeIndex > index)) {
+			nextNodeIndex = index;
+			nextNodeType = j;
+		}
+	}
+	
+	if(nextNodeIndex == -1) {
+		break;
+	}
+	
+	if(nodeTypes[nextNodeType] == emptyTag) {
+		endIndex = nextNodeIndex + len(emptyTag);
+	}
+	else {
+		endIndex = find(rest,endTag);
+		if(endIndex == -1) {
+			break;
+		}
+		endIndex = endIndex + len(endTag);
+	}
+	append(result,substring(rest,nextNodeIndex,endIndex));
+	rest = substring(rest,endIndex);
+}
+return result;

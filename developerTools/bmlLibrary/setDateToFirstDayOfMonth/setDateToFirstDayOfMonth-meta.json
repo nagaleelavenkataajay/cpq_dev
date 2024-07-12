@@ -1,0 +1,12 @@
+{
+  "name" : "Set Date to First Day of Month",
+  "variableName" : "setDateToFirstDayOfMonth",
+  "description" : "Set the string date passed in, to the first day of the month. Used for CSYS-74106. KA. 12-14-2016.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "inputDate",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

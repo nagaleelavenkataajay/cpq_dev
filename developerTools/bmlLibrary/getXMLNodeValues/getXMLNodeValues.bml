@@ -1,0 +1,55 @@
+/* util -> getXMLNodeValues
+xmlString - String
+xmlNodeName - String
+*/
+result = String[];
+
+// maximum number of elements
+loop = split(xmlString,"<" + xmlNodeName);
+rest = xmlString;
+
+attrTag = "<" + xmlNodeName + " ";		//"<from "
+noAttrTag = "<" + xmlNodeName + ">";	//"<from>"
+emptyTag = "<" + xmlNodeName + "/>";	//"<from/>"
+endTag = "</" + xmlNodeName + ">";		//"</from>"
+
+nodeTypes = String[]{attrTag,noAttrTag,emptyTag};
+nodeTypeRange = range(sizeofarray(nodeTypes));
+
+for i in loop {
+	nextNodeIndex = -1;
+	nextNodeType = -1;
+	
+	for j in nodeTypeRange {
+		index = find(rest,nodeTypes[j]);
+		if(index > -1 and (nextNodeIndex == -1 or nextNodeIndex > index)) { //If one of the attribute tags was found, and 
+			nextNodeIndex = index;
+			nextNodeType = j;
+		}
+	}
+	
+	if(nextNodeIndex == -1) {
+		break;
+	}
+	
+	if(nodeTypes[nextNodeType] == emptyTag) {
+		endIndex = nextNodeIndex + len(emptyTag);
+	}
+	else {
+		endIndex = find(rest,endTag);
+		if(endIndex == -1) {
+			break;
+		}
+		endIndex = endIndex + len(endTag);
+	}
+	
+	tagsWithValue = substring(rest, nextNodeIndex, endIndex);
+	startTagIndex = find(tagsWithValue, ">");
+	value = substring(tagsWithValue, startTagIndex + 1);
+	endTagIndex = find(value, "</");
+	value = substring(value, 0, endTagIndex);
+	
+	append(result, value);
+	rest = substring(rest,endIndex);
+}
+return result;

@@ -1,0 +1,14 @@
+result = "";
+
+configInfoSet = split(configAttrInfo, "|^|");
+for eachConfigInfoSet in configInfoSet {
+  configAttr = split(eachConfigInfoSet, "~");
+  configAttrVarName = configAttr[0];
+  configAttrVarValue = configAttr[2];
+  if ( configAttrVarName == inputConfigInfoVarName ) {
+    result = configAttrVarValue;
+    break;
+  }
+}
+
+return result;

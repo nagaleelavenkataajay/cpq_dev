@@ -1,0 +1,11 @@
+{
+  "name" : "getRampXmlForServicePartnerQuote",
+  "variableName" : "getRampXmlForServicePartnerQuote",
+  "description" : "CSYS-83099\nCSYS-85637 09/20/2017 - Reverting code to original ramp logic; NO LONGER USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "orderEffectiveDate_quote", "numCommittedTransaction_quote" ],
+  "systemAttributes" : [ ]
+}

@@ -1,0 +1,20 @@
+{
+  "name" : "Evaluate Approvals",
+  "variableName" : "evaluateApprovals",
+  "description" : "Evaluates approvals using the trigger dictionary in junction with the approvalTriggers table.",
+  "libraryFunctions" : [ "util.evaluate", "util.formAttrValueStr", "util.getDateFromString", "util.getStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "actionName",
+    "type" : "String"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_part_number", "customPricingHasOccured_line", "terminateSetupFee_line", "assetAction_line", "piItemType_line", "discount_line" ],
+  "mainDocAttributes" : [ "mgrApprovalHistory_quote", "vpApprovalHistory_quote", "svpApprovalHistory_quote", "gmApprovalHistory_quote", "cfoApprovalHistory_quote", "mgrLogin_quote", "vpLogin_quote", "svpLogin_quote", "gmLogin_quote", "cfoLogin_quote", "monthlyWaivePeriod_quote", "preproductionWaive_quote", "billingCycle_quote", "paymentMethod_quote", "amexReferral_quote", "businessUnit_quote", "segment_quote", "implementationMethods_quote", "quoteType_quote", "termNumMonths_quote", "market_quote", "billTo_countryISOCode_quote", "specialTerms_quote", "terms_quote", "addOnPaymentTerms_quote", "revisionNumber_quote", "sequence_quote", "sequence_quote_history", "submittedDate_quote", "approvalDate_quote", "expirationDate_quote", "evpApprovalHistory_quote", "evpLogin_quote", "ownerBU_quote", "ownerTheater_quote", "currentBillingCycle_quote", "currentPaymentMethod_quote", "quoteCurrency_quote", "rerequireCFOApproval_quote", "sapApprovalHistory_quote", "sAPLogin_quote", "SAP_MAR_ID_quote", "ownerMarket_quote", "totalArrNet_quote", "termNotice_quote", "ownerDivision_quote", "contractType_quote", "miscApprovalHistory_quote", "contractingEntity_quote", "externalPromotion_quote", "orderEffectiveDate_quote", "previousOrderEffectiveDate_quote", "rFAmore_quote", "rFAbillingCycle_quote", "rFAless_quote", "isProfessionalServicesImport_quote", "terminationForConvenienceMonths_quote", "referralStatus_quote", "referringPartnerCategory_quote", "purchasedFromPartnerCategorySFDC_quote", "revisionDate_quote", "createdDate_quote" ],
+  "systemAttributes" : [ "_system_current_step_var", "_system_user_login" ]
+}

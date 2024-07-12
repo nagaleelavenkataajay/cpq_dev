@@ -1,0 +1,9 @@
+{
+  "name" : "Get User Time Zone",
+  "variableName" : "getUserTimeZone",
+  "description" : "Retrieves the time zone of the user. \nEx: GMT-7",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "attributes" : [ "_user_timezone" ]
+}

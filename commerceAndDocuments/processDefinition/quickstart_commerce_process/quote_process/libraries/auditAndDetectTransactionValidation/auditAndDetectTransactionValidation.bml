@@ -1,0 +1,80 @@
+/****************************************************************************************************************************************  
+Per CSYS-93247 (LN. 9-12-2018) Commerce Library to assess whether Policy Audit/Audit Elite's number of Transactions has been defaulted due to Detect being present on the quote (fed into the soft validation logic), or if the Audit TRXN count is less than 30% of the Core Service Transaction while Detect is on the quote (fed into the hard validation logic), or for Add-On quotes if Audit's transaction count is differs from the Core (fed into the soft validation logic)
+*****************************************************************************************************************************************/
+
+//Establishing Constants
+BASE_FEE = "Base";
+SETUP_FEE = "Setup";
+CORE_SERVICE = "Core Service";
+POLICY_AUDIT_PO = "644";
+AUDIT_ELITE_PO = "34954";
+CONCUR_DETECT_PO = "3780125";
+DELIMITER = "@.@";
+ADD_ON_BUSINESS = "Add-On Business";
+TERMINATE_ACTION = "TERMINATE";
+coreServiceTrxnDict = dict("integer");
+tierChangeTrxnDict = dict("integer");
+detectExists = false;
+
+resultArr = string[];
+
+for line in line_process {
+	poCategory = line._part_custom_field20;
+	parentDocNum = line._parent_doc_number;
+	numOfTransactions = line.numCommittedTransaction_line;
+	piItemType = line._part_custom_field8;
+	assetAction = line.assetAction_line;
+	originalNumCommittedTransaction = line.originalNumCommittedTransaction_line;
+	poId = line.poId_line;
+
+	if(poCategory == CORE_SERVICE AND assetAction <> TERMINATE_ACTION){//Navigate to the Core Service
+
+		if(piItemType == BASE_FEE){//Store the Base Fee number of transactions
+			put(coreServiceTrxnDict, parentDocNum + DELIMITER + piItemType, numOfTransactions);
+		}
+
+		if(piItemType == SETUP_FEE){//Store the Setup Fee number of transactions
+			put(coreServiceTrxnDict, parentDocNum + DELIMITER + piItemType, numOfTransactions);
+		}
+
+		if(quoteType_quote == ADD_ON_BUSINESS AND originalNumCommittedTransaction <> numOfTransactions){//For Add-On quotes, if a Tier Change is detected populate the dictionary
+			put(tierChangeTrxnDict, parentDocNum + DELIMITER + piItemType, numOfTransactions);
+		}
+	}
+
+	//Determine if Detect Exists, leveraged in the Hard Validation Logic
+	if(poId == CONCUR_DETECT_PO AND assetAction <> TERMINATE_ACTION){
+		detectExists = true;
+	}
+}
+
+
+for line in line_process {
+	po = line._part_custom_field1;
+	parentDocNum = line._parent_doc_number;
+	numOfTransactions = line.numCommittedTransaction_line;
+	piItemType = line._part_custom_field8;
+	assetAction = line.assetAction_line;
+
+	if( (po == POLICY_AUDIT_PO OR po == AUDIT_ELITE_PO) AND assetAction <> TERMINATE_ACTION ){//If Audit is present on the quote
+		if( (piItemType == BASE_FEE OR piItemType == SETUP_FEE) AND containskey(coreServiceTrxnDict, parentDocNum + DELIMITER + piItemType)){
+			
+			coreTrxns = get(coreServiceTrxnDict, parentDocNum + DELIMITER + piItemType);
+			currentCoreTrxns = integer(round(coreTrxns*(.3), 0));
+
+			if( numOfTransactions == currentCoreTrxns ){//If Audit's Transactions has been defaulted, render the soft validation message
+				append(resultArr, "triggerAuditDefaultSoftValidation");
+			}
+
+			//if( detectExists AND numOfTransactions < currentCoreTrxns ){//If Detect is present, and the transactions are less than 30% of the core trigger the hard validation
+			//	append(resultArr, "triggerAuditDefaultHardValidation");
+			//}
+
+			if( quoteType_quote == ADD_ON_BUSINESS AND containskey(tierChangeTrxnDict, parentDocNum + DELIMITER + piItemType) AND numOfTransactions <> coreTrxns){
+				append(resultArr, "triggerAuditTierChangeSoftValidation");//If Audit is present and there has been a Tier Change, render the soft validation message regardless whether Detect is on the quote.
+			}
+		}
+	}
+}
+
+return resultArr;

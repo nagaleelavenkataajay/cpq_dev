@@ -1,0 +1,12 @@
+{
+  "name" : "convert2DArrayToDict",
+  "variableName" : "convert2DArrayToDict",
+  "description" : "String Dictionary =  convert2DArrayToDict (String[][]);\n  param: array\n  return: String Dictionary",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "array",
+    "type" : "String[][]"
+  } ],
+  "attributes" : [ ]
+}

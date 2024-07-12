@@ -1,0 +1,40 @@
+//CSYS-96006
+cipPiDict = dict("string");
+TILDE_DELIMITER = "~";
+
+cipRez = BMQL("SELECT partNumber, coreService, ServPartnerSpecialty, ServPartnerAuthrzns FROM cipSetupFees WHERE partNumber IN $partNumArr");
+
+for entry in cipRez {
+	cipPi = get(entry, "partNumber");
+	cipCore = get(entry, "coreService");
+	servicePartnerSpecialty = get(entry, "ServPartnerSpecialty");
+	servPartnerAuthrzns = get(entry, "ServPartnerAuthrzns");
+
+	if (servicePartnerSpecialty == "" AND servPartnerAuthrzns == ""){
+		put(cipPiDict, cipPi, "true");
+		put(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore", cipCore);
+	}
+	else{
+		//CSYS-96006
+		if ( find(partnerSpecialty, servicePartnerSpecialty) <> -1 OR
+			 find(partnerAuthrzns, servPartnerAuthrzns) <> -1 ){
+
+			//CSYS-96739 If there dictionary key is not yet populated, continue
+			if(NOT(containskey(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore"))){
+				put(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore", cipCore);
+			}
+			//CSYS-96739 If there is already a key in the dictionary, update the key to include Invoice
+			else {
+
+				invoiceCore = split(cipCore, TILDE_DELIMITER);
+				firstCipCore = get(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore");
+				firstCipCore = firstCipCore + invoiceCore[1];
+
+				put(cipPiDict, cipPi + TILDE_DELIMITER + "cipCore", firstCipCore + TILDE_DELIMITER);
+			}
+
+			put(cipPiDict, cipPi, "true");
+		}
+	}
+}
+return cipPiDict;

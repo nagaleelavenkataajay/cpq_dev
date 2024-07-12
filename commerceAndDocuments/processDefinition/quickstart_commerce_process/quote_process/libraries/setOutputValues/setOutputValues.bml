@@ -1,0 +1,2913 @@
+//PROD
+
+
+/* Use this file to create and save your script */
+
+TRUE_STR = "true";
+FALSE_STR = "false";
+DELIMITER = "@.@"; //CSYS-101907(OK. 2-1-2021)
+product = "";
+piItemType = "";
+delim = "|";
+keyDelim = "~";
+prodCatDelim = "^.^";
+productDict = dict("float");
+modelVarDict = dict("string");
+docNumDict = dict("string");
+checkRampPlanDict = dict("string[]");
+productCategoryDict = dict("string");
+modelItemTypeFeeDict = dict("float");
+transVolDict = dict("string");
+productCatDict = dict("string");
+keyArray = string[];
+modelKeyArray = string[];
+transVolArray = integer[];
+modelTransVolArray = integer[];
+rampPlanKeyArray = string[];
+productCategoryArray = string[];
+productCategoryValue = "";
+productCategoryString = "";
+count = 0;
+key = "";
+finalReturnString = "";
+valueWithcurrency = formatascurrency(0, quoteCurrency_quote);
+valueWithCurrency = replace(valueWithcurrency,"￥","¥");
+adjustedValueWithCurrency = "";//CSYS-107953
+ValueWithCurrencyArray = split(valueWithCurrency,"");
+
+for i in ValueWithCurrencyArray{
+	if(i == "0"){
+		adjustedValueWithCurrency  = adjustedValueWithCurrency + "0";
+		break;
+	}
+	else{
+		adjustedValueWithCurrency  = adjustedValueWithCurrency  + i;
+	}
+}
+
+index = 0;
+grpIndex = 0;
+i = 0;
+j = 0;
+z = 0;
+countVol = 0;
+countPC = 0;
+containsTravel = false;
+containsTravelDirectLegacy = false; //CSYS-96786 SN. 09-2019 
+containsTravelDirectLegacyReplacedWithNew = false; //CSYS-96786 SN. 09-2019 
+quoteContainsExpensePayNAArr = string[];//CSYS-95866 (M.J. 6-17-2019)
+quoteContainsExpensePayAPAOrJapanOrEMEAArr = string[];
+quoteHasExpensePayNA = false;
+quoteHasExpensePayAPAOrJapanOrEMEA = false;
+showTerminationOfExpensePay12Months = false;
+showTerminationOfExpensePay6Months = false;
+//CSYS-95657
+custDetailsDict = dict("string");
+//CSYS-99421 SV. 15-06-2020 Start
+showTerminationOfExpensePay2020DateText = false;
+showTerminationOfExpensePay2022DateText = false;
+quoteContainsPayEMEAorNAArr = string[];
+quoteContainsPayAPAorJapanArr = string[];
+quoteContainsPayGlobalorNAArr = string[];
+quoteContainsPay2020DateText = false;
+quoteContainsPay2022DateText = false;
+//CSYS-99421 End
+
+//CSYS-105782 LBN. 03-11-2022 Start
+//699 - Service Administration – Expense; 440562 - Service Administration - Invoice Processing; 706 - Service Administration - Travel & Expense; 8896 - Service Administration – Travel; 6844829 - Service Administration for Request – Standalone; Service Administration - Elite for Expense - 35303; Service Administration - Elite for Travel & Expense - 35323. 
+showExpirationLangforServAdminflag = false;
+terminateServiceAdminPOArr = string[] { "699", "440562", "706", "8896", "6844829", "35303", "35323" };
+// CSYS-105782 End
+
+//IESCNQRCPQ-841 513816 - Concur Financial Connector - 1 Connector; 514728 - Concur Financial Connector - 2 Connector; 514745 - Concur Financial Connector - 3 Connector; 514758 - Concur Financial Connector - 4 Connector; 514769 - Concur Financial Connector - 5 Connector;. 
+showExpirationLangforConFinConnectorflag = false;
+terminateConFinConnectorPOArr = string[] { "513816", "514728", "514745", "514758", "514769" };
+// IESCNQRCPQ-841 LBN 27-06-2023 END
+totalIncrFeeProposalJapan = totalIncrementalFeeForJapanProposal_quote; //IESCNQRCPQ-939 VK
+IncrFeeJapan = 0; //IESCNQRCPQ-939 VK
+//CSYS-106860 LBN. 16-08-2022 Start
+showExpirationLangforConcurFavr = false;
+showExpLangforConcurfavrBasedonAccts = false;
+accountName = account_quote;
+accountNameArr = string[] {"Tyson Foods Inc", "Expeditors International of Washington, Inc.", "Tyson Foods, Inc.", "Kimberly-Clark Services, Inc."};
+//CSYS-106860 End
+
+additionalTermsConditionforServicePartners = false; //IESCNQRCPQ-770
+
+//CSYS-100104 NP. 03-09-2020 Start
+showTerminationOfSunsettingServicesLang= false;
+//CSYS-102987 NT. 06-15-2021 Start
+addLegalLanguageToSunsetConcurDetectFlag= false;
+terminateSunsettingServicePOArr = string[] {
+    "3608456", "3159589", "816400", "2297338", "542579", "2297348", "2273356", "1062", "5036", "3608440", "3159573", "542588"
+};
+//CSYS-100104 End
+//CSYS-101081 NP 2020/11/18
+showConcurTaxAssuranceClause=false;
+
+//CSYS-102711 NP 04/05/2021
+stdToProfMigration=false;
+sTPMParentId="";
+//CSYS-102711 end
+
+// 433 Expense - Standard Base part# (Expense line)
+
+// 432 Expense - Professional Base part# (Expense line)
+// 433 Expense - Professional Setup part# (Expense line)
+
+// 416 Expense - Premium Base part# (Expense line)
+// 417 Expense - Premium Setup part# (Expense line)
+
+// 908 Travel & Expense - Standard first Base part# (Expense line)
+// 909 Travel & Expense - Standard second Base part# (Travel line)
+
+// 936 Travel & Expense - Professional first Base part# (Expense line)
+// 939 Travel & Expense - Professional second Base part# (Travel line)
+// 937 Travel & Expense - Professional first Setup part# (Expense line)
+// 940 Travel & Expense - Professional second Setup part# (Travel line)
+
+// 965 Travel & Expense - Premium first Base part# (Expense line)
+// 968 Travel & Expense - Premium first Base part# (Expense line)
+// 966 Travel & Expense - Premium first Setup part# (Expense line)
+// 969 Travel & Expense - Premium second Setup part# (Travel line)
+
+// 784866 Expense with TripLink - Standard first Base part# (Expense line)
+// 784871 Expense with TripLink - Professional first Base part# (Expense line)
+// 784873 Expense with TripLink - Premium first Base part# (Expense line)
+
+// 2234118 Expense with TripLink - Professional only Setup part# (Expense line)
+
+// 785932 Travel & Expense with TripLink - Standard first Base part# (Expense line)
+// 786857 Travel & Expense with TripLink - Standard second Base part# (Travel line)
+// 788990 Travel & Expense with TripLink - Standard third Base part# (TripLink line)
+
+// 785955 Travel & Expense with TripLink - Professional first Base part# (Expense line)
+// 786864 Travel & Expense with TripLink - Professional second Base part# (Travel line)
+// 789004 Travel & Expense with TripLink - Professional third Base part# (TripLink line)
+// 2234121 Travel & Expense with TripLink - Professional first Setup part# (Expense line)
+// 2234122 Travel & Expense with TripLink - Professional second Setup part# (Travel line)
+
+// 785961 Travel & Expense with TripLink - Premium first Base part# (Expense line)
+// 786867 Travel & Expense with TripLink - Premium second Base part# (Travel line)
+// 789025 Travel & Expense with TripLink - Premium third Base part# (TripLink line)
+
+//CSYS-96786 SN. 09-2019 
+//list of legacy travel direct 
+travelDirectLegacyPOs = string[]{"4814231", "774", "1028", "4810426", "2467548"};
+//list of travel direct new
+travelDirectNewPOs = string[]{"4814282", "4814265", "4814248", "4814299"};
+
+//CSYS-91981 (LN. 6-20-2018) Setting the Payment Terms Variance attribute via this script to remove the default function
+paymentTermsVariance = FALSE_STR;
+
+if(addOnPaymentTerms_quote <> "" AND terms_quote <> "" AND quoteType_quote == "Add-On Business" AND terms_quote <> addOnPaymentTerms_quote){
+	paymentTermsVariance = TRUE_STR;
+}
+
+finalReturnString = finalReturnString + "1" + keyDelim + "paymentTermsVariance_quote" + keyDelim + paymentTermsVariance + delim;
+
+//create a mapping between the Add On items and the line action (adi Smulian, 7/17/12)
+lineFilterHash = string[];
+if(find(add_OnItemsDisplay_quote,"New")<>-1){
+	append(lineFilterHash,"CREATE");
+}if(find(add_OnItemsDisplay_quote,"Existing")<>-1){
+	append(lineFilterHash,"NONE");
+	append(lineFilterHash,"MODIFY");
+}if(find(add_OnItemsDisplay_quote,"Terminated")<>-1){
+	append(lineFilterHash,"TERMINATE");
+}
+//support for legacy quotes (adi Smulian, 7/17/12)
+if(isempty(lineFilterHash)){
+	append(lineFilterHash,"CREATE");
+}
+// print lineFilterHash;
+// Billing Cycle
+Const_monthly_str = "Monthly";
+Const_quarterly_str = "Quarterly";
+Const_month = 1;
+Const_quarter = 3;
+Const_SemiAnnual_str = "Semi-Annually";  //CSYS-90719, Phil S. 02/06/2020 (09/30/2019), Semi-Annually
+Const_year = 12;
+billingCycle = Const_month;
+if (billingCycle_quote == Const_monthly_str){
+	billingCycle = Const_month;
+}
+elif (billingCycle_quote == Const_quarterly_str){
+	billingCycle = Const_quarter;
+}
+//CSYS-90719, Phil S. 02/06/2020 (09/30/2019), Semi-Annually
+elif (billingCycle_quote == Const_SemiAnnual_str){
+	billingCycle = 6;
+}
+//
+else {
+	billingCycle = Const_year;
+}
+/*BM_VT. July 18 2012. Systematized Contracts changes. Get the value if implementation method to be used in outputs */
+ImplementationMethodFoundFlag = true;//Implementation Method is an attribute in configurator. we want to recieve it only from the first model
+strImpMethod = "";
+/*BM_VT End */
+baseTotalOutput = 0.0;
+setUpTotalOutput = 0.0;
+incrTotalOutput = 0.0;
+preProdTotalOutput = 0.0;
+hasPreProdFeeForNewBusiness = false;
+hasPreProdFee = false;
+setupLineExists = false;
+
+//CSYS-81344 part 1: gather cip Setup Fees
+cipPiDict = dict("string");
+cipPoIDDict = dict("string");//CSYS-97045 (LN. 9-9-2019)
+cipAltNameDict = dict("string");//CSYS-92667
+partnerAuthrznsArr = split(accountServicePartnerAuthorizationsTA_quote, ";"); //CSYS-100546 (OK. 3-3-2021)
+cipTravelAuthorized = "";  //CSYS-100546 (OK. 3-3-2021)
+coreValueArray = String[]; //CSYS-100546 (OK. 3-3-2021)
+firstCipCore = ""; //CSYS-100546 (OK. 3-3-2021)
+walkMeAuthorized = ""; //CSYS-104401 (OK. 10-11-2021)
+
+//CSYS-107676 (PG 05/01/2023) - To Query the CIP data table except for Japan																			
+if(implementationPartner_quote <> "" AND _quote_process_serviceAddress_country <> "Japan"){
+	//CSYS-96006
+	//CSYS-97045 LAUREN
+	cipRez = BMQL("SELECT partNumber, poID, coreService, ServPartnerSpecialty, altProductName, ServPartnerAuthrzns FROM cipSetupFees WHERE IncludeJapan = 'NO'");
+	
+	for entry in cipRez {
+		cipPi = get(entry, "partNumber");
+		cipPoID = get(entry, "poID");//CSYS-97045 LAUREN
+		cipCore = get(entry, "coreService");
+		servicePartnerSpecialty = get(entry, "ServPartnerSpecialty");
+		servPartnerAuthrzns = get(entry, "ServPartnerAuthrzns");
+		alternativeProductName = get(entry, "altProductName");//CSYS-92667 (LN. 9-24-2018) New column added to the cipSetupFees table to store an alternative Product Name to render on the Contract
+		
+		//CSYS-100546 (OK. 3-3-2021) Check is that CIP Travel Authorized or not.
+		if (accountServicePartnerTypeCIP_quote == "true" AND (findinarray(partnerAuthrznsArr, "Travel Professional") <> -1 OR findinarray(partnerAuthrznsArr, "Travel Standard") <> -1)) {			
+			cipTravelAuthorized = "true";
+		}
+		
+		//CSYS-104401 (OK. 10-11-2021) check is that cip WalkMe Authorized or not
+		if (accountServicePartnerTypeCIP_quote == "true" AND (findinarray(partnerAuthrznsArr, "User Assistant by WalkMe") <> -1)) {		
+			walkMeAuthorized = "true";
+		}
+
+		if(cipPi <> ""){
+			//if (servicePartnerSpecialty == "" AND servPartnerAuthrzns == ""){  //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from cip logic
+			if (servPartnerAuthrzns == ""){			    
+			    put(cipPiDict, cipPi, "true");
+			    put(cipPiDict, cipPi + keyDelim + "cipCore", cipCore);
+			}
+			else{
+			    //CSYS-96006
+			    //if ( find(accountServicePartnerSpecialty_quote, servicePartnerSpecialty) <> -1 OR find(accountServicePartnerAuthorizationsTA_quote, servPartnerAuthrzns) <> -1 ){  //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from cip logic and add condition to check is that Travel authorized 
+				//CSYS-104401 (OK. 10-11-2021) Add WalkMe logic in below condition
+			    if (find(accountServicePartnerAuthorizationsTA_quote, servPartnerAuthrzns) <> -1 OR (cipTravelAuthorized == "true" AND (find(servPartnerAuthrzns, "~Travel Professional~") <> -1 OR find(servPartnerAuthrzns, "~Travel Standard~") <> -1)) OR (walkMeAuthorized == "true" AND (find(servPartnerAuthrzns, "~User Assistant by WalkMe~") <> -1))){  
+			        //CSYS-96739 If there dictionary key is not yet populated, continue
+			        if(NOT(containskey(cipPiDict, cipPi + keyDelim + "cipCore"))){
+			            put(cipPiDict, cipPi + keyDelim + "cipCore", cipCore);
+			        } 
+			        //CSYS-96739 If there is already a key in the dictionary, update the key to include Invoice
+			        else {
+						
+						if (cipCore == "~Invoice Processing~") { //CSYS-100546 (OK. 3-3-2021) Adding condition for invoice core because we need else condition to support the other core values
+							invoiceCore = split(cipCore, keyDelim);
+							firstCipCore = get(cipPiDict, cipPi + keyDelim + "cipCore");
+							firstCipCore = firstCipCore + invoiceCore[1];
+						}
+						else { //CSYS-100546 (OK. 3-3-2021)
+							coreArr = split(cipCore, keyDelim);
+							firstCipCore = get(cipPiDict, cipPi + keyDelim + "cipCore");
+							arraySize = sizeofarray(coreArr);
+							if (arraySize > 0) {
+								for rec in coreArr{
+									index = findinarray(coreArr, rec);
+									if (coreArr[index] <> coreArr[0] AND coreArr[index] <> coreArr[arraySize - 1]) {
+										append (coreValueArray, rec);
+									}														
+								}
+								cipCoreString = join(coreValueArray, "~");
+								firstCipCore = firstCipCore + cipCoreString;					
+							}
+						}
+			            put(cipPiDict, cipPi + keyDelim + "cipCore", firstCipCore + keyDelim);
+			        }
+
+			        put(cipPiDict, cipPi, "true");		      
+			    }
+			}
+		}
+		elif(cipPoID <> ""){//CSYS-97045 (LN. 9-9-2019)
+			put(cipPoIDDict, cipPoID, "true");
+			put(cipPoIDDict, cipPoID + keyDelim + "cipCore", cipCore);
+		}
+
+		//CSYS-92667 (LN. 9-24-2018) If an alternate Product Name has been called out in the table, store that information at the PI
+		if(alternativeProductName <> ""){
+
+			if(cipCore <> ""){//First, assess those products that are Core Specific
+				coreArr = split(cipCore, "~");//Convert the delimited string into an array
+				remove(coreArr, 0);//remove the last blank index
+
+				for core in coreArr {
+					//Only populate the dictionary for non-Invoice Core OR when Invoice Core & Service Partner Specialty is a match
+					//if(core <> "Invoice Processing" OR ( find(accountServicePartnerSpecialty_quote, get(entry, "ServPartnerSpecialty")) <> -1 OR find(accountServicePartnerAuthorizationsTA_quote, get(entry, "ServPartnerAuthrzns")) <> -1 )){  //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from CIP logic
+					if(core <> "Invoice Processing" OR (find(accountServicePartnerAuthorizationsTA_quote, get(entry, "ServPartnerAuthrzns")) <> -1)){
+						put(cipAltNameDict, cipPi + keyDelim + "coreSpecificAltProductName" + keyDelim + core, alternativeProductName);
+					}
+				}
+			}
+			else {
+				//If the product is non-Core specific, populate the dictionary at a different key
+				put(cipAltNameDict, cipPi + keyDelim + "nonCoreAltProductName", alternativeProductName);
+			}
+		}
+	}
+}
+
+//CSYS-107676 (PG 05/01/2023) - To Query the CIP data table for Japan
+if(implementationPartner_quote <> "" AND _quote_process_serviceAddress_country == "Japan"){
+	//CSYS-96006
+	//CSYS-97045 LAUREN
+	
+	//IESCNQRCPQ-430 (OK. 3-20-2023) Start: Add new if condition to support the WalkMe SKU CIP. When cIPForWalkMeONLY_quote = true only walkMe SKU will be considered as CIP. cIPForWalkMeONLY_quote <> true means normal query will be used
+	cipRez = recordset();
+	if (cIPForWalkMeONLY_quote == true) {
+		cipRez = BMQL("SELECT partNumber, poID, coreService, ServPartnerSpecialty, altProductName, ServPartnerAuthrzns FROM cipSetupFees WHERE JapanCIPSpecificSKU = 'YES'");
+	}
+	else {
+		cipRez = BMQL("SELECT partNumber, poID, coreService, ServPartnerSpecialty, altProductName, ServPartnerAuthrzns FROM cipSetupFees WHERE IncludeJapan = 'YES'");
+	}
+	//IESCNQRCPQ-430 - End
+	
+	for entry in cipRez {
+		cipPi = get(entry, "partNumber");
+		cipPoID = get(entry, "poID");//CSYS-97045 LAUREN
+		cipCore = get(entry, "coreService");
+		servicePartnerSpecialty = get(entry, "ServPartnerSpecialty");
+		servPartnerAuthrzns = get(entry, "ServPartnerAuthrzns");
+		alternativeProductName = get(entry, "altProductName");//CSYS-92667 (LN. 9-24-2018) New column added to the cipSetupFees table to store an alternative Product Name to render on the Contract
+		
+		//CSYS-100546 (OK. 3-3-2021) Check is that CIP Travel Authorized or not.
+		if (accountServicePartnerTypeCIP_quote == "true" AND (findinarray(partnerAuthrznsArr, "Travel Professional") <> -1 OR findinarray(partnerAuthrznsArr, "Travel Standard") <> -1)) {			
+			cipTravelAuthorized = "true";
+		}
+		
+		//CSYS-104401 (OK. 10-11-2021) check is that cip WalkMe Authorized or not
+		if (accountServicePartnerTypeCIP_quote == "true" AND (findinarray(partnerAuthrznsArr, "User Assistant by WalkMe") <> -1)) {		
+			walkMeAuthorized = "true";
+		}
+
+		if(cipPi <> ""){
+			//if (servicePartnerSpecialty == "" AND servPartnerAuthrzns == ""){  //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from cip logic
+			if (servPartnerAuthrzns == ""){			    
+			    put(cipPiDict, cipPi, "true");
+			    put(cipPiDict, cipPi + keyDelim + "cipCore", cipCore);
+			}
+			else{
+			    //CSYS-96006
+			    //if ( find(accountServicePartnerSpecialty_quote, servicePartnerSpecialty) <> -1 OR find(accountServicePartnerAuthorizationsTA_quote, servPartnerAuthrzns) <> -1 ){  //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from cip logic and add condition to check is that Travel authorized 
+				//CSYS-104401 (OK. 10-11-2021) Add WalkMe logic in below condition
+			    if (find(accountServicePartnerAuthorizationsTA_quote, servPartnerAuthrzns) <> -1 OR (cipTravelAuthorized == "true" AND (find(servPartnerAuthrzns, "~Travel Professional~") <> -1 OR find(servPartnerAuthrzns, "~Travel Standard~") <> -1)) OR (walkMeAuthorized == "true" AND (find(servPartnerAuthrzns, "~User Assistant by WalkMe~") <> -1))){  
+			        //CSYS-96739 If there dictionary key is not yet populated, continue
+			        if(NOT(containskey(cipPiDict, cipPi + keyDelim + "cipCore"))){
+			            put(cipPiDict, cipPi + keyDelim + "cipCore", cipCore);
+			        } 
+			        //CSYS-96739 If there is already a key in the dictionary, update the key to include Invoice
+			        else {
+						
+						if (cipCore == "~Invoice Processing~") { //CSYS-100546 (OK. 3-3-2021) Adding condition for invoice core because we need else condition to support the other core values
+							invoiceCore = split(cipCore, keyDelim);
+							firstCipCore = get(cipPiDict, cipPi + keyDelim + "cipCore");
+							firstCipCore = firstCipCore + invoiceCore[1];
+						}
+						else { //CSYS-100546 (OK. 3-3-2021)
+							coreArr = split(cipCore, keyDelim);
+							firstCipCore = get(cipPiDict, cipPi + keyDelim + "cipCore");
+							arraySize = sizeofarray(coreArr);
+							if (arraySize > 0) {
+								for rec in coreArr{
+									index = findinarray(coreArr, rec);
+									if (coreArr[index] <> coreArr[0] AND coreArr[index] <> coreArr[arraySize - 1]) {
+										append (coreValueArray, rec);
+									}														
+								}
+								cipCoreString = join(coreValueArray, "~");
+								firstCipCore = firstCipCore + cipCoreString;					
+							}
+						}
+			            put(cipPiDict, cipPi + keyDelim + "cipCore", firstCipCore + keyDelim);
+			        }
+
+			        put(cipPiDict, cipPi, "true");		      
+			    }
+			}
+		}
+		elif(cipPoID <> ""){//CSYS-97045 (LN. 9-9-2019)
+			put(cipPoIDDict, cipPoID, "true");
+			put(cipPoIDDict, cipPoID + keyDelim + "cipCore", cipCore);
+		}
+
+		//CSYS-92667 (LN. 9-24-2018) If an alternate Product Name has been called out in the table, store that information at the PI
+		if(alternativeProductName <> ""){
+
+			if(cipCore <> ""){//First, assess those products that are Core Specific
+				coreArr = split(cipCore, "~");//Convert the delimited string into an array
+				remove(coreArr, 0);//remove the last blank index
+
+				for core in coreArr {
+					//Only populate the dictionary for non-Invoice Core OR when Invoice Core & Service Partner Specialty is a match
+					//if(core <> "Invoice Processing" OR ( find(accountServicePartnerSpecialty_quote, get(entry, "ServPartnerSpecialty")) <> -1 OR find(accountServicePartnerAuthorizationsTA_quote, get(entry, "ServPartnerAuthrzns")) <> -1 )){  //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from CIP logic
+					if(core <> "Invoice Processing" OR (find(accountServicePartnerAuthorizationsTA_quote, get(entry, "ServPartnerAuthrzns")) <> -1)){
+						put(cipAltNameDict, cipPi + keyDelim + "coreSpecificAltProductName" + keyDelim + core, alternativeProductName);
+					}
+				}
+			}
+			else {
+				//If the product is non-Core specific, populate the dictionary at a different key
+				put(cipAltNameDict, cipPi + keyDelim + "nonCoreAltProductName", alternativeProductName);
+			}
+		}
+	}
+}
+																 
+//CSYS-97887, Phil S., unit/Quantity translation for order form
+//load translation table into JSON
+//put an IF statement here? if it is an English order form, skip it for better performance?
+trFR = json("{}");  //French, JSON
+trES = json("{}");  //Spanish, JSON
+trDE = json("{}");  //German, JSON
+trEN = json("{}");  //English, JSON
+trJP = json("{}");  //Japanese, JSON CSYS-107251
+												
+trRS = BMQL("SELECT english, german, french, spanish, japanese FROM translation where module = 'OF'");
+for r in trRS {
+	jsonput(trFR,get(r,"english"),get(r,"french"));
+	jsonput(trES,get(r,"english"),get(r,"spanish"));
+	jsonput(trDE,get(r,"english"),get(r,"german"));
+	jsonput(trEN,get(r,"english"),get(r,"english"));  //pre CSYS-97887
+	jsonput(trJP,get(r,"english"),get(r,"japanese")); //CSYS-107251
+																								
+}
+//
+
+ist4cArray = string[]; //CSYS-106472 SV. 19-07-2022 Created new array
+
+for line in line_process {
+	modelVarName = line._model_variable_name;
+	documentNumber = line._document_number;
+	action = line.assetAction_line;
+	parentDocNumber = line._parent_doc_number;
+	product = line.poName_line;
+	productCategory = line.poCategory_line;
+	piItemType = line.piItemType_line;
+	isPartOfPck = line.isPartOfPackage_line;
+	extNetPrice = line.extendedNetPrice_line;
+	PO = line.pO_line;
+	transVolume = line.numCommittedTransaction_line;
+	overideRampPlan = line.overrideDefaultRampPlan_line;
+	pi = line._part_number;
+	lineCoreOffering = line.coreOffering_line;
+	extNetPriceNonUnified = line.extNetPriceNonUnified_line;
+	listPrice = line.listPrice_line;
+	poID = line.poId_line;
+	//CSYS-95657
+	custDetails = line.customerName_line;
+	//CSYS-95866 (M.J. 6-17-2019) We are assessing if Expense NA is present on the Quote
+	if( (poID == "471") AND action <> "TERMINATE"){
+		//If the Current PO ID doesn't exist in the 'quoteContainsExpensePayNAArr', then add it to the array
+		if(findinarray(quoteContainsExpensePayNAArr, poID) == -1){
+			append(quoteContainsExpensePayNAArr, poID);
+		}
+	}
+	//CSYS-95866 (M.J. 6-17-2019) We are assessing if Expense APA or Japan or EMEA is present on the Quote
+	if( (poID == "1035" OR poID == "1268803" OR poID == "461") AND action <> "TERMINATE"){
+		//If the Current PO ID doesn't exist in the 'quoteContainsExpensePayAPAOrJapanOrEMEAArr', then add it to the array
+		if(findinarray(quoteContainsExpensePayAPAOrJapanOrEMEAArr, poID) == -1){
+			append(quoteContainsExpensePayAPAOrJapanOrEMEAArr, poID);
+		}
+	}
+	//CSYS-99421 SV. 17-06-2020 Start
+	if (((poID == "471" OR poID == "461")) AND action <> "TERMINATE"){
+	    if (findinarray(quoteContainsPayEMEAorNAArr, poID) == -1){
+	        append(quoteContainsPayEMEAorNAArr, poID);
+	    }	
+	}
+	if ((poID == "1035" OR poID == "1268803") AND action <> "TERMINATE"){
+	    if (findinarray(quoteContainsPayAPAorJapanArr, poID) == -1) {
+	        append(quoteContainsPayAPAorJapanArr, poID);
+	    }
+	}
+	if ((poID == "2653360" OR poID == "471") AND action <> "TERMINATE"){
+	    if (findinarray(quoteContainsPayGlobalorNAArr, poID) == -1){
+	        append(quoteContainsPayGlobalorNAArr, poID);
+	    }
+	}
+	//CSYS-99421 End
+	//CSYS-105782 LBN. 03-11-2022 Start
+	if (quoteType_quote =="Add-On Business") {
+		if (findinarray(terminateServiceAdminPOArr, poID) <> -1 AND action <> "TERMINATE") {
+			showExpirationLangforServAdminflag = true;
+		}
+	}
+	//CSYS-105782 End
+	
+	//IESCNQRCPQ-841 LBN 27-06-2023 Start
+	if (quoteType_quote =="Add-On Business" ) {
+		if (findinarray(terminateConFinConnectorPOArr, poID) <> -1 AND action <> "TERMINATE") {
+			showExpirationLangforConFinConnectorflag = true;
+		}
+	}//end
+	
+	//CSYS-106860 LBN. 16-08-2022 Start
+	if(quoteType_quote == "Add-On Business" OR quoteType_quote == "New Business"){
+		if(poID == "4722310" AND action <> "TERMINATE" AND NOT(findinarray(accountNameArr, accountName) <> -1)){
+			showExpirationLangforConcurFavr = true;
+		}
+	
+		if(findinarray(accountNameArr, accountName) <> -1 AND poID == "4722310" AND action <> "TERMINATE"){
+			showExpLangforConcurfavrbasedonAccts = true;
+		}
+	}
+	//CSYS-106860 End
+	
+	//IESCNQRCPQ-770 LBN. 27-07-2023 Start
+	if(quoteType_quote == "Add-On Business" AND (poID == "10801805" OR poID == "9254073")){
+		additionalTermsConditionforServicePartners = true;
+	}
+	//End
+	
+	//CSYS-100104 NP. 03-09-2020 Start
+	if (findinarray(terminateSunsettingServicePOArr, poID) <> -1 AND action <> "TERMINATE") {
+            showTerminationOfSunsettingServicesLang= true;
+	}
+	//CSYS-100104 End
+	
+	//CSYS-101081 NP. 11-18-2020 Start
+	if (poID == "7218533" AND action == "CREATE") {
+            showConcurTaxAssuranceClause= true;
+	}
+	//CSYS-101081 End
+	
+	//CSYS-102987 NT. 06-15-2021 Start
+	if (quoteType_quote=="Add-On Business" AND (poID == "7507717" OR poID == "3780125") AND action <> "TERMINATE") {
+            addLegalLanguageToSunsetConcurDetectFlag= true;
+	}
+	//CSYS-102987 End
+	
+	//CSYS-102711 NP 04/05/2021
+		if(billingCycle_quote <> ""){
+			if(PoId == "1100" AND piItemType == "Setup" AND OwnerBU_quote == "SMB BU" AND (billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly")){ //CSYS-102511 NP 11-15-2021
+				stdToProfMigration = true;
+				sTPMParentId = line._parent_doc_number;					
+            }
+        }
+     //CSYS-102711 end
+
+	if (piItemType == "Pre Prod" AND ownerBU_quote <> "SMB BU"){
+		hasPreProdFeeForNewBusiness = true;
+	}
+
+	if (piItemType == "Pre Prod" AND action <> "TERMINATE"){
+		hasPreProdFee = true;
+	}
+
+	/*BM_VT. July 18 2012. Systematized Contracts changes. Get the value if implementation method to be used in outputs */
+	//if(line.partNumber_line == ""){//if this is a model line number
+	if (productCategory == "Core Service" AND action <> "TERMINATE"){ //rather than checking models, we need to check the actual core products so that we can ignore terminated cores. fix for CSYS-42777 as part of SC Phase 5 (ATG)
+		//if(ImplementationMethodFoundFlag){//retrieve Implementation Method attribute value from the first model in the configurator
+			strImpMethod = getconfigattrvalue(parentDocNumber, "implementationMethods_concur");
+			//if(strImpMethod <> ""){
+			//ImplementationMethodFoundFlag = false;
+			//}
+		//}
+	}
+	/*BM_VT End */
+
+	if(action == ""){action = "CREATE";}
+	//Terminated Line fees from Asset String
+	if(quoteType_quote=="Add-On Business" and action=="TERMINATE"){
+		assetval = line.assetString_line;
+		assetsArray = split(assetval, "$$");
+		terminatedbasefee = 0.0;
+		terminatedincrementalfee = 0.0;
+		if(isnumber(assetsArray[8])){
+			terminatedbasefee = atof(assetsArray[8]) * billingCycle;
+		}
+		if(isnumber(assetsArray[9])){
+			terminatedincrementalfee = atof(assetsArray[9]);
+		}
+		finalReturnString = finalReturnString + documentNumber + keyDelim + "outputBaseFeeTerminated_line" + keyDelim + string(terminatedbasefee) + delim;
+		finalReturnString = finalReturnString + documentNumber + keyDelim + "outputIncrementalTransactionFeeTerminated_line" + keyDelim + string(terminatedincrementalfee) + delim;
+	}
+	//ensure only relevant lines are calculated and printed for add on quotes (adi Smulian, 7/17/12)
+	if(findinarray(lineFilterHash,action) == -1){
+		finalReturnString = finalReturnString + documentNumber + keyDelim + "printLine_line" + keyDelim + "false" + delim;
+		//continue; //How about we don't skip the rest of the loop? It's pretty important (ATG)
+	}
+	else{finalReturnString = finalReturnString + documentNumber + keyDelim + "printLine_line" + keyDelim + TRUE_STR + delim;} //added the else (ATG 5-19-15)
+	if(action == "TERMINATE") {
+		if(piItemType == "Base") {
+			baseTotalOutput = baseTotalOutput +  terminatedbasefee;
+			incrTotalOutput = incrTotalOutput + terminatedincrementalfee;
+		} elif(piItemType == "Setup") {
+			setUpTotalOutput = setUpTotalOutput + extNetPrice;
+		} /*elif(piItemType == "Incremental") {
+			incrTotalOutput = incrTotalOutput + terminatedincrementalfee;
+		} */elif(piItemType == "Pre Prod") {
+			preProdTotalOutput = preProdTotalOutput + extNetPrice;
+		}
+	}
+
+	//CSYS-98986, rollback FAVR (poID="4*7*2*2*3*1*0"), Phil S, 05/14/2020
+	//if (line.rampFlag_line == "Y" AND piItemType == "Base" AND poID <> "4*7*2*2*3*1*0"){//CSYS-94709 (LN. 1-25-3019) Exclude Concur FAVR from being multiplied by the Billing Cycle
+	//CSYS-108030 - multiply the monthly quote amount by the billing cycle when generating the contracts for ramp flag N - Updated the OR condition
+	if ((line.rampFlag_line == "Y" AND piItemType == "Base")  OR (pi =="514729" OR pi =="514347" OR pi =="514759" OR pi =="514748" OR pi =="514770" or pi =="6428" OR pi == "845" OR pi == "36999" OR pi == "437668" OR pi == "514477" OR pi == "5983964" OR pi == "9254074" OR pi == "9469018" OR pi=="9451098")){// Added or condition -CSYS-105386 - IESCNQRCPQ-164 - Remove config service PI
+		netPriceEach = line.extendedNetPrice_line * billingCycle;
+	}
+	else {
+		netPriceEach = extNetPrice;
+	}
+	if(documentNumber <> "" AND parentDocNumber == "") {     // This condition seperates new models
+		put(modelVarDict, documentNumber, modelVarName);
+	}
+	else {
+		//CSYS-96786 SN. 09-2019 
+		if (findinarray(travelDirectLegacyPOs, poID) <> -1 AND action == "TERMINATE"){
+			containsTravelDirectLegacy = true;
+		}
+		if(productCategory == "Core Service" AND (find(lower(product), "travel") <> -1) AND action <> "TERMINATE") {//CSYS-90178 (LN 5-22-2018, updated to ignore TERMINATE)
+			containsTravel = true;
+		}
+		if(containskey(modelVarDict, parentDocNumber)){
+			modelVarName = get(modelVarDict, parentDocNumber);
+		}
+		checkRampPlanArray = string[];
+		CheckRampPlanValue = documentNumber + keyDelim + piItemType + keyDelim + overideRampPlan;
+		if(containskey(checkRampPlanDict, parentDocNumber + keyDelim + product)) {
+				checkRampPlanArray = get(checkRampPlanDict, parentDocNumber + keyDelim + product);
+				append(checkRampPlanArray, CheckRampPlanValue);
+		}
+		else {
+			rampPlanKeyArray[j] = parentDocNumber + keyDelim + product;
+			j = j + 1;
+			append(checkRampPlanArray, CheckRampPlanValue);
+		}
+		put(checkRampPlanDict, parentDocNumber + keyDelim + product, checkRampPlanArray);
+
+		prodKey = "";
+		prodCat = "";
+		prodSplitArray = string[];
+		productCategoryValue = "";
+
+		if (piItemType == "Base" OR (piItemType == "Setup" AND productCategory == "Professional Service")){
+			prodKey = productCategory + prodCatDelim + "001" + prodCatDelim + parentDocNumber;
+
+			if (containskey(productCatDict, prodKey)){
+				prodCat = get(productCatDict, prodKey);
+				prodSplitArray = split(prodCat, prodCatDelim);
+				if (product <> prodSplitArray[3]){
+					prodCatIndex = atoi(prodSplitArray[1]);
+					prodCatIndex = prodCatIndex + 1;
+					if (prodCatIndex < 9){
+						productCategoryValue = productCategory + prodCatDelim + "00" + string(prodCatIndex) + prodCatDelim + parentDocNumber + prodCatDelim + product;
+					}
+					else {
+						productCategoryValue = productCategory + prodCatDelim + "0" + string(prodCatIndex) + prodCatDelim + parentDocNumber + prodCatDelim + product;
+					}
+					put (productCatDict, prodKey, productCategoryValue);
+				}
+				else {
+					productCategoryValue = "";
+				}
+			}
+			else {
+				productCategoryValue = productCategory + prodCatDelim + "001" + prodCatDelim + parentDocNumber + prodCatDelim + product;
+				put (productCatDict, prodKey, productCategoryValue);
+			}
+		}
+		//trimming the parent document number.
+		if (productCategoryValue <> ""){
+			prodSplitArray = split(productCategoryValue, prodCatDelim);
+			productCategoryString = prodSplitArray[0] + prodCatDelim + prodSplitArray[1] + prodCatDelim + prodSplitArray[3];
+		}
+		else {
+			productCategoryString = "";
+		}
+		if(isPartOfPck) {
+			key = modelVarName + keyDelim + parentDocNumber + keyDelim + product + keyDelim + piItemType;
+			rollingTotal = 0.0;
+			netPriceTotal = 0.0;
+			rollingModelTotal = 0.0;
+			rollingProduct = "";
+			if(containskey(modelItemTypeFeeDict, modelVarName + keyDelim + parentDocNumber + keyDelim + piItemType)){
+				rollingModelTotal = get(modelItemTypeFeeDict, modelVarName + keyDelim + parentDocNumber + keyDelim + piItemType);
+			}
+			put(modelItemTypeFeeDict, modelVarName + keyDelim + parentDocNumber + keyDelim + piItemType, rollingModelTotal + netPriceEach);
+			if(piItemType == "Setup"){
+				print "Net Price Each for Setup= " + string(netPriceEach) + " Document Number= " + documentNumber;
+			}
+			/* if(find(piItemType,"Base") > -1){
+				put(transVolDict, documentNumber, string(transVolume));
+				modelTransVolArray[countVol] = transVolume;
+				countVol = countVol + 1;
+				i = i + 1;
+			}*/
+			put(transVolDict, documentNumber, string(transVolume));
+			if(containskey(productDict,key)) {
+				rollingTotal = get(productDict,key);
+			}
+			else {
+				if(findinarray(keyArray, key + keyDelim + documentNumber) == -1) {
+					keyArray[count] = key + keyDelim + documentNumber + keyDelim + productCategoryString;
+								
+				 
+			   
+						  
+								   
+								 
+						   
+					modelKeyArray[z] = key;
+				}
+				z = z + 1;
+				count = count + 1;
+			}
+			netPriceEachConverted = util.convertToNonSciNotation(string(netPriceEach), "float", 2);
+			netPriceTotal = rollingTotal + netPriceEach;
+			put(productDict, key, netPriceTotal);
+			if(containskey(docNumDict, parentDocNumber + keyDelim + product)) {
+				if(piItemType <> "Base"){
+					documentNumber = get(docNumDict, parentDocNumber + keyDelim + product);
+				}
+
+			}
+			put(docNumDict, parentDocNumber + keyDelim + product, documentNumber);
+		}
+		else {
+			key = modelVarName + keyDelim + parentDocNumber + keyDelim + product + keyDelim + piItemType;
+						 
+						
+					  
+						   
+						 
+				   
+				 
+					  
+					
+			rollingTotal = 0.0;
+			netPriceTotal = 0.0;
+			rollingProduct = "";
+			/* if(find(piItemType,"Base") > -1){
+				put(transVolDict, documentNumber, string(transVolume));
+				transVolArray[i] = transVolume;
+				i = i + 1;
+			}*/
+			put(transVolDict, documentNumber, string(transVolume));
+			if(containskey(productDict,key)) {
+				rollingTotal = get(productDict,key);
+			}
+			else {
+				if(findinarray(keyArray, key + keyDelim + documentNumber) == -1) {
+					keyArray[count] = key + keyDelim + documentNumber + keyDelim + productCategoryString;
+								
+				 
+			   
+						  
+								 
+						   
+				}
+				count = count + 1;
+			}
+
+			netPriceEachConverted = util.convertToNonSciNotation(string(netPriceEach), "float", 2);
+			netPriceTotal = rollingTotal + netPriceEach;
+			put(productDict, key, netPriceTotal);
+			if(containskey(docNumDict, parentDocNumber + keyDelim + product)) {
+				documentNumber = get(docNumDict, parentDocNumber + keyDelim + product);
+			}
+			if(find(piItemType,"Base") > -1){ //Added to fix 108350
+				put(docNumDict, parentDocNumber + keyDelim + product, documentNumber);
+			}
+		}
+
+		//CSYS-81344 part 2 (KA. 6-20-2017): gather core and extended/professional service setup fee info for CIP quotes:
+		if(implementationPartner_quote <> "" AND action <> "TERMINATE"){
+			if(piItemType == "Setup"){
+				extServ_NonCip_GroupedSetupTotal = util.getFloatAttribute(productDict, parentDocNumber, keyDelim, "extServ_NonCip_GroupedSetupTotal");
+				core_NonCIP_GroupedSetupTotal = util.getFloatAttribute(productDict, parentDocNumber, keyDelim, "core_NonCIP_GroupedSetupTotal");
+
+				//Core services:
+				if(productCategory == "Core Service"){
+
+					//check for non-primary grouped core setup fees that cannot be implemented by a CIP (ex: the 2nd setup fee of T&E Pro):
+					if(isPartOfPck AND listPrice == 0.0 AND NOT containskey(cipPiDict, pi)){
+						core_NonCIP_GroupedSetupTotal = core_NonCIP_GroupedSetupTotal + extNetPriceNonUnified;
+						utilResultFlag = util.putFloatAttribute(productDict, parentDocNumber, keyDelim, "core_NonCIP_GroupedSetupTotal", core_NonCIP_GroupedSetupTotal);
+					}
+
+					if(containskey(cipPiDict, pi)){ //if we're dealing with a CIP core
+						utilResultString = util.putStringAttribute(docNumDict, parentDocNumber, keyDelim, "coreHasCipSetup", TRUE_STR);
+					}
+
+				}
+
+				//Extended and Pro Services:
+				if(productCategory <> "Core Service"){
+					//if(isPartOfPck){
+
+						//Check if the ability for a CIP to implement the product is core dependent (Ex: Concur Request Add-On, Single Sign On):
+						//CSYS-97045 LAUREN
+						cipCore = "";
+						if(containskey(cipPiDict, pi) AND containskey(cipPiDict, pi + keyDelim + "cipCore")){ //CSYS-97045 LAUREN, //CSYS-97099 SN. 09-2019 add + keyDelim + inbetween 
+							cipCore = get(cipPiDict, pi + keyDelim + "cipCore"); //CSYS-97099 SN. 09-2019 add + keyDelim + inbetween 
+						}
+
+						//If the product is core dependent, see if the product belongs to a CIP-implementable core:
+						if(cipCore <> "" AND NOT isnull(cipCore) AND find(cipCore, keyDelim + lineCoreOffering + keyDelim) <> -1){
+
+							if(productCategory == "Extended Service" AND isPartOfPck){
+								utilResultString = util.putStringAttribute(docNumDict, parentDocNumber, keyDelim, "extServ_Cip_SetupGroupedToCore", TRUE_STR);
+							}
+
+							//CSYS-82973 LN. 6/28/17 (POID mapping):
+							utilResultString = util.putStringAttribute(docNumDict, poID, keyDelim, "cipPoIdMapping", TRUE_STR);
+						}
+
+						//Not core dependent:
+						elif( (cipCore == "" OR isnull(cipCore)) AND containskey(cipPiDict, pi) ){ //CSYS-97045 LAUREN
+
+							if(productCategory == "Extended Service" AND isPartOfPck){
+								//mark this core as having a grouped Extended Service cip setup fee:
+								utilResultString = util.putStringAttribute(docNumDict, parentDocNumber, keyDelim, "extServ_Cip_SetupGroupedToCore", TRUE_STR);
+							}
+
+							//CSYS-82973 LN. 6/28/17 (POID mapping):
+							utilResultString = util.putStringAttribute(docNumDict, poID, keyDelim, "cipPoIdMapping", TRUE_STR);
+						}
+
+						//Non-CIP Extended services:
+						else{
+							//Mark this core as having a grouped Extended Service setup fee of which cannot be implemented by a CIP:
+							if(productCategory == "Extended Service" AND isPartOfPck){
+								utilResultString = util.putStringAttribute(docNumDict, parentDocNumber, keyDelim, "extServ_NonCip_SetupGroupedToCore", 	TRUE_STR);
+
+								//Accrue to the core's total of grouped Extended Service setup fees of which cannot be implemented by a CIP:
+								extServ_NonCip_GroupedSetupTotal = extServ_NonCip_GroupedSetupTotal + extNetPriceNonUnified;
+
+								utilResultFlag = util.putFloatAttribute(productDict, parentDocNumber, keyDelim, "extServ_NonCip_GroupedSetupTotal", extServ_NonCip_GroupedSetupTotal);
+							}
+						}
+					//}
+				}
+			}
+			//CSYS-97045 (LN. 9-9-2019) Ensure those CIP Products without Setup Fee's render the correct bundled langauage
+			elif(piItemType == "Base" AND containskey(cipPoIDDict, poID)){
+				utilResultString = util.putStringAttribute(docNumDict, poID, keyDelim, "cipPoIdMapping", TRUE_STR);
+			}
+		}
+
+		//CSYS-84119 (KA. 7-27-2017):
+		if(piItemType == "Setup" AND action <> "TERMINATE"){
+			setupLineExists = true;
+			//CSYS-95657
+			if ( productCategory == "Core Service" AND custDetails <> "" AND NOT(containskey(custDetailsDict, parentDocNumber)) ){
+				put(custDetailsDict, parentDocNumber, custDetails);
+			}
+		}
+		//CSYS-97887, Phil S.
+		finalReturnString = finalReturnString + documentNumber + keyDelim + "partUOMFrench_line" + keyDelim + jsonget(trFR,line._part_units) + delim;
+		finalReturnString = finalReturnString + documentNumber + keyDelim + "partUOMGerman_line" + keyDelim + jsonget(trDE,line._part_units) + delim;
+		finalReturnString = finalReturnString + documentNumber + keyDelim + "partUOMSpanish_line" + keyDelim + jsonget(trES,line._part_units) + delim;
+		finalReturnString = finalReturnString + documentNumber + keyDelim + "partUOMEnglish_line" + keyDelim + jsonget(trEN,line._part_units) + delim;
+		//CSYS-99323, Phil S, 05/11/2020
+		outputProposalHide = "";
+		numberCategory ="";
+		if (1==1){
+			
+			if(piItemType == "Base" OR (piItemType == "Setup" AND productCategory == "Professional Service")){
+				numberCategory ="001";
+			}
+			if (numberCategory =="001"  and (line.poCategory_line == "Core Service" and line.rollUp_line == "N")) 
+			{
+				outputProposalHide = "TRUE";
+			}
+		}
+		finalReturnString = finalReturnString + line._document_number + keyDelim + "outputProposalHide_line" + keyDelim + outputProposalHide + delim;
+		// end CSYS-99323
+	}
+	//CSYS-106472 SV. 19-07-2022 Start
+	ist4c = line.ist4c_line;
+	fullT4C = accountLevelT4C_quote;
+	poCategory = line.poCategory_line;
+	itemType = line.piItemType_line;
+	if(ist4C == true AND itemType == "Base" AND ((fullT4C <> "" AND NOT(isnull(fullT4C))) OR ((FullT4C == "" OR isnull(fullT4C)) AND poCategory == "Extended Service"))){
+		append(ist4cArray, pi);
+	}
+	//CSYS-106472 End
+}
+
+//CSYS-95866 (M.J. 6-17-2019)
+if(sizeofarray(quoteContainsExpensePayNAArr) > 0){
+	quoteHasExpensePayNA = true;
+}
+if(sizeofarray(quoteContainsExpensePayAPAOrJapanOrEMEAArr) > 0){
+	quoteHasExpensePayAPAOrJapanOrEMEA = true;
+}
+
+if(quoteHasExpensePayNA == true){
+	if (quoteHasExpensePayAPAOrJapanOrEMEA == false){
+		showTerminationOfExpensePay6Months = true;
+	}
+}
+
+if(quoteHasExpensePayAPAOrJapanOrEMEA == true){
+	showTerminationOfExpensePay12Months = true;
+}
+
+finalReturnString = finalReturnString + "1" + keyDelim + "showTerminationOfExpensePay6Months_quote" + keyDelim + string(showTerminationOfExpensePay6Months) + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "showTerminationOfExpensePay12Months_quote" + keyDelim +  string(showTerminationOfExpensePay12Months) + delim;
+
+finalReturnString = finalReturnString + "1" + keyDelim + "setupLineExists_quote" + keyDelim + string(setupLineExists) + delim;
+
+//CSYS-99421 SV. 15-06-2020 Start
+if (sizeofarray(quoteContainsPayEMEAorNAArr) > 0 AND sizeofarray(quoteContainsPayAPAorJapanArr) == 0) {
+    quoteContainsPay2020DateText = true;
+}
+//if((sizeofarray(quoteContainsPayAPAorJapanArr) > 0) OR (findinarray(quoteContainsPayAPAorJapanArr,"1035") <> -1 AND findinarray(quoteContainsPayEMEAorNAArr,"461") <> -1 AND findinarray(quoteContainsPayAPAorJapanArr,"1268803") <> -1 AND sizeofarray(quoteContainsPayGlobalorNAArr) > 0 )){
+if (sizeofarray(quoteContainsPayAPAorJapanArr) > 0) {
+    quoteContainsPay2022DateText = true;
+}
+if (quoteContainsPay2020DateText == true) {
+    showTerminationOfExpensePay2020DateText = true;
+}
+if (quoteContainsPay2022DateText == true) {
+    showTerminationOfExpensePay2022DateText = true;
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "showTerminationOfExpensePay2020DateText_quote" + keyDelim + string(quoteContainsPay2020DateText) + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "showTerminationOfExpensePay2022DateText_quote" + keyDelim + string(quoteContainsPay2022DateText) + delim;
+//CSYS-99421 End
+
+finalReturnString = finalReturnString + "1" + keyDelim + "showExpirationLanguageForServiceAdministration" + keyDelim + string(showExpirationLangforServAdminflag) + delim; // CSYS-105782 LBN. 03-09-2022
+
+finalReturnString = finalReturnString + "1" + keyDelim + "terminationLanguageForConcurFinancialConnector" + keyDelim + string(showExpirationLangforConFinConnectorflag) + delim; // IESCNQRCPQ-841 LBN 27-06-2023
+
+finalReturnString = finalReturnString + "1" + keyDelim + "sunsetLanguageForConcurFAVR" + keyDelim + string(showExpirationLangforConcurFavr) + delim; // CSYS-106860 LBN. 16-08-2022
+
+finalReturnString = finalReturnString + "1" + keyDelim + "sunsetLanguageForConcurFAVRBasedOnAccounts" + keyDelim + string(showExpLangforConcurfavrBasedonAccts) + delim; // CSYS-106860 LBN. 16-08-2022
+
+finalReturnString = finalReturnString + "1" + keyDelim + "additionalTCForPartner_quote" + keyDelim + string(additionalTermsConditionforServicePartners) + delim; // IESCNQRCPQ-770 LBN. 27-07-2023
+
+finalReturnString = finalReturnString + "1" + keyDelim + "showTerminationOfSunsettingServicesLang_quote" + keyDelim + string(showTerminationOfSunsettingServicesLang) + delim; // CSYS-100104 NP. 03-09-2020
+
+finalReturnString = finalReturnString + "1" + keyDelim + "addLegalLanguageToSunsetConcurDetect" + keyDelim + string(addLegalLanguageToSunsetConcurDetectFlag) + delim; // CSYS-102987 NT. 06-15-2021
+
+finalReturnString = finalReturnString + "1" + keyDelim + "showConcurTaxAssuranceClause_quote" + keyDelim + string(showConcurTaxAssuranceClause) + delim; // CSYS-101081 NP. 11-18-2020
+
+//CSYS-77782 (KA. 2-14-2017): new loop to fix multiple base core document number assignment:
+for line in line_process {
+	documentNumber = line._document_number;
+	action = line.assetAction_line;
+	parentDocNumber = line._parent_doc_number;
+	product = line.poName_line;
+	productCategory = line.poCategory_line;
+	piItemType = line.piItemType_line;
+	isPartOfPck = line.isPartOfPackage_line;
+	extNetPrice = line.extendedNetPrice_line;
+	uniqueCoreBase = line.uniqueCoreBase_line;
+	poID = line.poId_line; //CSYS-96786 SN. 09-2019 
+	UQG = line.usageQualificationGroup_line;//IESCNQRCPQ-939 -VK
+
+	//Detect grouped non-terminated non-zero core Base fees:
+	if(productCategory == "Core Service" AND
+		isPartOfPck AND
+		uniqueCoreBase AND
+		action <> "TERMINATE"){
+
+			if(piItemType == "Base"){
+				//overwrite the dictionary key with the correct documentNumber to fix outputSetupFee_line (among others):
+				put(docNumDict, parentDocNumber + keyDelim + product, documentNumber);
+			}
+
+	}
+	//CSYS-95657
+	if ( productCategory == "Core Service" AND piItemType == "Base" AND containskey(custDetailsDict, parentDocNumber) AND action <> "TERMINATE"){
+		finalReturnString = finalReturnString + documentNumber + keyDelim + "outputCoreSetUpDetails_line"  + keyDelim + get(custDetailsDict, parentDocNumber) + delim;
+	}
+	//CSYS-96786 SN. 09-2019 
+	if (quoteType_quote=="Add-On Business" AND findinarray(travelDirectNewPOs, poID) <> -1 AND action == "CREATE" AND containsTravelDirectLegacy == true ){
+		containsTravelDirectLegacyReplacedWithNew = true;
+	}
+	//IESCNQRCPQ-939 - VK START
+	if (UQG == "ConcurDistinctExpense" AND piItemType == "Incremental") {
+		IncrFeeJapan = IncrFeeJapan + extNetPrice*numberOfTransMultipleBy13Or12MQY_quote;
+		finalReturnString = finalReturnString + "1" + keyDelim + "usageQualificationIndicator_quote" + keyDelim + TRUE_STR + delim;
+	
+	}
+	
+	if(UQG <> "ConcurDistinctExpense" AND piItemType == "Incremental"){
+		IncrFeeJapan = IncrFeeJapan + extNetPrice;
+	}
+	//IESCNQRCPQ-939 - VK END
+}
+//IESCNQRCPQ-939 - VK 
+finalReturnString = finalReturnString + "1" + keyDelim + "totalIncrementalFeeForJapanProposal_quote" + keyDelim + string(IncrFeeJapan) + delim;
+
+setupFeeDict = dict("string");
+preProdFeeDict = dict("string");
+implementationFeeDict = dict("string");
+coreServiceArray = string[];
+countGroupCheck = 0;
+allModelsStrInfo = join(keyArray,"@@");
+coreJapanServiceDict = dict("string");//IESCNQRCPQ-881
+
+for keys in keyArray {
+	docNum = "";
+	modelDocNum = "";
+	netPrice = 0.0;
+	groupCheckFlag = false;
+	keySplitArray = split(keys,keyDelim);
+							 
+			  					 
+	dictKey = keySplitArray[0] + keyDelim + keySplitArray[1] + keyDelim + keySplitArray[2] + keyDelim + keySplitArray[3];
+	netPrice = get(productDict, dictKey);
+	docNum = keySplitArray[4];
+
+	modelDocNum = keySplitArray[1];
+	productCat= keySplitArray[5];
+	modelItemTypeKey = keySplitArray[0] + keyDelim + keySplitArray[1] + keyDelim + keySplitArray[3];
+
+	if(findinarray(modelKeyArray, dictKey) > -1) {
+		groupCheckFlag = true;
+		countGroupCheck = countGroupCheck + 1;
+	}
+	if(containskey(docNumDict, keySplitArray[1] + keyDelim + keySplitArray[2])) {
+				docNum = get(docNumDict, keySplitArray[1] + keyDelim + keySplitArray[2]);
+	}
+
+	//find if Base Item Fees are not applicable for any Products
+	searchKeyForBaseItems = keySplitArray[0] + keyDelim + keySplitArray[1] + keyDelim + keySplitArray[2] + keyDelim + "Base";
+	if( find(allModelsStrInfo,searchKeyForBaseItems) == -1 ){
+		//This Means that current Extended Service/Product doesn't have base fee and this set the flag for NoBaseFees to true;
+			finalReturnString = finalReturnString + docNum + keyDelim + "noBaseFeesFlag_line"  + keyDelim + TRUE_STR + delim;
+	}
+
+	//find if SetUp Item Fees are not applicable for any Products
+	searchKeyForSetUpItems = keySplitArray[0] + keyDelim + keySplitArray[1] + keyDelim + keySplitArray[2] + keyDelim + "Setup";
+	if( find(allModelsStrInfo,searchKeyForSetUpItems) == -1 ){
+		//This Means that current Extended Service/Product doesn't have SetUp fee and this set the flag for NoSetUpFees to true;
+			finalReturnString = finalReturnString + docNum + keyDelim + "noSetUpFeesFlag_line"  + keyDelim + TRUE_STR + delim;
+	}
+
+	if(netPrice >= 0 and docNum <> "" AND modelDocNum <> "") {
+
+		if(productCat <> "NA" AND productCat <> "") {
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputPOCategory_line"  + keyDelim + productCat + delim;
+		}
+			if(groupCheckFlag) {
+				finalReturnString = finalReturnString + docNum + keyDelim + "outputPOName_line"  + keyDelim + keySplitArray[2] + delim;
+									 
+						   
+				finalReturnString = finalReturnString + modelDocNum + keyDelim + "outputPOName_line"  + keyDelim + "" + delim;
+				if(find(keySplitArray[3],"Pre Prod") > -1){
+					finalReturnString = finalReturnString + docNum + keyDelim + "outputPreProductionFee_line" + keyDelim + "Included" + delim;
+				}
+				if(find(keySplitArray[3], "Setup") > -1){
+					finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Included" + delim;
+				}
+				if(find(keySplitArray[3], "Incremental") > -1){
+					finalReturnString = finalReturnString + docNum + keyDelim + "outputIncrementalTransactionFee_line" + keyDelim + "Included" + delim;
+				}
+				if(find(keySplitArray[3], "Base") > -1){
+					if (find(productCat, "Core Service") <> -1){
+						append(coreServiceArray, docNum);
+						itemTypeArray = split (modelItemTypeKey,keyDelim);
+						setupFee = itemTypeArray[0] + keyDelim + itemTypeArray[1] + keyDelim + "Setup";
+						preProdFee = itemTypeArray[0] + keyDelim + itemTypeArray[1] + keyDelim + "Pre Prod";
+						implementationFee = itemTypeArray[0] + keyDelim + itemTypeArray[1] + keyDelim + "Incremental";
+						if (containskey(modelItemTypeFeeDict, setupFee)){
+							put(setupFeeDict,docNum,(string(get(modelItemTypeFeeDict, setupFee))));
+						}
+						if (containskey(modelItemTypeFeeDict, preProdFee)){
+							put(preProdFeeDict,docNum,(string(get(modelItemTypeFeeDict, preProdFee))));
+						}
+						if (containskey(modelItemTypeFeeDict, implementationFee)){
+							put(implementationFeeDict,docNum,(string(get(modelItemTypeFeeDict, implementationFee))));
+						}
+						finalReturnString = finalReturnString + docNum + keyDelim + "outputBaseFee_line" + keyDelim + string(get(modelItemTypeFeeDict, modelItemTypeKey)) + delim;
+							baseTotalOutput = baseTotalOutput +  get(modelItemTypeFeeDict, modelItemTypeKey);
+						finalReturnString = finalReturnString + docNum + keyDelim + "outputBaseTransactionVolume_line" + keyDelim + get (transVolDict, docNum) + delim;		//string(modelTransVolArray[grpIndex])
+						//print get(transVolDict,docNum);
+					}
+					else {
+						finalReturnString = finalReturnString + docNum + keyDelim + "outputBaseFee_line" + keyDelim + "Included" + delim;
+						finalReturnString = finalReturnString + docNum + keyDelim + "outputBaseTransactionVolume_line" + keyDelim + "Included" + delim;
+					}
+					grpIndex = grpIndex + 1;
+				}
+		}
+		else {
+			if(productCat <> "NA" AND productCat <> "") {
+				finalReturnString = finalReturnString + docNum + keyDelim + "outputPOCategory_line"  + keyDelim + productCat + delim;
+			}
+
+			if(docNum <> "" AND modelDocNum <> ""){
+				finalReturnString = finalReturnString + docNum + keyDelim + "outputPOName_line"  + keyDelim + keySplitArray[2] + delim;
+									   
+				 
+					  
+						   
+				finalReturnString = finalReturnString + modelDocNum + keyDelim + "outputPOName_line"  + keyDelim + "" + delim;
+				if(find(keySplitArray[3],"Pre Prod") > -1){
+					finalReturnString = finalReturnString + docNum + keyDelim + "outputPreProductionFee_line" + keyDelim + string(get(productDict, dictKey)) + delim;
+					preProdTotalOutput = preProdTotalOutput + get(productDict, dictKey);
+					if(countGroupCheck == 0) {
+						finalReturnString = finalReturnString + modelDocNum + keyDelim + "outputPreProductionFee_line" + keyDelim + "" + delim;
+					}
+				}
+				if(find(keySplitArray[3], "Setup") > -1){
+					finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + string(get(productDict, dictKey)) + delim;
+					setUpTotalOutput = setUpTotalOutput + get(productDict, dictKey);
+					if(countGroupCheck == 0) {
+						finalReturnString = finalReturnString + modelDocNum + keyDelim + "outputSetupFee_line" + keyDelim + "" + delim;
+					}
+				}
+				if(find(keySplitArray[3], "Incremental") > -1){
+					finalReturnString = finalReturnString + docNum + keyDelim + "outputIncrementalTransactionFee_line" + keyDelim + string(get(productDict, dictKey)) + delim;
+					incrTotalOutput = incrTotalOutput + get(productDict, dictKey);
+					if(countGroupCheck == 0) {
+						finalReturnString = finalReturnString + modelDocNum + keyDelim + "outputIncrementalTransactionFee_line" + keyDelim + "" + delim;
+					}
+				}
+				if(find(keySplitArray[3], "Base") > -1){
+					finalReturnString = finalReturnString + docNum + keyDelim + "outputBaseFee_line" + keyDelim + string(get(productDict, dictKey)) + delim;
+					finalReturnString = finalReturnString + docNum + keyDelim + "outputBaseTransactionVolume_line" + keyDelim + get(transVolDict,docNum) + delim;
+					baseTotalOutput = baseTotalOutput +  get(productDict, dictKey);
+					if(countGroupCheck == 0) {
+						finalReturnString = finalReturnString + modelDocNum + keyDelim + "outputBaseFee_line" + keyDelim + "" + delim;
+						finalReturnString = finalReturnString + modelDocNum + keyDelim + "outputBaseTransactionVolume_line" + keyDelim + "" + delim;
+					}
+					index = index + 1;
+				}
+			}
+		}
+	}
+	else {
+		if(docNum <> "" AND modelDocNum <> ""){
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputPOCategory_line"  + keyDelim + "" + delim;
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputPOName_line"  + keyDelim + "" + delim;
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputPreProductionFee_line" + keyDelim + "" + delim;
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "" + delim;
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputIncrementalTransactionFee_line" + keyDelim + "" + delim;
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputBaseFee_line" + keyDelim + "" + delim;
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputBaseTransactionVolume_line" + keyDelim + "" + delim;
+		}
+	}
+
+ }
+
+for coreService in coreServiceArray{
+	if(containskey(setupFeeDict,coreService)){
+		finalReturnString = finalReturnString + coreService + keyDelim + "outputSetupFee_line" + keyDelim + get(setupFeeDict, coreService) + delim;
+		put(coreJapanServiceDict,coreService,get(setupFeeDict, coreService));//IESCNQRCPQ-881
+		tempSetupFee = get(setupFeeDict, coreService );
+		if ( isnumber( tempSetupFee )){
+			setUpTotalOutput = setUpTotalOutput + atof(tempSetupFee);
+		}
+	}
+	if(containskey(preProdFeeDict,coreService)){
+		finalReturnString = finalReturnString + coreService + keyDelim + "outputPreProductionFee_line" + keyDelim + get(preProdFeeDict, coreService) + delim;
+	}
+	if(containskey(implementationFeeDict,coreService)){
+		finalReturnString = finalReturnString + coreService + keyDelim + "outputIncrementalTransactionFee_line" + keyDelim + get(implementationFeeDict, coreService) + delim;
+		tempIncrementalFee = get( implementationFeeDict, coreService );
+		if ( isnumber( tempIncrementalFee ) ){
+			incrTotalOutput = incrTotalOutput + atof(tempIncrementalFee);
+		}
+	}
+}
+
+
+//CIP Cores:
+cipCoreDict = dict("string");
+cipCoreSpanishDict = dict("string");
+cipCoreGermanDict = dict("string");
+
+put(cipCoreDict, "Expense", "Included in the Extended Services Setup Fee");
+put(cipCoreDict, "Expense with TripLink", "Included in the TripLink Initial Setup Fee");
+put(cipCoreDict, "Travel & Expense", "Included in the Travel Initial Setup Fee");
+put(cipCoreDict, "Travel & Expense with TripLink", "Included in the Travel with TripLink Setup Fee");
+put(cipCoreDict, "Concur Request - Standalone", "Included in the Extended Services Setup Fee");//CSYS-97099 SN. 09-2019
+
+//CSYS-100546 (OK. 3-3-2021) Start:
+cipTravelAuthorizedCoreDict = dict("string"); 
+cipTravelAuthorizedCoreSpanishDict = dict("string"); 
+cipTravelAuthorizedCoreGermanDict = dict("string");
+cipTravelAuthorizedCore = "";
+
+put(cipTravelAuthorizedCoreDict, "Travel & Expense", "Included in the Extended Services Initial Setup Fee");
+put(cipTravelAuthorizedCoreDict, "Travel & Expense with TripLink", "Included in the Extended Services Initial Setup Fee");
+
+//Spanish Translations for CIP quotes.
+put(cipTravelAuthorizedCoreSpanishDict, "Travel & Expense", "Incluido en la Tarifa por Instalación Inicial de la Extensión de Servicios");
+put(cipTravelAuthorizedCoreSpanishDict, "Travel & Expense with TripLink", "Incluido en la Tarifa por Instalación Inicial de la Extensión de Servicios");
+
+//German Translations for CIP quotes.
+put(cipTravelAuthorizedCoreGermanDict, "Travel & Expense", "Enthalten im Initialen Einrichtungsentgelt für die Service-Erweiterungen");
+put(cipTravelAuthorizedCoreGermanDict, "Travel & Expense with TripLink", "Enthalten im Initialen Einrichtungsentgelt für die Service-Erweiterungen");
+//CSYS-100546 (OK. 3-3-2021) - End
+
+//CSYS-93828 (LN. 2-24-2019) Spanish Translations for CIP quotes.
+put(cipCoreSpanishDict, "Expense", "Incluido en la Tarifa por Instalación Inicial de la Extensión de Servicios");
+put(cipCoreSpanishDict, "Expense with TripLink", "Incluido en la Tarifa por Instalación Inicial de TripLink");
+put(cipCoreSpanishDict, "Travel & Expense", "Incluido en la Tarifa por Instalación Inicial de Travel");
+put(cipCoreSpanishDict, "Travel & Expense with TripLink", "Incluido en la Tarifa por Instalación de Travel con TripLink");
+put(cipCoreSpanishDict, "Concur Request - Standalone", "Incluido en la Tarifa por Instalación Inicial de la Extensión de Servicios");//CSYS-97099 SN. 09-2019
+
+//CSYS-96007
+put(cipCoreGermanDict, "Expense", "Enthalten im Initialen Einrichtungsentgelt für die Service-Erweiterungen");
+put(cipCoreGermanDict, "Expense with TripLink", "Enthalten im Initialen Einrichtungsentgelt für TripLink");
+put(cipCoreGermanDict, "Travel & Expense", "Enthalten im Initialen Einrichtungsentgelt für Travel");
+put(cipCoreGermanDict, "Travel & Expense with TripLink", "Enthalten im Initialen Einrichtungsentgelt für Travel mit TripLink");
+put(cipCoreGermanDict, "Concur Request - Standalone", "Enthalten im Initialen Einrichtungsentgelt für die Service-Erweiterungen");//CSYS-97099 SN. 09-2019
+
+cipCoreList = keys(cipCoreDict);
+
+
+//CSYS-81344 part 3 (KA. 6-20-2017): on CIP quotes, loop through the grid again and overwrite outputSetupFee_line if necessary:
+if(implementationPartner_quote <> ""){
+	for line in line_process{
+		docNum = line._document_number;
+		parentDocNumber = line._parent_doc_number;
+		pi = line._part_number;
+		uniqueCoreBase = line.uniqueCoreBase_line;
+		productCategory = line.poCategory_line;
+		isPartOfPackage = line.isPartOfPackage_line;
+		action = line.assetAction_line;
+		piItemType = line.piItemType_line;
+		poID = line.poId_line;
+		lineCoreOffering = line.coreOffering_line;
+		implementationMethod = line.implementationMethod_line;
+		extNetPriceNonUnified = line.extNetPriceNonUnified_line; //CSYS-107676 (PG 05/01/2023)																			
+  
+		//CSYS-107676 (PG 05/01/2023)
+		if (pi == "940" OR pi == "969" OR pi == "2234122"){
+			extNetPriceNonUnified_Japan = extNetPriceNonUnified;
+			utilResultFlag = util.putFloatAttribute(productDict, parentDocNumber, keyDelim, "extNetPriceNonUnified_Japan", extNetPriceNonUnified_Japan);
+		}				   
+		
+		//CSYS-100546 (OK. 3-3-2021) check is that travel authorized core or not
+		if (lineCoreOffering == "Travel & Expense" OR lineCoreOffering == "Travel & Expense with TripLink") {
+			cipTravelAuthorizedCore = "true";
+		}
+		
+		//model's total of all grouped extended service setup fees that can't be implemented by a CIP:
+		extServ_NonCip_GroupedSetupTotal = util.getFloatAttribute(productDict, parentDocNumber, keyDelim, "extServ_NonCip_GroupedSetupTotal");
+
+		//model's grouped core service setup fees that can't be implemented by a CIP:
+		core_NonCIP_GroupedSetupTotal = util.getFloatAttribute(productDict, parentDocNumber, keyDelim, "core_NonCIP_GroupedSetupTotal");
+
+		//add the 2 variables above together to get the grand total of non-CIP grouped setup fees:
+		nonCIP_GroupedSetupGrandTotal = extServ_NonCip_GroupedSetupTotal + core_NonCIP_GroupedSetupTotal;
+		
+		//IESCNQRCPQ-881- Start- Checking if difference in total is 1 yen then replace the with quote data.
+		if (containskey(coreJapanServiceDict, docNum)){
+			extNetPriceCoreBundledCIPSetUp = atof(get(coreJapanServiceDict, docNum));
+			if(extNetPriceCoreBundledCIPSetUp - nonCIP_GroupedSetupGrandTotal == 1.0){
+				nonCIP_GroupedSetupGrandTotal = extNetPriceCoreBundledCIPSetUp;
+			}
+		}
+		//IESCNQRCPQ-881 - End
+
+		outputSetupFeeVerbiage = "";
+		extServ_NonCip_SetupGroupedToCore = util.getStringAttribute(docNumDict, parentDocNumber, keyDelim, "extServ_NonCip_SetupGroupedToCore");
+
+		//Overwrite outputSetupFee_line on the first core base, and only if the core has a non-terminated CIP Setup fee
+		if(uniqueCoreBase AND containskey(docNumDict, parentDocNumber + keyDelim + "coreHasCipSetup")){
+
+			if(pi == "432" OR pi == "416" //Expense cores (Professional/Premium edition)
+			  	       OR pi == "4810417"){ //CSYS-99616 (Add Universal core service)
+				if(extServ_NonCip_SetupGroupedToCore == TRUE_STR){ //Extended Service setup fees not implementable by a CIP are bundled to the core
+
+					if(actionName == "SpanishOF"){//CSYS-93828 (LN. 2-24-2019)
+											   
+						outputSetupFeeVerbiage = "Expense: CIP "+ adjustedValueWithCurrency +"*;* Tarifa por Instalación Inicial de la Extensión de Servicios: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					elif(actionName == "GermanOF"){
+											   
+						outputSetupFeeVerbiage = "Expense: CIP "+ adjustedValueWithCurrency +"*;* Enthalten in den Einrichtungsentgelten für Service-Erweiterungen: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					//IESCNQRCPQ-614 (LBN-29-05-2023)
+					elif(actionName == "JapanOF") {
+						outputSetupFeeVerbiage = "Expense: CIP *;* " +formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}//END
+					else {
+						
+						if(_quote_process_serviceAddress_country == "Japan"){
+							outputSetupFeeVerbiage = "Expense: CIP*;* Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+						
+						else{
+							outputSetupFeeVerbiage = "Expense: CIP "+ adjustedValueWithcurrency +"*;* Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+	   
+					}
+				}
+				else{
+
+					if(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "CIP";
+					}
+					else{
+						outputSetupFeeVerbiage = "CIP "+adjustedValueWithcurrency;
+					}
+	  
+				}
+			}
+			//CSYS-92111
+			elif(pi == "583" OR pi == "2490989" //Invoice cores (Professional/Premium edition)
+					 OR pi == "4810511"){ //CSYS-99616 (Add Universal core service)
+				if(extServ_NonCip_SetupGroupedToCore == TRUE_STR){ //Extended Service setup fees not implementable by a CIP are bundled to the core
+
+					if(actionName == "SpanishOF"){//CSYS-93828 (LN. 2-24-2019)
+											   
+						outputSetupFeeVerbiage = "Invoice: CIP "+ adjustedValueWithCurrency +"*;* Tarifa por Instalación Inicial de la Extensión de Servicios: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					elif(actionName == "GermanOF"){
+											   
+						outputSetupFeeVerbiage = "Invoice: CIP "+ adjustedValueWithCurrency +"*;* Enthalten in den Einrichtungsentgelten für Service-Erweiterungen: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					//IESCNQRCPQ-614 (LBN-29-05-2023)
+					elif(actionName == "JapanOF") {
+						outputSetupFeeVerbiage = "Invoice: CIP *;* " +formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}//END
+					else {
+		   
+						if(_quote_process_serviceAddress_country == "Japan"){
+							outputSetupFeeVerbiage = "Invoice: CIP*;* Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+						else{
+							outputSetupFeeVerbiage = "Invoice: CIP "+ adjustedValueWithcurrency +"*;* Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+	   
+					}
+				}
+				else{
+	 
+					if(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "CIP";
+					}
+					else{
+						outputSetupFeeVerbiage = "CIP "+adjustedValueWithcurrency;
+					}																
+	  
+				}
+			}
+			//CSYS-97099 SN. 09-2019
+			elif(pi == "798" ){ //Concur Request Standalone core
+				if(extServ_NonCip_SetupGroupedToCore == TRUE_STR){ //Extended Service setup fees not implementable by a CIP are bundled to the core
+
+					if(actionName == "SpanishOF"){//CSYS-93828 (LN. 2-24-2019)
+											   
+						outputSetupFeeVerbiage = "Concur Request - Standalone: CIP "+ adjustedValueWithCurrency +"*;* Tarifa por Instalación Inicial de la Extensión de Servicios: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					elif(actionName == "GermanOF"){
+											   
+						outputSetupFeeVerbiage = "Concur Request - Standalone: CIP "+ adjustedValueWithCurrency +"*;* Enthalten in den Einrichtungsentgelten für Service-Erweiterungen: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					else {
+	  
+						if(_quote_process_serviceAddress_country == "Japan"){
+							outputSetupFeeVerbiage = "Concur Request - Standalone: CIP*;* Extended Services Initial Set Up Fees: " +formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+						
+						else{
+							outputSetupFeeVerbiage = "Concur Request - Standalone: CIP "+ adjustedValueWithcurrency +"*;* Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+	   
+					}
+				}
+				else{
+	 
+					if(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "CIP";
+					}
+					else{
+						outputSetupFeeVerbiage = "CIP "+adjustedValueWithcurrency;
+					}
+
+				}
+			}
+			elif(pi == "784871" OR pi == "784873" //Expense with TripLink cores (Professional/Premium edition)
+					    OR pi == "4809791" 
+					    OR pi == "4809797"){ //CSYS-99616 (Add Universal core service)
+				if(extServ_NonCip_SetupGroupedToCore == TRUE_STR){ //Extended Service setup fees not implementable by a CIP are bundled to the core
+					
+					if(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "Expense: CIP*;* TripLink: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					
+					else{
+						outputSetupFeeVerbiage = "Expense: CIP "+ adjustedValueWithcurrency +"*;* TripLink: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+	  
+				}
+				else{
+					
+					if(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "Expense: CIP*;* TripLink: " + formatascurrency(0.0, quoteCurrency_quote);
+					}
+					
+					else{
+						outputSetupFeeVerbiage = "Expense: CIP "+ adjustedValueWithcurrency +"*;* TripLink: " + formatascurrency(0.0, quoteCurrency_quote);
+					}
+	  
+				}
+			}
+			elif(pi == "936" OR pi == "965" //Travel & Expense cores (Professional/Premium edition)
+					 OR pi == "4810450"	   
+					 OR pi == "4810459"){ //CSYS-99616 (Add Universal core service)
+				if (cipTravelAuthorized == "true") {  //CSYS-100546 (OK. 3-3-2021)
+					if(extServ_NonCip_SetupGroupedToCore == TRUE_STR){ //Extended Service setup fees not implementable by a CIP are bundled to the core
+				
+						if(actionName == "SpanishOF"){
+																		
+							outputSetupFeeVerbiage = "Travel & Expense: CIP "+ adjustedValueWithCurrency +"*;* Tarifa por Instalación Inicial de la Extensión de Servicios: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+						elif(actionName == "GermanOF"){
+																		
+							outputSetupFeeVerbiage = "Travel & Expense: CIP "+ adjustedValueWithCurrency +"*;* Enthalten in den Einrichtungsentgelten für Service-Erweiterungen: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+						//IESCNQRCPQ-614 (LBN-29-05-2023)
+						elif(actionName == "JapanOF") {
+							outputSetupFeeVerbiage = "Expense: CIP Travel: " + formatascurrency(extNetPriceNonUnified_Japan, quoteCurrency_quote) + "*;*" + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}//END
+						
+						//CSYS-107676 (PG 05/01/2023)
+						elif(_quote_process_serviceAddress_country == "Japan"){
+							outputSetupFeeVerbiage = "Expense: CIP*;* Travel: " + formatascurrency(extNetPriceNonUnified_Japan, quoteCurrency_quote) + "  Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+																					
+						else {
+							outputSetupFeeVerbiage = "Travel & Expense: CIP "+ adjustedValueWithCurrency +"*;* Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+		
+						}
+					}
+								  
+					//CSYS-107676 (PG 05/01/2023)
+					elif(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "Expense: CIP*;*Travel: " + formatascurrency(extNetPriceNonUnified_Japan, quoteCurrency_quote);
+					}
+					
+					else {
+				 
+						outputSetupFeeVerbiage = "CIP "+ adjustedValueWithCurrency;
+	   
+					}
+				}
+				else {
+									 
+					if(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "Expense: CIP*;*Travel: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					
+					else{
+						outputSetupFeeVerbiage = "Expense: CIP "+adjustedValueWithcurrency+ "*;*Travel: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+	  
+				}
+				
+			}
+			elif(pi == "785955" //Travel & Expense with TripLink cores (Professional edition)
+			     OR pi == "4810470"
+                 	     OR pi == "4810476"
+                             OR pi == "4810482"){ //CSYS-99616 (Add Universal core service)
+				if (cipTravelAuthorized == "true") {  //CSYS-100546 (OK. 3-3-2021)
+					if(extServ_NonCip_SetupGroupedToCore == TRUE_STR){ //Extended Service setup fees not implementable by a CIP are bundled to the core
+				
+						if(actionName == "SpanishOF"){
+																		
+							outputSetupFeeVerbiage = "Travel & Expense with TripLink: CIP "+ adjustedValueWithCurrency +"*;* Tarifa por Instalación Inicial de la Extensión de Servicios: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+						elif(actionName == "GermanOF"){
+																		
+							outputSetupFeeVerbiage = "Travel & Expense with TripLink: CIP "+ adjustedValueWithCurrency +"*;* Enthalten in den Einrichtungsentgelten für Service-Erweiterungen: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+							
+						//CSYS-107676 (PG 05/01/2023)
+						elif(_quote_process_serviceAddress_country == "Japan"){
+							outputSetupFeeVerbiage = "Expense: CIP*;* Travel with TripLink: " + formatascurrency(extNetPriceNonUnified_Japan, quoteCurrency_quote) + "  Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+						}
+																						
+	   
+						else {
+																			
+							outputSetupFeeVerbiage = "Travel & Expense with TripLink: CIP "+ adjustedValueWithCurrency +"*;* Extended Services Initial Set Up Fees: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+		
+						}
+					}
+					
+					//CSYS-107676 (PG 05/01/2023)
+					elif(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "Expense: CIP*;* Travel with TripLink: " + formatascurrency(extNetPriceNonUnified_Japan, quoteCurrency_quote);
+					}
+																						
+					else {											  
+						outputSetupFeeVerbiage = "CIP "+adjustedValueWithCurrency;
+					}
+				}
+				else {
+					
+					if(_quote_process_serviceAddress_country == "Japan"){
+						outputSetupFeeVerbiage = "Expense: CIP*;* Travel with TripLink: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+					else{
+						outputSetupFeeVerbiage = "Expense: CIP "+adjustedValueWithcurrency+"*;* Travel with TripLink: " + formatascurrency(nonCIP_GroupedSetupGrandTotal, quoteCurrency_quote);
+					}
+	  
+				}
+		
+			}
+
+			//overwrite outputSetupFee_line for the first Core Base here.
+			//This is what document engine/designer uses for the core service setup value:
+			outputSetupFeeVerbiage = replace(outputSetupFeeVerbiage,"￥","¥");
+			finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + outputSetupFeeVerbiage + delim;
+
+		}
+
+		// #### CSYS-82973 LN. 6/28/17 START #### //
+		// Extended Services logic, CIP Products relevant to Expense, Travel & Expense, Expense with TripLink and Travel & Expense with TripLink and the appropriate document verbiage
+		if(productCategory == "Extended Service" AND action <> "TERMINATE" AND piItemType == "Base"){
+
+
+			if(NOT(isPartOfPackage)){
+
+				isItImplementableByaCip = containskey(docNumDict, poID + keyDelim + "cipPoIdMapping");
+
+				if(isItImplementableByaCip){ //Non-bundled CIP Ext. Services should show CIP on the Order form
+
+					//if( findinarray(cipCoreList, lineCoreOffering) <> -1 OR (lineCoreOffering == "Invoice Processing" AND ( find(accountServicePartnerSpecialty_quote, "Invoice Certified") <> -1 OR find(accountServicePartnerAuthorizationsTA_quote, "Invoice") <> -1 ))){  //CSYS-100546 (OK. 3-3-2021)  Remove the servicePartnerSpecialty field from CIP logic
+					if( findinarray(cipCoreList, lineCoreOffering) <> -1 OR (lineCoreOffering == "Invoice Processing" AND (find(accountServicePartnerAuthorizationsTA_quote, "Invoice") <> -1 ))){
+																																								  
+						if(_quote_process_serviceAddress_country == "Japan"){
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "CIP " + delim;
+						}
+						
+						else{
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "CIP "+adjustedValueWithcurrency + delim;
+						}
+	   
+					}
+					
+					//IESCNQRCPQ-242 Start(PG 21-02-2023) //Invoice Processing with Budget for Invoice Processing & Purchase Requests for Invoice
+				if(lineCoreOffering == "Invoice Processing" AND (poID == "440492" OR poID == "3534654") AND quoteCurrency_quote == "JPY"){
+						if(_quote_process_serviceAddress_country == "Japan"){
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "CIP " + delim;
+						}
+						
+						else{
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "CIP "+adjustedValueWithcurrency + delim;
+						}
+					}
+					//IESCNQRCPQ-242 End
+
+				}
+
+				if(lineCoreOffering == "Expense with TripLink" AND poID == "880"){ //Expense with TripLink core with Concur Request Add-on Ext. Service NOT bundled should show CIP on the Order Form
+
+						if(_quote_process_serviceAddress_country == "Japan"){
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "CIP " + delim;
+						}
+						else{
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "CIP "+adjustedValueWithcurrency + delim;
+						}
+				}
+
+			}
+			elif(isPartOfPackage){//Bundled Ext. Services Logic
+
+				//Verify if current Ext. Serv. Base is a CIP product from the cipSetupFees data table
+				isItImplementableByaCip = containskey(docNumDict, poID + keyDelim + "cipPoIdMapping");
+
+				if(isItImplementableByaCip){
+
+					if(findinarray(cipCoreList, lineCoreOffering) <> -1){
+
+						if(actionName == "SpanishOF"){//CSYS-93828 (LN. 2-24-2019)
+							if (cipTravelAuthorized == "true" AND cipTravelAuthorizedCore == "true") { //CSYS-100546 (OK. 3-3-2021)
+								finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Incluido en la Tarifa por Instalación de " + lineCoreOffering + delim;
+							}
+							else { 
+								if (lineCoreOffering == "Concur Request - Standalone") { //CSYS-100546 (OK. 3-3-2021) Adding extra condition for Concur Request - Standalone core to fix the existing issue
+									finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Incluido en la Tarifa por Instalación de " + lineCoreOffering + delim;
+								}
+								else {							
+									finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Incluido en la Tarifa por Instalación de Expense" + delim;
+								}
+							}
+						}
+						elif(actionName == "GermanOF"){
+							if (cipTravelAuthorized == "true" AND cipTravelAuthorizedCore == "true") { //CSYS-100546 (OK. 3-3-2021)
+								finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Enthalten im Initialen Einrichtungsentgelt für " + lineCoreOffering + delim;
+							}
+							else {
+								if (lineCoreOffering == "Concur Request - Standalone") { //CSYS-100546 (OK. 3-3-2021) Adding extra condition for Concur Request - Standalone core to fix the existing issue
+									finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Enthalten im Initialen Einrichtungsentgelt für " + lineCoreOffering + delim;
+								}
+								else {
+									finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Enthalten im Initialen Einrichtungsentgelt für Expense" + delim;
+								}
+							}
+						}
+						//IESCNQRCPQ-614 (LBN-29-05-2023)
+						elif(actionName == "JapanOF"){
+							if (cipTravelAuthorized == "true" AND cipTravelAuthorizedCore == "true") {
+								finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + lineCoreOffering + delim;
+							}
+							else {
+								finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + "Expense" + delim;
+							}
+						}//END
+						else {
+							if (cipTravelAuthorized == "true" AND cipTravelAuthorizedCore == "true") { //CSYS-100546 (OK. 3-3-2021)
+								finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Included in the " +lineCoreOffering +  " Initial Setup Fee" + delim;
+							}
+							else {
+								if (lineCoreOffering == "Concur Request - Standalone") { //CSYS-100546 (OK. 3-3-2021) Adding extra condition for Concur Request - Standalone core to fix the existing issue
+									finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Included in the Concur Request - Standalone Initial Setup Fee" + delim;
+								}
+								else {
+									finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Included in the Expense Initial Setup Fee" + delim;
+								}
+							}
+						}
+					}
+					else {
+						//if(lineCoreOffering == "Invoice Processing" AND ( find(accountServicePartnerSpecialty_quote, "Invoice Certified") <> -1 OR find(accountServicePartnerAuthorizationsTA_quote, "Invoice") <> -1 )){ //CSYS-100546 (OK. 3-3-2021)
+						if(lineCoreOffering == "Invoice Processing" AND (find(accountServicePartnerAuthorizationsTA_quote, "Invoice") <> -1 )){
+
+							if(actionName == "SpanishOF"){//CSYS-93828 (LN. 2-24-2019)
+								finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Incluido en la Tarifa por Instalación de Invoice Processing" + delim;
+							}
+							elif(actionName == "GermanOF"){
+								finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Enthalten im Initialen Einrichtungsentgelt für Invoice Processing" + delim;
+							}
+							//IESCNQRCPQ-614 LBN(29-05-2023)
+							elif(actionName == "JapanOF"){
+								finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + "Invoice" + delim;
+							}//END
+							else {
+								finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Included in the Invoice Processing Initial Setup Fee" + delim;
+							}
+						}
+						else{
+							if(actionName == "JapanOF"){
+								finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + "Included" + delim;
+							}
+						}
+					}
+
+				}
+				else {//Non-CIP Ext. Services that are bundled to CIP Cores
+
+					if(containskey(cipCoreDict, lineCoreOffering) OR containskey(cipCoreSpanishDict, lineCoreOffering) OR containskey(cipCoreGermanDict, lineCoreOffering)){//CSYS-93828 (LN. 2-24-2019)
+
+						groupedVerbiage = "";
+
+						if(actionName == "SpanishOF"){
+							if (cipTravelAuthorized == "true" AND cipTravelAuthorizedCore == "true") { //CSYS-100546 (OK. 3-3-2021)
+								groupedVerbiage = get(cipTravelAuthorizedCoreSpanishDict, lineCoreOffering);
+							}
+							else {
+								groupedVerbiage = get(cipCoreSpanishDict, lineCoreOffering);
+							}
+						}
+						elif(actionName == "GermanOF"){
+							if (cipTravelAuthorized == "true" AND cipTravelAuthorizedCore == "true") { //CSYS-100546 (OK. 3-3-2021)
+								groupedVerbiage = get(cipTravelAuthorizedCoreGermanDict, lineCoreOffering);
+							}
+							else {
+								groupedVerbiage = get(cipCoreGermanDict, lineCoreOffering);
+							}
+						}
+						//IESCNQRCPQ-614 (LBN-29-05-2023) start
+						elif(actionName == "JapanOF"){
+							if (cipTravelAuthorized == "true" AND cipTravelAuthorizedCore == "true") { 
+								//groupedVerbiage = "Extended Services";
+								finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + "Extended Services" + delim;
+							}
+							else{
+								if(lineCoreOffering == "Expense"){
+									//groupedVerbiage = "Extended Services";
+									finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + "Extended Services" + delim;
+								}
+								else{
+									//groupedVerbiage = "Travel";
+									finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + "Travel" + delim;
+								}
+							}
+						}//END	
+						else { 
+							if (cipTravelAuthorized == "true" AND cipTravelAuthorizedCore == "true") { //CSYS-100546 (OK. 3-3-2021)
+								groupedVerbiage = get(cipTravelAuthorizedCoreDict, lineCoreOffering);
+							}
+							else {
+								groupedVerbiage = get(cipCoreDict, lineCoreOffering);
+							}
+						}
+
+						finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + groupedVerbiage + delim;
+
+					}
+
+					//elif(lineCoreOffering == "Invoice Processing" AND ( find(accountServicePartnerSpecialty_quote, "Invoice Certified") <> -1 OR find(accountServicePartnerAuthorizationsTA_quote, "Invoice") <> -1 ) ){
+					elif(lineCoreOffering == "Invoice Processing" AND (find(accountServicePartnerAuthorizationsTA_quote, "Invoice") <> -1 ) ){  //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from CIP logic
+
+						groupedVerbiage = "";
+
+						if(actionName == "SpanishOF"){//CSYS-93828 (LN. 2-24-2019)
+							//groupedVerbiage = "Incluido en la Tarifa por Instalación de Invoice Processing"; //CSYS-100546 (OK. 3-3-2021) Commenting out and adding below line to fix the existing issue
+							groupedVerbiage = "Incluido en la Tarifa por Instalación Inicial de la Extensión de Servicios";
+						}
+						elif(actionName == "GermanOF"){
+							//groupedVerbiage = "Enthalten im Initialen Einrichtungsentgelt für Invoice Processing"; //CSYS-100546 (OK. 3-3-2021) Commenting out and adding below line to fix the existing issue
+							groupedVerbiage = "Enthalten im Initialen Einrichtungsentgelt für die Service-Erweiterungen";
+						}
+						//IESCNQRCPQ-614 LBN(29-05-2023)
+						elif(actionName == "JapanOF"){
+							//groupedVerbiage = "Extended Services";
+							finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + "Extended Services" + delim;
+						}
+						//END
+						else {
+							//groupedVerbiage = "Included in the Invoice Processing Initial Setup Fee"; //CSYS-100546 (OK. 3-3-2021) Commenting out and adding below line to fix the existing issue
+							groupedVerbiage = "Included in the Extended Services Initial Setup Fee";
+						}
+
+						finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + groupedVerbiage + delim;
+					}
+
+					elif(findinarray(cipCoreList, lineCoreOffering) == -1){ //If this is a CIP quote & there are bundled Ext. Services & the core does NOT equal a CIP core, business as usual verbiage:
+
+						if(actionName == "SMNOrderForm"){
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Included in the fees for the Service Type Ordered above" + delim;
+						}
+						elif(actionName == "Quotation"){
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Included" + delim;
+						}
+						elif(actionName == "SpanishOF"){//CSYS-93828 (LN. 2-24-2019)
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Incluido en las tarifas por el Servicio Cloud que arriba se solicitó" + delim;
+						}
+						elif(actionName == "GermanOF"){
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "Enthalten in den Entgelten für den oben bestellten Servicetyp" + delim;
+						}
+						//IESCNQRCPQ-614 Start
+						elif(actionName == "JapanOF"){ 
+							finalReturnString = finalReturnString + docNum + keyDelim + "japaneseTranslationForCIP_line" + keyDelim + "Included" + delim;
+						}
+						//IESCNQRCPQ-614 End
+					}
+				}
+			}
+		}
+
+
+
+		//CIP Pro. Services that can be implemented by the CIP
+		//if(productCategory == "Professional Service" AND action <> "TERMINATE" AND piItemType == "Setup" AND (findinarray(cipCoreList, lineCoreOffering) <> -1 OR (lineCoreOffering == "Invoice Processing" AND ( find(accountServicePartnerSpecialty_quote, "Invoice Certified") <> -1 OR find(accountServicePartnerAuthorizationsTA_quote, "Invoice") <> -1 )))){ //CSYS-100546 (OK. 3-3-2021) Remove the servicePartnerSpecialty field from CIP logic
+		if(productCategory == "Professional Service" AND action <> "TERMINATE" AND piItemType == "Setup" AND (findinarray(cipCoreList, lineCoreOffering) <> -1 OR (lineCoreOffering == "Invoice Processing" AND (find(accountServicePartnerAuthorizationsTA_quote, "Invoice") <> -1 )))){
+
+				isProServImplementableByaCip = containskey(docNumDict, poID + keyDelim + "cipPoIdMapping");
+
+				if(isProServImplementableByaCip == true){ //When a CIP Pro. Services is part of  CIP Core, display CIP on the Order Form; NOTE: Single Sign On only displays 'CIP' when the core is Expense
+
+						if(_quote_process_serviceAddress_country == "Japan"){
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "CIP " + delim;
+						}
+						else{
+							finalReturnString = finalReturnString + docNum + keyDelim + "outputSetupFee_line" + keyDelim + "CIP "+adjustedValueWithcurrency + delim;
+						}						 
+	  
+				}
+
+		}
+
+		// #### CSYS-82973 LN. 6/28/17 END #### //
+
+		/*
+		CSYS-92667 (LN. 9-24-2018) If the cipPiDict contains a found value found in the cipSetupFees table for an alternative Product Name,
+		populate that name on the cIPAlternativeProductName_line, to be fed into the Contract XSL logic to display for CIP Quotes
+		*/
+		alternativeProductName = "";
+
+		//Populate the Core Specific Alternative Product Name accordingly
+		if(containskey(cipAltNameDict, pi + keyDelim + "coreSpecificAltProductName" + keyDelim + lineCoreOffering)){
+			alternativeProductName = get(cipAltNameDict, pi + keyDelim + "coreSpecificAltProductName" + keyDelim + lineCoreOffering);
+		}
+		//Populate the non-Core Specific Alternative Product Name accordingly
+		elif(containskey(cipAltNameDict, pi + keyDelim + "nonCoreAltProductName")){
+			alternativeProductName = get(cipAltNameDict, pi + keyDelim + "nonCoreAltProductName");
+		}
+
+		//Write to the final return string for each line item; either null "" or populated with an alternative name
+		finalReturnString = finalReturnString + docNum + keyDelim + "cIPAlternativeProductName_line" + keyDelim + alternativeProductName + delim;
+	}
+
+}
+
+
+
+checkOutputRampFlag = "false";
+for rampPlanKey in rampPlanKeyArray {
+	rampPlanValuesArray = get(checkRampPlanDict,rampPlanKey);
+	countBase = 0;
+	checkOverideRampFlag = false;
+	docNumRampPlan = "";
+	for rampPlanValues in rampPlanValuesArray {
+		if(find(rampPlanValues, "Base") > -1) {
+			countBase = countBase + 1;
+			rampPlanArray = split(rampPlanValues, "~");
+			docNumRampPlan = rampPlanArray[0];
+			size = sizeofarray(rampPlanArray);
+			if(rampPlanArray[size-1] == "false"){
+				checkOverideRampFlag = true;
+			}
+		}
+	}
+	if(countBase > 0 AND checkOverideRampFlag) {
+		checkOutputRampFlag = TRUE_STR;
+	}
+	else {
+		checkOutputRampFlag = "false";
+	}
+	if(docNumRampPlan <> "") {
+		finalReturnString = finalReturnString + docNumRampPlan + keyDelim + "outputCheckRamp_line" + keyDelim + checkOutputRampFlag + delim;
+	}
+}
+if ( proposalExpirationDate_quote == "" ){
+	currentDate = getdate();
+	expirationDate = adddays( currentDate, 30 );
+	finalReturnString = finalReturnString + "1~proposalExpirationDate_quote~" + datetostr(expirationDate) + "|";
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "containsTravel_quote" + keyDelim + string(containsTravel) + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "containsReplacedTravelDirect_quote" + keyDelim + string(containsTravelDirectLegacyReplacedWithNew) + delim; //CSYS-96786 SN. 09-2019 
+
+/*BM_VT. July 18 2012. Systematized Contracts changes. Get the value if implementation method to be used in outputs */
+finalReturnString = finalReturnString + "1" + keyDelim + "implementationMethods_quote" + keyDelim + strImpMethod + delim;
+
+billingCycleFrenchDD = "";//CSYS-91980 (LN. 7-25-2018)
+billingCycleSpanishDD = ""; //CSYS-92933 (LN. 10-16-2018)
+billingCycleGermanDD = ""; //CSYS-95993 (LN. 8-20-2019)
+billingCycleJapaneseDD = "";//CSYS-107251 									  
+
+if (billingCycle_quote == "Monthly"){
+	finalReturnString = finalReturnString + "1" + keyDelim + "numberOfTransMultipleBy13Or12MQY_quote" + keyDelim + "1"+ delim;
+	billingCycleFrenchDD = "Mensuellement";//CSYS-91980 (LN. 7-25-2018)
+	billingCycleSpanishDD = "Mensualmente"; //CSYS-92933 (LN. 10-16-2018)	
+    billingCycleGermanDD = "monatlich"; //CSYS-95993 (LN. 8-20-2019)
+	billingCycleJapaneseDD = "1ヶ月毎";//CSYS-107251 
+													  
+}
+elif(billingCycle_quote == "Quarterly"){
+	finalReturnString = finalReturnString + "1" + keyDelim + "numberOfTransMultipleBy13Or12MQY_quote" + keyDelim + "3"+ delim;
+	billingCycleFrenchDD = "Trimestriellement";//CSYS-91980 (LN. 7-25-2018)
+	billingCycleSpanishDD = "Trimestralmente"; //CSYS-92933 (LN. 10-16-2018)	
+    billingCycleGermanDD = "vierteljährlich"; //CSYS-95993 (LN. 8-20-2019)
+	billingCycleJapaneseDD = "四半期毎";//CSYS-107251 
+														
+}
+elif(billingCycle_quote == "Semi-Annually"){  // CSYS-90721, Phil S, Semi-Annually
+	finalReturnString = finalReturnString + "1" + keyDelim + "numberOfTransMultipleBy13Or12MQY_quote" + keyDelim + "6"+ delim;
+	billingCycleFrenchDD = "Semestriellement";
+	billingCycleSpanishDD = "Semestral";
+	billingCycleGermanDD = " Halbjährlich"; //end of CSYS-90721, Phil S, Semi-Annually
+	billingCycleJapaneseDD = "半年毎";//CSYS-107251 
+									  
+}
+elif(billingCycle_quote == "Annually"){
+	finalReturnString = finalReturnString + "1" + keyDelim + "numberOfTransMultipleBy13Or12MQY_quote" + keyDelim + "12"+ delim;
+	billingCycleFrenchDD = "Annuellement";//CSYS-91980 (LN. 7-25-2018)
+	billingCycleSpanishDD = "Anualmente"; //CSYS-92933 (LN. 10-16-2018)	
+	billingCycleGermanDD = "jährlich"; //CSYS-95993 (LN. 8-20-2019)
+	billingCycleJapaneseDD = "1年間毎"; //CSYS-107251 
+									   
+} else {
+	finalReturnString = finalReturnString + "1" + keyDelim + "numberOfTransMultipleBy13Or12MQY_quote" + keyDelim + "1"+ delim;
+}
+
+finalReturnString = finalReturnString + "1" + keyDelim + "billingCycleFrenchDD_quote" + keyDelim + billingCycleFrenchDD + delim;//CSYS-91980 (LN. 7-25-2018)
+finalReturnString = finalReturnString + "1" + keyDelim + "billingCycleSpanishDD_quote" + keyDelim + billingCycleSpanishDD + delim;//CSYS-92933 (LN. 10-16-2018)
+finalReturnString = finalReturnString + "1" + keyDelim + "billingCycleGermanDD_quote" + keyDelim + billingCycleGermanDD + delim;//CSYS-95993 (LN. 8-20-2019)
+finalReturnString = finalReturnString + "1" + keyDelim + "billingCycleJapaneseDD_quote" + keyDelim + billingCycleJapaneseDD + delim;//CSYS-107251
+
+//CSYS-96183 MJ 7/9/2019;
+currentBillingCycleFrenchDD = "";
+currentBillingCycleSpanishDD = "";
+currentBillingCycleGermanDD = "";
+currentBillingCycleJapaneseDD = "";//CSYS-107251
+												 
+
+if(quoteType_quote=="Add-On Business") {
+	if(currentBillingCycle_quote <> "") {
+		if (currentBillingCycle_quote == "Monthly"){
+			currentBillingCycleFrenchDD = "Mensuellement";
+			currentBillingCycleSpanishDD = "Mensualmente";
+			currentBillingCycleGermanDD = "monatlich";
+			currentBillingCycleJapaneseDD = "1ヶ月毎";//CSYS-107251
+															 
+		}
+		elif(currentBillingCycle_quote == "Quarterly"){
+			currentBillingCycleFrenchDD = "Trimestriellement";
+			currentBillingCycleSpanishDD = "Trimestralmente";
+			currentBillingCycleGermanDD = "vierteljährlich";
+			currentBillingCycleJapaneseDD = "四半期毎";//CSYS-107251
+																							  
+		}
+		// CSYS-90723, Phil S, Semi-Annually
+		elif(currentBillingCycle_quote == "Semi-Annually"){
+			currentBillingCycleFrenchDD = "Semestriellement";
+			currentBillingCycleSpanishDD = "Semestral";
+			currentBillingCycleGermanDD = "Halbjährlich";
+			currentBillingCycleJapaneseDD = "半年毎";//CSYS-107251
+															
+		}
+		//
+		elif(currentBillingCycle_quote == "Annually"){
+			currentBillingCycleFrenchDD = "Annuellement";
+			currentBillingCycleSpanishDD = "Anualmente";
+			currentBillingCycleGermanDD = "jährlich";
+			currentBillingCycleJapaneseDD = "1年間毎";//CSYS-107251 
+																							 
+		}
+	}
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "currentBillingCycleFrenchDD_quote" + keyDelim + currentBillingCycleFrenchDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "currentBillingCycleSpanishDD_quote" + keyDelim + currentBillingCycleSpanishDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "currentBillingCycleGermanDD_quote" + keyDelim + currentBillingCycleGermanDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "currentBillingCycleJapaneseDD_quote" + keyDelim + currentBillingCycleJapaneseDD + delim;//CSYS-107251 																																								
+
+if(quoteType_quote=="Add-On Business") {
+	finalReturnString = finalReturnString + "1" + keyDelim + "totalProposalBaseFee_proposal_quote" + keyDelim + string(baseTotalOutput) + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "totalSetupFee_proposal_quote" + keyDelim + string(setUpTotalOutput) + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "totalIncrementalTransactionFee_proposal_quote" + keyDelim + string(incrTotalOutput) + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "totalPreprodFee_proposal_quote" + keyDelim + string(preProdTotalOutput) + delim;
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "quoteHasPreProdFeeForEnterprise_quote" + keyDelim + string(hasPreProdFeeForNewBusiness) + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "quoteHasPreProdDD_quote" + keyDelim + string(hasPreProdFee) + delim;
+
+//CSYS-88618 (LN. 1/9/2018) No longer needed.  Both Ent & SMB will use one hyperlink
+//CSYS-77783 (KA. 2-20-2017): populate new attributes for Document Designer:
+// gtcHyperlinkDD = "";
+// if(accountArea_quote == "EMEA" AND _quote_process_serviceAddress_country == "United Kingdom" AND ownerBU_quote == "SMB BU"){
+// 	gtcHyperlinkDD = "http://www.concur.com/legal/agreements/uk";
+// }
+// elif(accountArea_quote == "EMEA" AND ownerBU_quote == "SMB BU"){
+// 	gtcHyperlinkDD = "http://www.concur.com/legal/agreements/nl";
+// }
+// elif(accountArea_quote == "APAC" AND ownerBU_quote == "SMB BU"){
+// 	gtcHyperlinkDD = "http://www.concur.com/legal/agreements/au";
+// }
+// elif(accountArea_quote == "Americas" AND _quote_process_serviceAddress_country == "Canada" AND ownerBU_quote == "SMB BU"){
+// 	gtcHyperlinkDD = "http://www.concur.com/legal/agreements/ca";
+// }
+// elif(ownerBU_quote == "SMB BU"){
+// 	gtcHyperlinkDD = "http://www.concur.com/legal/agreements/us";
+// }
+// elif(ownerBU_quote == "Enterprise BU"){
+// 	gtcHyperlinkDD = "http://go.sap.com/about/agreements.html";
+// }
+// else{
+// 	gtcHyperlinkDD = "http://go.sap.com/about/agreements.html";
+// }
+// finalReturnString = finalReturnString + "1" + keyDelim + "gtcHyperlinkDD_quote" + keyDelim + gtcHyperlinkDD + delim;
+
+//CSYS-88618 (LN. 1/9/2018) No longer needed.  Both Ent & SMB will use this verbaige
+// sapReferenceTextDD = "";
+// if(ownerBu_quote == "Enterprise BU"){
+// 	sapReferenceTextDD = "All references to \"SAP\" in the GTC shall mean \"Concur\".";
+// }
+// finalReturnString = finalReturnString + "1" + keyDelim + "sapReferenceTextDD_quote" + keyDelim + sapReferenceTextDD + delim;
+
+//CSYS-97803, Phil Sheu 12/23/2019 German Order Form CSYS-104536 NP 10/22/2021 updated German Payment terms
+paymentTermsDE = "";  //payment term in German
+paymentTermsDJ = ""; //payment term in Japan CSYS-107251
+paymentTermsDD = "";
+if(terms_quote == "Net 30"){
+	paymentTermsDD = "30";
+	paymentTermsDE = "dreißig (30)";
+	paymentTermsDJ = "30"; //CSYS-107251					 
+}
+elif(terms_quote == "Net 45"){
+	paymentTermsDD = "45";
+	paymentTermsDE = "fünfundvierzig (45)";
+	paymentTermsDJ = "45"; //CSYS-107251
+									 
+}
+elif(terms_quote == "Net 60"){//CSYS-91413 (LN. 5-18-2018) Missing the Net 60 value
+	paymentTermsDD = "60";
+	paymentTermsDE = "sechzig (60)";
+	paymentTermsDJ = "60"; //CSYS-107251
+									 
+}
+elif(terms_quote == "Net 90"){
+	paymentTermsDD = "90";
+	paymentTermsDE = "neunzig (90)";
+	paymentTermsDJ = "90"; //CSYS-107251
+									 
+}
+elif(terms_quote == "Net 120"){
+	paymentTermsDD = "120";
+	paymentTermsDE = "einhundertzwanzig (120)";
+	paymentTermsDJ = "120"; //CSYS-107251
+									  
+}
+else{
+	paymentTermsDD = "30";
+	paymentTermsDE = "dreißig (30)";
+	paymentTermsDJ = "30"; //CSYS-107251
+									 
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "paymentTermsDD_quote" + keyDelim + paymentTermsDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "paymentTermsDE_quote" + keyDelim + paymentTermsDE + delim; //CSYS-97803
+finalReturnString = finalReturnString + "1" + keyDelim + "paymentTermsDJ_quote" + keyDelim + paymentTermsDJ + delim; //CSYS-107251																																  
+//
+
+termNoticeDD = "";
+termNoticeFrenchDD = "";//CSYS-91980 (LN. 7-24-2018) French Term Notice values to be leveraged in the French Order Form
+termNoticeSpanishDD = "";//CSYS-92941 (LN. 2-15-2019) Spanish Term Notice values to be leveraged in the Spanish Order Form
+termNoticeGermanDD = "";//CSYS-95998 (LN. 8-27-2019) German Term Notice values to be leveraged in the German Order Form
+termNoticeJapaneseDD = ""; //CSYS-107251
+										
+
+if(termNotice_quote == "Ninety (90) days"){
+	termNoticeDD = "90 days";
+	termNoticeFrenchDD = " Quatre-vingt-dix (90) jours";
+	termNoticeSpanishDD = "noventa (90) días";
+	termNoticeGermanDD = "Neunzig (90) Tagen";
+	termNoticeJapaneseDD = "90日"; //CSYS-107251
+											  
+}
+elif(termNotice_quote == "Sixty (60) days"){
+	termNoticeDD = "60 days";
+	termNoticeFrenchDD = "Soixante (60) jours";
+	termNoticeSpanishDD = "sesenta (60) días";
+	termNoticeGermanDD = "Sechzig (60) Tagen";
+	termNoticeJapaneseDD = "60日"; //CSYS-107251
+											  
+}
+elif(termNotice_quote == "Thirty (30) days"){
+	termNoticeDD = "30 days";
+	termNoticeFrenchDD = "Trente (30) jours";
+	termNoticeSpanishDD = "treinta (30) días";
+	termNoticeGermanDD = "Dreißig (30) Tagen";
+	termNoticeJapaneseDD = "30日"; //CSYS-107251
+											  
+}
+else{
+	termNoticeDD = termNotice_quote;
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "termNoticeDD_quote" + keyDelim + termNoticeDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "termNoticeFrenchDD_quote" + keyDelim + termNoticeFrenchDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "termNoticeSpanishDD_quote" + keyDelim + termNoticeSpanishDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "termNoticeGermanDD_quote" + keyDelim + termNoticeGermanDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "termNoticeJapaneseDD_quote" + keyDelim + termNoticeJapaneseDD + delim; //CSYS-107251
+																																			  
+
+preProductionPromoDD = "";
+preProductionPromoSpanishDD = "";//CSYS-92941 (LN. 2-15-2019) Spanish Pre Production Promotion values to be leveraged in the Spanish Order Form
+preProductionPromoFrenchDD = ""; //CSYS-96901 (SN. MJ 9/3/2019) French Pre Production promotion values to be leveraged in French Order Form
+preProductionPromoGermanDD = ""; //CSYS-95998 (KW 9/6/2019) German Pre Production promotion values to be leveraged in German Order Form
+
+if(preproductionWaive_quote == "6 months" OR find(appliedPromotion_quote, "AMAS13Q34ERPHIGHERED") <> -1){
+	preProductionPromoDD = "seventh";
+	preProductionPromoSpanishDD = "séptimo";
+	preProductionPromoFrenchDD = "septième";//CSYS-96901 
+	preProductionPromoGermanDD = "siebten";		
+}
+/*
+elif(find(appliedPromotion_quote, "AMAS13Q34ERPNATLM") <> -1){
+	preProductionPromoDD = "fourth";
+	preProductionPromoSpanishDD = "cuarto";
+	preProductionPromoGermanDD = "vierte";	
+}*/
+elif(preproductionWaive_quote == "30 days" OR preproductionWaive_quote == "1 month"){
+	preProductionPromoDD = "second";
+	preProductionPromoSpanishDD = "segundo";
+	preProductionPromoFrenchDD = "deuxième";//CSYS-96901 
+	preProductionPromoGermanDD = "zweiten";	
+}
+elif(preproductionWaive_quote == "60 days" OR preproductionWaive_quote == "2 months"){
+	preProductionPromoDD = "third";
+	preProductionPromoSpanishDD = "tercero";
+	preProductionPromoFrenchDD = "troisième";//CSYS-96901
+	preProductionPromoGermanDD = "dritten";
+}
+elif(preproductionWaive_quote == "90 days" OR preproductionWaive_quote == "3 months" OR find(appliedPromotion_quote, "AMAS13Q34ERPNATLM") <> -1){
+	preProductionPromoDD = "fourth";
+	preProductionPromoSpanishDD = "cuarto";
+	preProductionPromoFrenchDD = "quatrième";//CSYS-96901
+	preProductionPromoGermanDD = "vierten";
+}
+//CSYS-97078
+elif(preproductionWaive_quote == "4 months"){
+	preProductionPromoDD = "fifth";
+	preProductionPromoSpanishDD = "quinto";
+	preProductionPromoFrenchDD = "cinquième";//CSYS-96901
+	preProductionPromoGermanDD = "fünften";
+}
+elif(preproductionWaive_quote == "5 months"){
+	preProductionPromoDD = "sixth";
+	preProductionPromoSpanishDD = "sexto";
+	preProductionPromoFrenchDD = "sixième";//CSYS-96901
+	preProductionPromoGermanDD = "sechsten";
+}
+else{
+	preProductionPromoDD = "first";
+	preProductionPromoSpanishDD = "primer";
+	preProductionPromoFrenchDD = "premier";//CSYS-96901 
+	preProductionPromoGermanDD = "ersten";
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "preProductionPromoDD_quote" + keyDelim + preProductionPromoDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "preProductionPromoSpanishDD_quote" + keyDelim + preProductionPromoSpanishDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "preProductionPromoFrenchDD_quote" + keyDelim + preProductionPromoFrenchDD + delim;//CSYS-96901
+finalReturnString = finalReturnString + "1" + keyDelim + "preProductionPromoGermanDD_quote" + keyDelim + preProductionPromoGermanDD + delim;
+
+//IESCNQRCPQ-196 SV Added for waiver months in words
+waiverMonthsInEnglish = "";
+waiverMonthsInFrench = "";
+waiverMonthsInSpanish = "";
+waiverMonthsInGerman = "";
+if(monthsToWaive == "1"){
+	waiverMonthsInEnglish = "one";
+	waiverMonthsInFrench = "un";
+	waiverMonthsInSpanish = "uno";
+	waiverMonthsInGerman = "eins";
+}
+elif(monthsToWaive == "2"){
+	waiverMonthsInEnglish = "two";
+	waiverMonthsInFrench = "deux";
+	waiverMonthsInSpanish = "dos";
+	waiverMonthsInGerman = "zwei";
+}
+elif(monthsToWaive == "3"){
+	waiverMonthsInEnglish = "three";
+	waiverMonthsInFrench = "trois";
+	waiverMonthsInSpanish = "tres";
+	waiverMonthsInGerman = "drei";
+}
+elif(monthsToWaive == "4"){
+	waiverMonthsInEnglish = "four";
+	waiverMonthsInFrench = "quatre";
+	waiverMonthsInSpanish = "cuatro";
+	waiverMonthsInGerman = "vier";
+}
+elif(monthsToWaive == "5"){
+	waiverMonthsInEnglish = "five";
+	waiverMonthsInFrench = "cinq";
+	waiverMonthsInSpanish = "cinco";
+	waiverMonthsInGerman = "fünf";
+}
+elif(monthsToWaive == "6"){
+	waiverMonthsInEnglish = "six";
+	waiverMonthsInFrench = "six";
+	waiverMonthsInSpanish = "seis";
+	waiverMonthsInGerman = "sechs";
+}
+elif(monthsToWaive == "7"){
+	waiverMonthsInEnglish = "seven";
+	waiverMonthsInFrench = "sept";
+	waiverMonthsInSpanish = "siete";
+	waiverMonthsInGerman = "sieben";
+}
+elif(monthsToWaive == "8"){
+	waiverMonthsInEnglish = "eight";
+	waiverMonthsInFrench = "huit";
+	waiverMonthsInSpanish = "ocho";
+	waiverMonthsInGerman = "acht";
+}
+elif(monthsToWaive == "9"){
+	waiverMonthsInEnglish = "nine";
+	waiverMonthsInFrench = "neuf";
+	waiverMonthsInSpanish = "nueve";
+	waiverMonthsInGerman = "neun";
+}
+elif(monthsToWaive == "10"){
+	waiverMonthsInEnglish = "ten";
+	waiverMonthsInFrench = "dix";
+	waiverMonthsInSpanish = "diez";
+	waiverMonthsInGerman = "zehn";
+}
+elif(monthsToWaive == "11"){
+	waiverMonthsInEnglish = "eleven";
+	waiverMonthsInFrench = "onze";
+	waiverMonthsInSpanish = "once";
+	waiverMonthsInGerman = "elf";
+}
+else{
+	waiverMonthsInEnglish = "twelve";
+	waiverMonthsInFrench = "douze";
+	waiverMonthsInSpanish = "doce";
+	waiverMonthsInGerman = "zwölf";
+}
+
+finalReturnString = finalReturnString + "1" + keyDelim + "monthsToWaiveInWordsEnglish_quote" + keyDelim + waiverMonthsInEnglish + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "monthsToWaiveInWordsSpanish_quote" + keyDelim + waiverMonthsInSpanish + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "monthsToWaiveInWordsFrench_quote" + keyDelim + waiverMonthsInFrench + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "monthsToWaiveInWordsGerman_quote" + keyDelim + waiverMonthsInGerman + delim;
+
+//IESCNQRCPQ-196 End
+contractRenewalDateDD = "";
+contractRenewalDateFrenchDD = "";//CSYS-91980 (LN. 7-25-2018)
+contractRenewalDateSpanishDD = "";//CSYS-92941 (LN. 2-18-2019)
+contractRenewalDateGermanDD = "";//CSYS-95998 (LN. 8-29-2019)
+contractRenewalDateJapaneseDD = ""; //CSYS-107251											 
+
+if(contractRenewalDate_quote <> ""){
+	//CSYS 82969 - Updating the Renewal Date format for the Document Designer LN 6/20/2017
+	contractRenewalDateDD = util.formatDate(contractRenewalDate_quote, "long");
+	contractRenewalDateFrenchDD = util.formatDate(contractRenewalDate_quote, "frenchLong");//CSYS-91980
+	contractRenewalDateSpanishDD = util.formatDate(contractRenewalDate_quote, "spanishLong");//CSYS-92941
+	contractRenewalDateGermanDD = util.formatDate(contractRenewalDate_quote, "germanLong");//CSYS-95998
+	contractRenewalDateJapaneseDD = util.formatDate(contractRenewalDate_quote, "japaneseLong");//CSYS-107251
+																										 
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "contractRenewalDateDD_quote" + keyDelim + contractRenewalDateDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "contractRenewalDateFrenchDD_quote" + keyDelim + contractRenewalDateFrenchDD + delim;//CSYS-91980
+finalReturnString = finalReturnString + "1" + keyDelim + "contractRenewalDateSpanishDD_quote" + keyDelim + contractRenewalDateSpanishDD + delim;//CSYS-92941
+finalReturnString = finalReturnString + "1" + keyDelim + "contractRenewalDateGermanDD_quote" + keyDelim + contractRenewalDateGermanDD + delim;//CSYS-95998
+finalReturnString = finalReturnString + "1" + keyDelim + "contractRenewalDateJapaneseDD_quote" + keyDelim + contractRenewalDateJapaneseDD + delim;//CSYS-107251
+
+
+//CSYS-98264 (LN. 9-20-2018) No longer need to dynamially replace 'Order' w/ 'Quote' for TFSD language, it will all be 'Order' now
+tfsdLanguage = replace(tFSDLanguagePlaceholder_quote, "ORDERVSQUOTATIONSTR", "Order");
+tfsdLanguageExtended = replace(tFSDLanguageExtendedPlaceholder_quote, "ORDERVSQUOTATIONSTR", "Order");
+
+finalReturnString = finalReturnString + "1" + keyDelim + "tFSDLanguage_quote" + keyDelim + tfsdLanguage + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "tFSDLanguageExtended_quote" + keyDelim + tfsdLanguageExtended + delim;
+
+
+//CSYS-85600 (LN. 9/22/2017) Restructing the code to use the util.formatDate
+orderEffectiveDateDD = "";
+orderEffectiveDateFrenchDD = "";//CSYS-91980
+orderEffectiveDateSpanishDD = "";//CSYS-92933
+orderEffectiveDateGermanDD = "";//CSYS-95993
+orderEffectiveDateJapaneseDD = "";//CSYS-107251
+											   
+
+if(orderEffectiveDate_quote <> ""){
+	orderEffectiveDateDD = util.formatDate(orderEffectiveDate_quote, "long");
+	orderEffectiveDateFrenchDD = util.formatDate(orderEffectiveDate_quote, "frenchLong");//CSYS-91980
+	orderEffectiveDateSpanishDD = util.formatDate(orderEffectiveDate_quote, "spanishLong");//CSYS-92933
+    orderEffectiveDateGermanDD = util.formatDate(orderEffectiveDate_quote, "germanLong");//CSYS-95993
+	orderEffectiveDateJapaneseDD = util.formatDate(orderEffectiveDate_quote, "japaneseLong");//CSYS-107251
+																										
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "orderEffectiveDateDD_quote" + keyDelim + orderEffectiveDateDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "orderEffectiveDateFrenchDD_quote" + keyDelim + orderEffectiveDateFrenchDD + delim;//CSYS-91980
+finalReturnString = finalReturnString + "1" + keyDelim + "orderEffectiveDateSpanishDD_quote" + keyDelim + orderEffectiveDateSpanishDD + delim;//CSYS-92933
+finalReturnString = finalReturnString + "1" + keyDelim + "orderEffectiveDateGermanDD_quote" + keyDelim + orderEffectiveDateGermanDD + delim;//CSYS-95993
+finalReturnString = finalReturnString + "1" + keyDelim + "orderEffectiveDateJapaneseDD_quote" + keyDelim + orderEffectiveDateJapaneseDD + delim; //CSYS-107251
+
+//CSYS-77783 END.
+
+//IESCNQRCPQ-479 SV. 24-03-2023 Start
+contractEffectiveDateDD = "";
+contractEffectiveDateFrenchDD = "";
+contractEffectiveDateSpanishDD = "";
+contractEffectiveDateGermanDD = "";
+contractEffectiveDateJapanDD = "";
+
+if(contractEffectiveDate_quote <> ""){
+	contractEffectiveDateDD = util.formatDate(contractEffectiveDate_quote, "long");
+	contractEffectiveDateFrenchDD = util.formatDate(contractEffectiveDate_quote, "frenchLong");
+	contractEffectiveDateSpanishDD = util.formatDate(contractEffectiveDate_quote, "spanishLong");
+    contractEffectiveDateGermanDD = util.formatDate(contractEffectiveDate_quote, "germanLong");
+	contractEffectiveDateJapanDD = util.formatDate(contractEffectiveDate_quote, "japaneseLong");
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "contractEffectiveDateDD_quote" + keyDelim + contractEffectiveDateDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "contractEffectiveDateFrenchDD_quote" + keyDelim + contractEffectiveDateFrenchDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "contractEffectiveDateSpanishDD_quote" + keyDelim + contractEffectiveDateSpanishDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "contractEffectiveDateGermanDD_quote" + keyDelim + contractEffectiveDateGermanDD + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "contractEffectiveDateJapanDD_quote" + keyDelim + contractEffectiveDateJapanDD + delim; 
+//IESCNQRCPQ-479 End
+
+/*BM_VT. End */
+
+//CSYS-100494 (TT. 9/15/2020)\
+tFSDForResellOrderDD = "";
+for line in line_process{
+	newProductStartDate = line.newProductStartDate_line;
+	//CSYS-105930 - Added newProductStartDate is not null condition as it was taking setting black value for TFSD
+	if (orderEffectiveDate_quote <> "" and newProductStartDate <> "") {
+    		tFSDForResellOrderDD = util.formatDate(newProductStartDate, "long");
+
+	}
+	
+	//IESCNQRCPQ-1212 (OK. 10-9-2023) Add logic to avoid the null TFSD issue. Pulling the generic value from TfsdLanguage table to avoid adding the extra clause in documents
+	if (tFSDForResellOrderDD == "") {
+		quoteType = "Add-On Business";
+		accntPreProdFlag = "FALSE";
+		recordSet = BMQL("SELECT language1 FROM TfsdLanguage WHERE quoteType = $quoteType AND (coreOneAction is null OR coreOneAction = '') AND (coreTwoAction is null OR coreTwoAction = '') AND (coreOneProdOffsetFlg is null or coreOneProdOffsetFlg = '') AND (coreTwoProdOffsetFlg is null OR coreTwoProdOffsetFlg = '') AND accntPreProdFlag = $accntPreProdFlag AND (OwnerBU is null OR OwnerBU = '')");
+		for res in recordSet {
+			language1 = get(res, "language1");
+			
+			if (find(language1, "means ") <> -1) {
+				language1 =  replace(language1, "means ", "");
+			}
+			tFSDForResellOrderDD = language1;
+		}
+	}
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "tFSDForResellOrderDD_quote" + keyDelim + tFSDForResellOrderDD + delim;
+//CSYS-100494 END. 
+
+//CSYS-103478 LBN 20-07-2021 Start
+ContractdateforResellOrderDD="";
+for line in line_process{
+	NPSD = line.newProductStartDate_line;
+	if(quoteType_quote == "New Business" AND purchasedFromPartnerCategorySFDC_quote == "VAR" AND termNumMonths_quote <> ""){
+		if(isnumber(termNumMonths_quote)){
+			num_of_months = string(atoi(termNumMonths_quote)-1); //CSYS-105455 To avoid adding extra month to date, LBN-02/10/2022
+			ContractdateforResellOrderDD = util.addMonthsToDate(NPSD,num_of_months);
+			ContractdateforResellOrderDD = util.setDateToLastDayOfMonth(ContractdateforResellOrderDD);
+		}
+		if(ContractdateforResellOrderDD <> ""){
+			ContractdateforResellOrderDD = util.formatDate(ContractdateforResellOrderDD, "long");
+		}
+	}
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "contractRenewalDateforResellOrderDD_quote" + keyDelim + ContractdateforResellOrderDD + delim;
+//CSYS-103478 LBN 20-07-2021 End	
+
+//CSYS-103220 Start
+numberValDict = dict("string");
+									   
+//CSYS-107251 - For Japanese Order Form
+put(numberValDict, "1", "first" + DELIMITER + "premier" + DELIMITER + "primer" + DELIMITER + "ersten" + DELIMITER + "翌");
+//IESCNQRCPQ-736 04-07-2023 SV. As per the comments updating the vlaue of second for Japanese
+//put(numberValDict, "2", "second" + DELIMITER + "deuxième" + DELIMITER + "segundo" + DELIMITER + "zweiten" + DELIMITER + "2番目の");
+put(numberValDict, "2", "second" + DELIMITER + "deuxième" + DELIMITER + "segundo" + DELIMITER + "zweiten" + DELIMITER + "翌々");
+put(numberValDict, "3", "third" + DELIMITER + "troisième" + DELIMITER + "tercero" + DELIMITER + "dritten" + DELIMITER + "3番目の");
+put(numberValDict, "4", "fourth" + DELIMITER + "quatrième" + DELIMITER + "cuarto" + DELIMITER + "vierten" + DELIMITER + "4番目の");
+put(numberValDict, "5", "fifth" + DELIMITER + "cinquième" + DELIMITER + "quinto" + DELIMITER + "fünften" + DELIMITER + "5番目の");
+put(numberValDict, "6", "sixth" + DELIMITER + "sixième" + DELIMITER + "sexto" + DELIMITER + "sechsten" + DELIMITER + "6番目の");
+put(numberValDict, "7", "seventh" + DELIMITER + "septième" + DELIMITER + "séptimo" + DELIMITER + "siebten" + DELIMITER + "7番目の");
+put(numberValDict, "8", "eighth" + DELIMITER + "huitième" + DELIMITER + "octavo" + DELIMITER + "achten" + DELIMITER + "8番目の");
+put(numberValDict, "9", "ninth" + DELIMITER + "neuvième" + DELIMITER + "noveno" + DELIMITER + "neunten" + DELIMITER + "9番目の");
+put(numberValDict, "10", "tenth" + DELIMITER + "dixième" + DELIMITER + "décimo" + DELIMITER + "zehnten" + DELIMITER + "10番目の");
+put(numberValDict, "11", "eleventh" + DELIMITER + "onzième" + DELIMITER + "décimo primero" + DELIMITER + "elften" + DELIMITER + "11番目の"); //CSYS-103933 NP 09/13/2021 
+put(numberValDict, "12", "twelfth" + DELIMITER + "douzième" + DELIMITER + "décimo segundo" + DELIMITER + "zwölften" + DELIMITER + "12番目の"); //CSYS-103933 NP 09/13/2021
+put(numberValDict, "13", "thirteenth" + DELIMITER + "treizième" + DELIMITER + "decimotercero" + DELIMITER + "dreizehnten" + DELIMITER + "13番目の");
+put(numberValDict, "14", "fourteenth" + DELIMITER + "quatorzième" + DELIMITER + "decimocuarto" + DELIMITER + "vierzehnten" + DELIMITER + "14番目の");
+put(numberValDict, "15", "fifteenth" + DELIMITER + "quinzième" + DELIMITER + "decimoquinto" + DELIMITER + "fünfzehnten" + DELIMITER + "15番目の");
+//CSYS-103220 Ends
+
+//CSYS-102711 NP 03-05-2021
+
+if(stdToProfMigration AND moreThanTwoModelFlag_quote){
+	coreList = split(listOfCoreOffering_quote, "$$");
+	if(sizeofarray(coreList)==2){
+		npsdSTPM="";
+		npsdSTPMFrench="";//CSYS-102834 NP 08/05/2021
+		npsdSTPMSpanish="";//CSYS-103933 NP 09/13/2021
+		npsdSTPMGerman="";//CSYS-103932 NP 09/27/2021
+		firstCoreSTPM="";
+		secondCoreSTPM="";
+		TFSD_TEXT_STPM="";
+		TFSD_TEXT_STPMFrench = "";//CSYS-102834 NP 08/05/2021
+		TFSD_TEXT_STPMSpanish="";//CSYS-103933 NP 09/13/2021
+		TFSD_TEXT_STPMGerman="";//CSYS-103932 NP 09/27/2021
+		month2ndCore=0; //CSYS-103220 to show months in TFSD language
+		
+		for line in line_process{
+			
+			if(line.assetAction_line == "CREATE" AND line.poCategory_line=="Core Service" AND line.piItemType_line=="Base" ){
+				
+				if(line.nextBillingDate_line<>"" AND line.newProductStartDate_line<>""){//existing asset with npsd populated
+					if(line._parent_doc_number==sTPMParentId){ //the STPM core service
+						firstCoreSTPM=line.poName_line;
+						npsdSTPM = util.formatDate(line.newProductStartDate_line, "long");
+						npsdSTPMFrench = util.formatDate(line.newProductStartDate_line, "frenchLong");//CSYS-102834 NP 08/05/2021
+						npsdSTPMSpanish = util.formatDate(line.newProductStartDate_line, "spanishLong");//CSYS-103933 NP 09/13/2021
+						npsdSTPMGerman = util.formatDate(line.newProductStartDate_line, "germanLong");//CSYS-103932 NP 09/27/2021
+					}
+					if(line._parent_doc_number<>sTPMParentId){ //The non-STPM Core service
+						if(secondCoreSTPM==""){
+							secondCoreSTPM="Migrated";	
+						}
+					}
+				}
+				if(line.nextBillingDate_line=="" AND line.newProductStartDate_line<>""){//newly created STPM Core, this prints the longer TFSD_TEXT_STPM
+					if(line._parent_doc_number<>sTPMParentId){
+						if(secondCoreSTPM==""){
+							secondCoreSTPM=line.poName_line;
+							month2ndCore=util.getDifferenceInMonths(orderEffectiveDate_quote,line.newProductStartDate_line); //CSYS-103220 to show months in TFSD language
+						}
+					}
+				}
+		
+			}
+		}
+		
+		
+		if(secondCoreSTPM<>""AND secondCoreSTPM<>"Migrated" ){
+			//CSYS-103220 Starts NP 20/07/2021 to show months in TFSD language
+			finalMonth2ndCore="";
+			finalMonth2ndCoreFrench=""; //CSYS-102834 NP 08/05/2021
+			finalMonth2ndCoreSpanish=""; //CSYS-103933 NP 09/13/2021
+			finalMonth2ndCoreGerman="";//CSYS-103932 NP 09/27/2021
+			monthVal2ndCore = string[];
+			if(containskey(numberValDict, string(month2ndCore))){
+				monthVal2ndCore = split(get(numberValDict, string(month2ndCore)), DELIMITER);
+				finalMonth2ndCore = monthVal2ndCore[0];//first index is in English
+				finalMonth2ndCoreFrench = monthVal2ndCore[1];//second index is in French CSYS-102834 NP 08/05/2021
+				finalMonth2ndCoreSpanish = monthVal2ndCore[2];//third index is in Spanish CSYS-103933 NP 09/13/2021
+				finalMonth2ndCoreGerman = monthVal2ndCore[3];//fourth index is in German CSYS-103932 NP 09/27/2021
+			}
+			else
+			{
+				finalMonth2ndCore=string(month2ndCore);
+			}
+			TFSD_TEXT_STPM= "for the "+firstCoreSTPM+" Service Type ordered as specified above (and all the extended services that pertain to such Service Type) "+npsdSTPM+"; and (ii) for the "+secondCoreSTPM+" Service Type ordered as specified above (and all the extended services that pertain to such Service Type) the "+finalMonth2ndCore+" calendar month after the date set forth above as the \"Order Effective Date\".";
+			TFSD_TEXT_STPMFrench= "(i) pour le Service Type "+firstCoreSTPM+" commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le "+npsdSTPMFrench+" ; et (ii) pour le Service Type "+secondCoreSTPM+" commandé et tel que spécifié ci-dessus (ainsi que pour les Services étendus rattachés audit Service Type) le "+finalMonth2ndCoreFrench+" mois calendaire suivant la date indiquée ci-dessus à « Date d’Entrée en Vigueur de la Commande ». ";//CSYS-102834 NP 08/05/2021
+			TFSD_TEXT_STPMSpanish = "para el Tipo de Servicio "+firstCoreSTPM+" solicitado que se especifica anteriormente (y todos los servicios extendidos que pertenecen a dicho Tipo de Servicio) el "+npsdSTPMSpanish+"; y (ii) para el Tipo de Servicio "+secondCoreSTPM+" solicitado que se especifica anteriormente (y todos los servicios extendidos que pertenecen a dicho Tipo de Servicio) el "+finalMonth2ndCoreSpanish+" mes calendario a partir de la “Fecha de Entrada en Vigor del Pedido” señalada arriba.  ";//CSYS-103933 NP 09/13/2021
+			TFSD_TEXT_STPMGerman = "für den wie oben bestimmten "+firstCoreSTPM+" ServiceTyp (und alle Service-Erweiterungen, die zu diesem Servicetyp gehören), den "+npsdSTPMGerman+"; und (ii) für den wie oben bestimmten "+secondCoreSTPM+" Servicetyp (und alle Service-Erweiterungen, die zu diesem Servicetyp gehören), den "+finalMonth2ndCoreGerman+" Kalendermonat nach dem oben bestimmten „Gültigkeitsdatum“.";//CSYS-103932 NP 09/27/2021
+			//CSYS-103220 Ends
+		}else{
+			TFSD_TEXT_STPM = npsdSTPM;
+			TFSD_TEXT_STPMFrench = "le "+npsdSTPMFrench+"."; //CSYS-102834 NP 08/05/2021
+			TFSD_TEXT_STPMSpanish = npsdSTPMSpanish+"."; //CSYS-103933 NP 09/13/2021
+			TFSD_TEXT_STPMGerman = "den "+npsdSTPMGerman+"."; //CSYS-103932 NP 09/27/2021
+		}
+		finalReturnString = finalReturnString + "1" + keyDelim + "nPSDDateForDDSTPM_quote" + keyDelim + TFSD_TEXT_STPM + delim;
+		finalReturnString = finalReturnString + "1" + keyDelim + "nPSDDateForDDSTPMFrench_quote" + keyDelim + TFSD_TEXT_STPMFrench + delim; //CSYS-102834 NP 08/05/2021
+		finalReturnString = finalReturnString + "1" + keyDelim + "nPSDDateForDDSTPMSpanish_quote" + keyDelim + TFSD_TEXT_STPMSpanish + delim; //CSYS-103933 NP 09/13/2021
+		finalReturnString = finalReturnString + "1" + keyDelim + "nPSDDateForDDSTPMGerman_quote" + keyDelim + TFSD_TEXT_STPMGerman + delim; //CSYS-103932 NP 09/27/2021
+		
+	}
+}
+
+//CSYS-102711 End
+
+//CSYS-97637, by Phil S, 12/02/2019
+showBCC = false;  //show Billing Cycle Changed Language
+if (quoteType_quote == "Add-On Business"
+	and currentBillingCycle_quote <> ""
+	and ((currentBillingCycle_quote == "Monthly" and billingCycle_quote == "Quarterly")
+			or(currentBillingCycle_quote == "Monthly" and billingCycle_quote == "Annually")
+			or(currentBillingCycle_quote == "Monthly"   and billingCycle_quote == "Semi-Annually")
+			or(currentBillingCycle_quote == "Quarterly" and billingCycle_quote == "Annually")
+			or(currentBillingCycle_quote == "Quarterly" and billingCycle_quote == "Monthly")
+			or(currentBillingCycle_quote == "Quarterly" and billingCycle_quote == "Semi-Annually")
+			or (currentBillingCycle_quote=="Semi-Annually" and billingCycle_quote <> "Semi-Annually")
+			or (currentBillingCycle_quote=="Annually" and billingCycle_quote <> "Annually")  //CSYS-98771
+		)
+	)
+  {showBCC = true;}
+
+if (contractSource_quote=="Concur Paper"){
+	finalReturnString = finalReturnString + "1" + keyDelim + "showBillingCycleChangedConcurPaper_quote" + keyDelim + 	string(showBCC) + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "showBillingCycleChangedNOTConcurPaper_quote" + keyDelim + 	"false" + delim;
+}
+else{
+	finalReturnString = finalReturnString + "1" + keyDelim + "showBillingCycleChangedConcurPaper_quote" + keyDelim + 	"false" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "showBillingCycleChangedNOTConcurPaper_quote" + keyDelim + 	string(showBCC) + delim;
+}
+//end of CSYS-97637
+
+
+//CSYS-97803, PhilS 12/27/2019, update governingCountryLawException for existing quotes
+cGoverningCountryLawException=commerce.getGoverningCountry();
+finalReturnString = finalReturnString + "1" + keyDelim + "governingCountryLawException" + keyDelim + cGoverningCountryLawException + delim;
+//end of CSYS-97803
+
+//IESCNQRCPQ-363 (OK. 2-6-2023) Start: LATAM will be the governingCountry for all LATAM countries except Brazil
+serviceCountryResSet = bmql("SELECT governingCountryLaw, LATAMCountry, governingCity FROM governingLawMapping WHERE svcAddressCountry = $_quote_process_serviceAddress_country");
+
+for countryRes in serviceCountryResSet {
+	governingCountry = get(countryRes, "governingCountryLaw");
+	LATAMCountry = get(countryRes, "LATAMCountry");
+	governingCity = get(countryRes, "governingCity");
+	
+	if (LATAMCountry == "Y") {
+		finalReturnString = finalReturnString + "1" + keyDelim + "governingCountry_quote" + keyDelim + governingCountry + delim;
+		finalReturnString = finalReturnString + "1" + keyDelim + "governingCity_quote" + keyDelim + governingCity + delim;
+		finalReturnString = finalReturnString + "1" + keyDelim + "isLATAMCountry_quote" + keyDelim + "true" + delim;
+	}
+	else{
+		finalReturnString = finalReturnString + "1" + keyDelim + "isLATAMCountry_quote" + keyDelim + "false" + delim;
+	}
+}
+//IESCNQRCPQ-363 - End
+
+//CSYS-98589, PhilS 02/28/2020
+showRFA = false;
+//CSYS-99709 (OK. 7-09-2020) Request for Fee Adjustments selection allowed for Addon Orders in Enterprise BU
+//if ((quoteType_quote=="New Business") and (ownerBU_quote == "Enterprise BU")){
+if (ownerBU_quote == "Enterprise BU") {
+	finalReturnString = finalReturnString + "1" + keyDelim + "rFAYesNo_quote" + keyDelim + "true" + delim;
+	showRFA = true;
+	//CSYS-100739 (BS, 10/28/2020) Termination for Convenience Clause selection allowed for Enterprise BU
+	//CSYS-106472 (SV. 18-07-2022) Commenting the below condition and adding new condtion
+	//if(productsForTerminationForConvenience_quote <> "" AND terminationForConvenienceMonths_quote <> ""){	// values are entered for termination for convenience months and products for termination
+	//CSYS-107912 SV. 17-01-2023 moved the code below to remove the assocation of BU
+	/* if(NOT(isempty(ist4cArray)) OR (productsForTerminationForConvenience_quote <> "" AND terminationForConvenienceMonths_quote <> "")){//Checking if the ist4C array is not blank. or if values are entered for termination for convenience months and products for termination. If so then terminationForConvenienceClause_quote is set to true
+		finalReturnString = finalReturnString + "1" + keyDelim + "terminationForConvenienceClause_quote" + keyDelim + "true" + delim;
+	}
+	else{
+		finalReturnString = finalReturnString + "1" + keyDelim + "terminationForConvenienceClause_quote" + keyDelim + "false" + delim;
+	}*/
+}
+else{
+	finalReturnString = finalReturnString + "1" + keyDelim + "rFAYesNo_quote" + keyDelim + "false" + delim;
+	showRFA = false;
+	//CSYS-100739 (BS, 10/28/2020) Termination for Convenience Clause selection not allowed for any other BU
+																	//CSYS-107912 SV. 17-01-2023 moved the code below to remove the assocation of BU
+	//finalReturnString = finalReturnString + "1" + keyDelim + "terminationForConvenienceClause_quote" + keyDelim + "false" + delim;
+}
+
+//CSYS-107912 SV. 17-01-2023 moved the code from the previous block to remove the association of BU
+if(NOT(isempty(ist4cArray)) OR (productsForTerminationForConvenience_quote <> "" AND terminationForConvenienceMonths_quote <> "")){//Checking if the ist4C array is not blank. or if values are entered for termination for convenience months and products for termination. If so then terminationForConvenienceClause_quote is set to true
+	finalReturnString = finalReturnString + "1" + keyDelim + "terminationForConvenienceClause_quote" + keyDelim + "true" + delim;
+}
+else{
+	finalReturnString = finalReturnString + "1" + keyDelim + "terminationForConvenienceClause_quote" + keyDelim + "false" + delim;
+}
+//CSYS-107912 End
+
+//set rFAshowTermsInOF_quote 
+e1 = ((rFAless_quote=="") OR (rFAless_quote=="NA"));  // no value selected on Fee Adjustment Percent LESS
+e2 = ((rFAmore_quote=="") OR (rFAmore_quote=="NA"));  // no value selected on Fee Adjustment Percent MORE
+e3 = ((rFAbillingCycle_quote==""));  // no value selected on Fee Adjustment Consecutive Billing Cycle
+
+//CSYS-101299 (OK. 12-1-2020) - Start: If Fee Adjustment Percent LESS is a value other than BLANK and NA, then allow Fee Adjustment Percent MORE have NA. If Fee Adjustment Percent MORE is a value other than BLANK and NA, then allow Fee Adjustment Percent LESS have NA.
+e4 = false;
+e5 = false;
+if (NOT(e1) AND rFAmore_quote == "NA") {
+	e4 = true;
+}
+if (NOT(e2) AND rFAless_quote == "NA") {
+	e5 = true;
+}
+//allRfaHaveValue = (not(e1) and not(e2) and not(e3));
+allRfaHaveValue = ((NOT(e4) AND e5) OR ((e4 AND NOT(e5))) OR (NOT(e4) AND NOT(e5)) AND NOT(e3));
+rFAOFLanguage = "";
+//CSYS-103754 LBN 17/08/2021 - start
+rFAOFLanguageFrench = "";  
+rFAbillingCycleFrenchDD = "";
+rFAOFLanguageGerman = ""; //CSYS-103934 
+rFAbillingCycleGermanDD = "";	//CSYS-103934  
+rFAOFLanguageSpanish = ""; //CSYS-103935 LBN 15/09/2021
+rFAbillingCycleSpanishDD = "";	//CSYS-103935 LBN 15/09/2021 
+
+if (NOT(e3)){
+	if (rFAbillingCycle_quote == "1"){
+		rFAbillingCycleFrenchDD = "une (1)";
+		rFAbillingCycleGermanDD = "einer (1)"; //CSYS-103934
+		rFAbillingCycleSpanishDD = "uno (1)";	//CSYS-103935
+	}
+	elif(rFAbillingCycle_quote == "2"){
+		rFAbillingCycleFrenchDD = "deux (2)";
+		rFAbillingCycleGermanDD = "zwei (2)";	//CSYS-103934
+		rFAbillingCycleSpanishDD = "dos (2)";	//CSYS-103935
+	}
+	elif(rFAbillingCycle_quote == "3"){
+		rFAbillingCycleFrenchDD = "trois (3)";
+		rFAbillingCycleGermanDD = "drei (3)";	//CSYS-103934
+		rFAbillingCycleSpanishDD = "tres (3)";	//CSYS-103935
+	}
+	elif(rFAbillingCycle_quote == "6"){
+		rFAbillingCycleFrenchDD = "six (6)";
+		rFAbillingCycleGermanDD = "sechs (6)";	//CSYS-103934
+		rFAbillingCycleSpanishDD = "seis (6)";	//CSYS-103935
+	}
+	elif(rFAbillingCycle_quote == "9"){
+		rFAbillingCycleFrenchDD = "neuf (9)";
+		rFAbillingCycleGermanDD = "neun (9)";	//CSYS-103934
+		rFAbillingCycleSpanishDD = "nueve (9)";	//CSYS-103935
+	}
+	elif(rFAbillingCycle_quote == "12"){
+		rFAbillingCycleFrenchDD = "douze (12)";
+		rFAbillingCycleGermanDD = "zwölf (12)";	//CSYS-103934
+		rFAbillingCycleSpanishDD = "doce (12)";	//CSYS-103935
+	}
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "rFAbillingCycleFrenchDD_quote" + keyDelim + rFAbillingCycleFrenchDD + delim;//CSYS-103754 LBN 17/08/2021 - end
+finalReturnString = finalReturnString + "1" + keyDelim + "rFAbillingCycleGermanDD_quote" + keyDelim + rFAbillingCycleGermanDD + delim; //CSYS-103934
+finalReturnString = finalReturnString + "1" + keyDelim + "rFAbillingCycleSpanishDD_quote" + keyDelim + rFAbillingCycleSpanishDD + delim; //CSYS-103935 LBN 15/09/2021
+
+if (e4 == true) {
+	rFAOFLanguage = " less than " + rFAless_quote;
+	rFAOFLanguageFrench = " inférieur à " + rFAless_quote; //CSYS-103754 LBN 17/08/2021
+	rFAOFLanguageGerman = " kleiner ist als " + rFAless_quote; //CSYS-103934
+	rFAOFLanguageSpanish = " menor al " + rFAless_quote; //CSYS-103935 LBN 15/09/2021
+}
+else{
+	if (e5 == true) {
+		rFAOFLanguage = " more than " + rFAmore_quote;
+		rFAOFLanguageFrench = " supérieur à " + rFAmore_quote; //CSYS-103754 LBN 17/08/2021
+		rFAOFLanguageGerman = " größer ist als " + rFAmore_quote; //CSYS-103934
+		rFAOFLanguageSpanish = " mayor al " + rFAmore_quote; //CSYS-103935 LBN 15/09/2021
+	}
+	else {
+		rFAOFLanguage = " less than " + rFAless_quote + " or more than " + rFAmore_quote;
+		rFAOFLanguageFrench = " inférieur à " + rFAless_quote + " ou supérieur à " + rFAmore_quote; //CSYS-103754 LBN 17/08/2021
+		rFAOFLanguageGerman = " kleiner ist als " + rFAless_quote + " oder größer ist als " + rFAmore_quote; //CSYS-103934
+		rFAOFLanguageSpanish = " menor al " + rFAless_quote + " o mayor al " + rFAmore_quote; //CSYS-103935 LBN 15/09/2021
+	}
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "rFAOrderFormLanguage_quote" + keyDelim + rFAOFLanguage + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "rFAOrderFormLanguageFrench_quote" + keyDelim + rFAOFLanguageFrench + delim; //CSYS-103754 LBN 17/08/2021
+finalReturnString = finalReturnString + "1" + keyDelim + "rFAOrderFormLanguageGerman_quote" + keyDelim + rFAOFLanguageGerman + delim; //CSYS-103934
+finalReturnString = finalReturnString + "1" + keyDelim + "rFAOrderFormLanguageSpanish_quote" + keyDelim + rFAOFLanguageSpanish + delim; //CSYS-103935
+//CSYS-101299 - End
+	
+if (allRfaHaveValue and showRFA){
+	finalReturnString = finalReturnString + "1" + keyDelim + "rFAshowTermsInOF_quote" + keyDelim + "true" + delim;
+}
+else{finalReturnString = finalReturnString + "1" + keyDelim + "rFAshowTermsInOF_quote" + keyDelim + "false" + delim;}
+
+if (contractSource_quote == "Concur Paper"){
+	finalReturnString = finalReturnString + "1" + keyDelim + "rFAshowSales_quote" + keyDelim + " Sales" + delim;
+}
+else{
+	finalReturnString = finalReturnString + "1" + keyDelim + "rFAshowSales_quote" + keyDelim + "" + delim;
+}
+//end of CSYS-98589,
+
+//CSYS-101253 (OK. 12-4-2020) - Start: if DPA Signed insert the language in contracts
+//CSYS-101907(OK. 2-1-2021) - Start: Updating the condition to check Contract conversion flag value and adding values for Spanish, French and German DPA languages
+if (dataProcessingAgreementFromAccountText_quote == "DPA Signed" AND contractConversionToSAPGTC_quote == true) {
+	finalReturnString = finalReturnString + "1" + keyDelim + "dPAOrderFormLanguage_quote" + keyDelim + " as previously agreed between Customer and Concur" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "dPAOrderFormLanguageFrench_quote" + keyDelim + " comme convenu précédemment entre le Client et Concur" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "dPAOrderFormLanguageGerman_quote" + keyDelim + " wie zuvor zwischen Kunde und Concur vereinbart" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "dPAOrderFormLanguageSpanish_quote" + keyDelim + " como se acordó previamente entre el Cliente y Concur" + delim;
+}
+else{
+	finalReturnString = finalReturnString + "1" + keyDelim + "dPAOrderFormLanguage_quote" + keyDelim + "" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "dPAOrderFormLanguageFrench_quote" + keyDelim + "" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "dPAOrderFormLanguageGerman_quote" + keyDelim + "" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "dPAOrderFormLanguageSpanish_quote" + keyDelim + "" + delim;
+}
+//CSYS-101907 (OK. 2-1-2021) - End
+//CSYS-101253 (OK. 12-4-2020) - End
+
+//CSYS-104083 (OK. 9-9-2021) Start: Display Quote expiration date in contracts
+expirationDateInOF = "";
+expirationDateInFrenchOF = "";
+expirationDateInSpanishOF = "";
+expirationDateInGermanOF = "";
+expirationDateInJapaneseOF = ""; //CSYS-107251
+											  
+if (expirationDate_quote <> "") {
+	expirationDateInOF = util.formatDate(expirationDate_quote, "long");
+	expirationDateInFrenchOF = util.formatDate(expirationDate_quote, "frenchLong");
+	expirationDateInSpanishOF = util.formatDate(expirationDate_quote, "spanishLong");
+	expirationDateInGermanOF = util.formatDate(expirationDate_quote, "germanLong");
+	expirationDateInJapaneseOF = util.formatDate(expirationDate_quote, "japaneseLong"); //CSYS-107251
+																								  
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "expirationDateInOF_quote" + keyDelim + expirationDateInOF + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "expirationDateInSpanishOF_quote" + keyDelim + expirationDateInSpanishOF + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "expirationDateInFrenchOF_quote" + keyDelim + expirationDateInFrenchOF + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "expirationDateInGermanOF_quote" + keyDelim + expirationDateInGermanOF + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "expirationDateInJapaneseOF_quote" + keyDelim + expirationDateInJapaneseOF + delim; //CSYS-107251
+																																						  
+//CSYS-104083 - End
+
+//CSYS-104211 (OK. 2-18-2022) Start: Override the Transaction Fee Start Date language in contracts
+overrideTFSDInOF = "";
+tFSDOverrideBillingException = "";
+
+//CSYS-106868 (LBN. 06-09-2022) Start: Override the Transaction Fee Start Date language for non-english contracts
+monthGermanLongName = String[] { "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember" };
+monthNum = String[] {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+monthGermanLongNameDict = dict("string");
+index = 0;
+for item in monthNum {
+  put( monthGermanLongNameDict, monthNum[index], monthGermanLongName[index]);
+  index = index + 1;
+} 
+inputDate = contractTFSDOverride_quote; 
+year = substring(inputDate, 0, 4);
+month = substring(inputDate, 5, 7);
+day = substring(inputDate, 8, 10);
+
+overrideTFSDInGermanOF = "";
+overrideTFSDInSpanishOF = "";
+overrideTFSDInFrenchOF = "";
+overrideTFSDJapaneseOF = "";  //CSYS-107251								   
+//CSYS-106868 end
+
+if (contractTFSDOverride_quote <> "") {
+	overrideTFSDInOF = util.formatDate(contractTFSDOverride_quote, "long");
+	//CSYS-106868 start
+	monthName = "";
+	if( containskey(monthGermanLongNameDict, month) ){
+		monthName = get(monthGermanLongNameDict, month);
+	}
+	overrideTFSDInGermanOF = day + ". " + monthName + ", " + year;
+	overrideTFSDInSpanishOF = util.formatDate(contractTFSDOverride_quote, "spanishLong");
+	overrideTFSDInFrenchOF = util.formatDate(contractTFSDOverride_quote, "frenchLong");
+	overrideTFSDJapaneseOF = util.formatDate(contractTFSDOverride_quote, "japaneseLong"); //CSYS-107251
+																									
+	//CSYS-106868 end
+	
+	//CSYS-107671 (OK. 12-16-2022) Remove the Override TFSD billing exception for future dated scenarios
+	if (NOT((orderEffectiveDateHDS_quote <> "" OR isAccountPreProdTerminate_quote OR standardToProfessionalMigrationFlag) OR ((detectMigrateToIntelligentAuditAdvanced_quote == "true" OR detectMigrateToIntelligentAuditEssential_quote == "true" OR detectMigrateToVerify_quote  == "true" OR detectByAppzenTerminate_quote) AND (billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly")))) {
+		tFSDOverrideBillingException = "Transaction Fee Start Date Override to " + overrideTFSDInOF + ". This date does NOT get populated in the BMI quote line items and will NOT be set to Metranet. The billing Team will need to adjust accordingly.";
+	}
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "overrideTFSDInOF_quote" + keyDelim + overrideTFSDInOF + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "contractTFSDOverrideReadOnly_quote" + keyDelim + substring(contractTFSDOverride_quote,0,10) + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "tFSDOverrideBillingException_quote" + keyDelim + tFSDOverrideBillingException + delim;
+//CSYS-104211 - End
+
+//CSYS-106868 start
+finalReturnString = finalReturnString + "1" + keyDelim + "overrideTFSDInGermanOF_quote" + keyDelim + overrideTFSDInGermanOF + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "overrideTFSDInSpanishOF_quote" + keyDelim + overrideTFSDInSpanishOF + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "overrideTFSDInFrenchOF_quote" + keyDelim + overrideTFSDInFrenchOF + delim;
+finalReturnString = finalReturnString + "1" + keyDelim + "overrideTFSDInJapaneseOF_quote" + keyDelim + overrideTFSDJapaneseOF + delim; //CSYS-107251																																				
+//CSYS-106868 end
+
+//CSYS-107094 - edition on French contract, LBN.23/09/2022
+editionOnFrench="";
+if(implementationMethods_quote == "Standard"){
+	editionOnFrench = "Standard";
+}
+if(implementationMethods_quote == "Professional"){
+	editionOnFrench = "Professionnelle";
+}
+elif(implementationMethods_quote == "Premium"){
+	editionOnFrench = "Premium";
+}
+finalReturnString = finalReturnString + "1" + keyDelim + "editionOnFrenchOF_quote" + keyDelim + editionOnFrench + delim;
+//CSYS-107094 - end
+
+//CSYS-98002, PhilS 02/13/2020
+//test case, transID = 780580643
+jsonPP2 = commerce.setProposalControls(actionName);
+jkey01 = jsonkeys(jsonPP2);
+for jk in jkey01{
+	jval01 = jsonget(jsonPP2,jk);
+	finalReturnString = finalReturnString + "1" + keyDelim + jk + keyDelim + jval01 + delim;
+}
+
+// CSYS-99114 MJ getting last day of order effective date
+//if (contractConversionToSAPGTC_quote == true)
+//{ - commented these two lines are pasted them at line no 2163
+	lastDay = "";
+	yearVal = "";
+	monthVal = "";
+	dayVal = "";	
+	splitNewDate = string[];	
+	splitNewDate = split(orderEffectiveDate_quote, "-");
+	yearVal = splitNewDate[0];
+	monthVal = splitNewDate[1];
+	dayVal = splitNewDate[2];
+	splitDay = string[];
+	splitDay = split(dayVal, " ");
+	dayVal = splitDay[0];
+
+	isLeapYear = false;
+	if (isnumber(yearVal)){
+		isLeapYear = isleap(atoi(yearVal)); 
+	}
+
+	daysDict = dict("string");
+	//put(daysDict,"00", "31");
+	put(daysDict,"01", "31");
+	if (NOT isLeapYear){put(daysDict,"02", "28");}
+	else {put(daysDict,"02", "29");}
+	put(daysDict,"03", "31");
+	put(daysDict,"04", "30");
+	put(daysDict,"05", "31");
+	put(daysDict,"06", "30");
+	put(daysDict,"07", "31");
+	put(daysDict,"08", "31");
+	put(daysDict,"09", "30");
+	put(daysDict,"10", "31");
+	put(daysDict,"11", "30");
+	put(daysDict,"12", "31");
+	
+	monthsDict = dict("string");
+	//CSYS-101907(OK. 2-1-2021) - Start: Updating date logic to support Spanish, French and German languages										
+	//CSYS-107251 - For Japanese Order Form
+	put(monthsDict,"01", "January" + DELIMITER + "janvier" + DELIMITER + "enero" + DELIMITER + "Januar" + DELIMITER + "01");
+	put(monthsDict,"02", "February" + DELIMITER + "février" + DELIMITER + "febrero" + DELIMITER + "Februar" + DELIMITER + "02");
+	put(monthsDict,"03", "March" + DELIMITER + "mars" + DELIMITER + "marzo" + DELIMITER + "März" + DELIMITER + "03");
+	put(monthsDict,"04", "April" + DELIMITER + "avril" + DELIMITER + "abril" + DELIMITER + "April" + DELIMITER + "04");
+	put(monthsDict,"05", "May" + DELIMITER + "mai" + DELIMITER + "mayo" + DELIMITER + "Mai" + DELIMITER + "05");
+	put(monthsDict,"06", "June" + DELIMITER + "juin" + DELIMITER + "junio" + DELIMITER + "Juni" + DELIMITER + "06");
+	put(monthsDict,"07", "July" + DELIMITER + "juillet" + DELIMITER + "julio" + DELIMITER + "Juli" + DELIMITER + "07");
+	put(monthsDict,"08", "August" + DELIMITER + "août" + DELIMITER + "agosto" + DELIMITER + "August" + DELIMITER + "08");
+	put(monthsDict,"09", "September" + DELIMITER + "septembre" + DELIMITER + "septiembre" + DELIMITER + "September" + DELIMITER + "09");
+	put(monthsDict,"10", "October" + DELIMITER + "octobre" + DELIMITER + "octubre" + DELIMITER + "Oktober" + DELIMITER + "10");
+	put(monthsDict,"11", "November" + DELIMITER + "novembre" + DELIMITER + "noviembre" + DELIMITER + "November" + DELIMITER + "11");
+	put(monthsDict,"12", "December" + DELIMITER + "décembre" + DELIMITER + "diciembre" + DELIMITER + "Dezember" + DELIMITER + "12");
+	
+if (contractConversionToSAPGTC_quote == true)
+{
+	lastDayOfMonth = get(daysDict, monthVal);
+	//month = get(monthsDict, monthVal); 
+	monthArr = split(get(monthsDict, monthVal), DELIMITER);
+	month = monthArr[0];// index is in English
+	monthInFrench = monthArr[1];// index is in French
+	monthInSpanish = monthArr[2];// index is in Spanish
+	monthInGerman = monthArr[3];// index is in German
+	monthInJapanese = monthArr[4]; // index is in Japanese CSYS-107251														   
+											 
+ 
+
+	lastDay = month + " " + lastDayOfMonth + ", " + yearVal;
+	finalReturnString = finalReturnString + "1" + keyDelim + "lastDayOfMonthOfOrderEffectiveDate_quote" + keyDelim + lastDay + delim;
+	
+	lastDayInFrench = lastDayOfMonth + " " + monthInFrench + " " + yearVal; //monthInFrench + " " + lastDayOfMonth + ", " + yearVal; CSYS-102390 NP 12/04/2021
+	lastDayInSpanish = monthInSpanish + " " + lastDayOfMonth + ", " + yearVal;
+	lastDayInGerman = monthInGerman + " " + lastDayOfMonth + ", " + yearVal;
+	lastDayInJapanese = monthInJapanese + " " + lastDayOfMonth + ", " + yearVal; //CSYS-107251																				   
+
+	finalReturnString = finalReturnString + "1" + keyDelim + "lastDayOfOEDMonthInFrench_quote" + keyDelim + lastDayInFrench + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "lastDayOfOEDMonthInSpanish_quote" + keyDelim + lastDayInSpanish + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "lastDayOfOEDMonthInGerman_quote" + keyDelim + lastDayInGerman + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "lastDayOfOEDMonthInJapanese_quote" + keyDelim + lastDayInJapanese + delim; //CSYS-107251																																			   
+	//CSYS-101907 - End
+}
+/*
+//CSYS-104972 - LIN-12-13-2021-Start - Setting the flag to 0 when save is performed.
+if(externalPromotion_quote <> ""){
+	finalReturnString = finalReturnString + "1" + keyDelim + "isPromoAppliedIntBoolean_quote" + keyDelim + string(0)+ delim;
+	
+}
+//End - CSYS-104972
+*/
+
+//CSYS-105709(SV. 09-02-2022) - Start:
+//(SV. 09-08-2022) Commenting out the code as backout was requested 
+/*
+orderEffectiveDateText = (orderEffectiveDate_quote);
+if((orderEffectiveDateText <> "" AND NOT isnull(orderEffectiveDateText)) AND (termNumMonths_quote <> "" AND NOT isnull(termNumMonths_quote))){
+	intialTermDateEnd = util.addMonthsToDate(orderEffectiveDateText,termNumMonths_quote);
+	intialTermDateEnd = util.setDateToLastDayOfMonth(intialTermDateEnd);
+	intialTermDateStart = util.addMonthsToDate(orderEffectiveDateText,"1");
+	intialTermDateStart = util.setDateToFirstDayOfMonth(intialTermDateStart);	
+	//newDate = util.addMonthsToDate(newDateStart,termNumMonths_quote);
+	initialTermStartDateDD = util.formatDate(intialTermDateStart, "long");
+	initialTermEndDateDD = util.formatDate(intialTermDateEnd, "long");
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialTermStartDate_quote" + keyDelim + initialTermStartDateDD + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialTermEndDate_quote" + keyDelim + initialTermEndDateDD + delim;
+}
+*/
+//CSYS-105709 End
+
+//CSYS-107388 (OK. 10-18-2022) Start - For United Kingdom market need to update general terms with "United Kingdom"
+//IESCNQRCPQ-1323 (OK. 11-21-2023) Replace "ownerMarket_quote" with "_quote_process_serviceAddress_country" to check the "United Kingdom"
+if (_quote_process_serviceAddress_country == "United Kingdom") {
+	finalReturnString = finalReturnString + "1" + keyDelim + "uKDPALanguageInOF_quote" + keyDelim + "(United Kingdom) " + delim;
+}
+else{
+	finalReturnString = finalReturnString + "1" + keyDelim + "uKDPALanguageInOF_quote" + keyDelim + "" + delim;
+}
+//CSYS-107388 - End
+
+
+//Start - CSYS-107692 Updating the Initial Order form Date for French, spanish, German
+if(initialOrderFormDate <> ""){
+	yearVal = "";
+	monthVal = "";
+	dayVal = "";	
+	splitNewDate = string[];	
+	splitNewDate = split(initialOrderFormDate, "-");
+	yearVal = splitNewDate[0];
+	monthVal = splitNewDate[1];
+	dayVal = splitNewDate[2];
+	splitDay = string[];
+	splitDay = split(dayVal, " ");
+	dayVal = splitDay[0];
+	
+	monthArr = split(get(monthsDict, monthVal), DELIMITER);
+	month = monthArr[0];// index is in English
+	monthInFrench = monthArr[1];// index is in French
+	monthInSpanish = monthArr[2];// index is in Spanish
+	monthInGerman = monthArr[3];// index is in German
+	monthInJapanese = monthArr[4];// index is in Japanese - IESCNQRCPQ-512 (PG 11-04-2023)
+	
+	initialOrderFormDateString = month + " " + dayVal + ", " + yearVal;
+	initialOrderFormDateStringFrench = dayVal + " " + monthInFrench + " " + yearVal;
+	initialOrderFormDateStringSpanish = dayVal + " " + monthInSpanish + " " + yearVal;
+	initialOrderFormDateStringGerman = dayVal + ". " + monthInGerman + ", " + yearVal;
+	initialOrderFormDateStringJapanese = yearVal + "/ " + monthInJapanese + "/ " + dayVal;
+	
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateEnglish" + keyDelim + initialOrderFormDateString + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateFrench" + keyDelim + initialOrderFormDateStringFrench + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateSpanish" + keyDelim + initialOrderFormDateStringSpanish + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateGerman" + keyDelim + initialOrderFormDateStringGerman + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateJapanese" + keyDelim + initialOrderFormDateStringJapanese + delim;
+	}
+	
+else{
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateEnglish" + keyDelim + "" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateFrench" + keyDelim + "" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateSpanish" + keyDelim + "" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateGerman" + keyDelim + "" + delim;
+	finalReturnString = finalReturnString + "1" + keyDelim + "initialOrderFormDateJapanese" + keyDelim + "" + delim;
+}
+
+return finalReturnString;

@@ -1,0 +1,11 @@
+{
+  "name" : "Asset NBD Validation for Quarterly Cycle",
+  "variableName" : "assetNBDValidationForQuarterlyCycle",
+  "description" : "CSYS-105865 (OK. 3-18-2022) Check if OED and Core service NBD is within grace period",
+  "libraryFunctions" : [ "util.getUserTimeZone" ],
+  "returnType" : "Boolean",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "nextBillingDate_line", "poCategory_line", "assetAction_line", "_part_custom_field8" ],
+  "mainDocAttributes" : [ "quoteType_quote", "orderEffectiveDate_quote", "billingCycle_quote", "standardToProfessionalMigrationFlag", "orderEffectiveDateHDS_quote", "termDateForDDDetect_quote" ],
+  "systemAttributes" : [ ]
+}

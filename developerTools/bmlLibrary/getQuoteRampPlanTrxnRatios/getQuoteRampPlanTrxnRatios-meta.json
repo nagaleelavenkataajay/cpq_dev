@@ -1,0 +1,15 @@
+{
+  "name" : "getQuoteRampPlanTrxnRatios",
+  "variableName" : "getQuoteRampPlanTrxnRatios",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Float[]",
+  "parameters" : [ {
+    "name" : "trxnArray",
+    "type" : "String[]"
+  }, {
+    "name" : "quoteTrxns",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

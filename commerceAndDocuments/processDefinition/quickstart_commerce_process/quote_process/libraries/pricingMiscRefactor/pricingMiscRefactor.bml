@@ -1,0 +1,1386 @@
+ADD_ON = "Add-On Business";
+DELIMITER = "@.@";
+ASSET_ACTION = "assetAction_line";
+RAMP_PLAN_DETAIL = "rampPlanDetails_line";
+ASSETS_ORIGINAL_DISCOUNT = "assetsOriginalDiscount_line";
+DISCOUNT = "discount_line";
+TIME_AND_MATERIALS_FLAG = "timeMaterialsFlag_line"; //CSYS-95855 Initializing constants
+TRUE_STR = "true";
+FALSE_STR = "false";
+timeAndMaterialsPoArr = String[]; //CSYS-95855 
+CREATE_ACTION = "CREATE";
+MODIFY_ACTION = "MODIFY"; //CSYS-87864 (LN 12/4/2017)
+BASE_FEE = "Base";
+TRIG_KEY_VALUE_DELIM = "$,$";
+NEW_BIZ = "New Business";
+NONE_ACTION = "NONE";
+CORE_SERVICE = "Core Service";
+hasQuoteProd = FALSE_STR;
+TILDE_DELIMITER = "~";
+detectByAppZenTerminateParentId="";//CSYS-104596 NP 11-09-2021
+TERMINATE_ACTION = "TERMINATE";
+intelligentAuditCreate = ""; //CSYS-106050 (OK. 4-25-2022)
+intelligentAuditEssentialCreate = ""; //CSYS-106157 (OK. 5-06-2022)
+verifyCreate = ""; //CSYS-106158 (OK. 5-06-2022)
+anyTypeDict = dict("anytype"); //CSYS-106638 (OK. 7-11-2022)
+nbdOldLine="";//CSYS-104596 NP 11-09-2021
+detectParentDocNum = ""; //CSYS-106638 (OK. 7-11-2022)
+nPSDDetectOversight="";
+terminationDateDelay = ""; //CSYS-106050 (OK. 4-25-2022)
+nbdOldLineSTPM = ""; //CSYS-104890
+FROM = "from";
+RAMP_PLAN_OVERRIDE = "overrideDefaultRampPlan_line";
+TO = "to";
+RAMP_TRANSACTIONS = "transactions";
+annualBundleBillingExceptionStr = "";
+SETUP_FEE = "Setup";
+PACKAGE_ID = "package_line";
+NUMBER_RAMP_ENTRIES = "numRampEntries";
+ROLL_UP = "rollUp_line";
+IS_GROUPED = "isPartOfPackage_line"; //This form field is checked if the user wishes to DYNAMICALLY GROUP this line item
+QUOTE_DOC_NUM = "1";
+stateAndLocalPackage = false;
+HAS_PRODUCTS = "hasProducts_quote";
+PO_ID = "poId_line";
+PROMO_CODES_LINE = "promotionCode_line";
+INCREMENTAL_FEE = "Incremental";
+T4CPromoIdMonthDict = dict("string");
+LIST_PRICE = "listPrice_line";
+preDefinedPackages = "";
+detectByAppzenTerminateRes=false;//CSYS-103219 NP 06/21/2021
+isT4cTrueArray = String[];
+detectByOversightCreate=false;//CSYS-103219 NP 06/21/2021
+PRIME_PACKAGE_PRESENT = "primePackagePresent"; //CSYS-94755
+CUSTOM_SEQ_NUM = "lineOrderCustom_line";
+lineRampDeletionFlag = false;
+deleteSalesforceRamps = false;
+terminatedDate = "";
+newProdSetupDateSTPM = ""; //CSYS-104890
+TERM_NUM_MONTHS = "termNumMonths_quote";
+quoteType = quoteType_quote; //CSYS-103406 SV. 05-09-2021
+
+//IESCNQRCPQ-1838 (OK. 5-17-2024) Start
+solExProductsRec = bmql("SELECT PO FROM SolExProducts"); 
+optOutPromosRec = bmql("SELECT promotion FROM OptOutPromos"); 
+solExProductPromosRec = bmql("SELECT promotion FROM OptOutPromos WHERE solExProductPromo = 'Y'"); 
+solExProductPromoArray = string[]; 
+optOutPromoArray = string [];
+solExProdutPOArray = string [];
+for recs in optOutPromosRec {
+	promo = get(recs, "promotion");
+	append(optOutPromoArray, promo);
+}
+for rec in solExProductsRec {
+	solEXPo = get(rec, "PO");
+	append(solExProdutPOArray, solEXPo);
+}
+for rec in solExProductPromosRec {
+	solExPromo = get(rec, "promotion");
+	append(solExProductPromoArray, solExPromo);
+}
+//IESCNQRCPQ-1838 - End
+
+//IESCNQRCPQ-1848 SV. 04-06-2024 Added the below block of code from Pricing Misc
+timeAndMaterialsRes = BMQL("SELECT POID FROM timeMaterialExcep"); // CSYS-95855  
+
+// CSYS-95855 - Looping through the record set returned from our Query 
+for timeAndMaterialPO in timeAndMaterialsRes { // For each table entry in the entire table  
+    timeAndMaterialsPO = get(timeAndMaterialPO, "POID"); // Retrieve each POID from the table    
+    append(timeAndMaterialsPoArr, timeAndMaterialsPO); // Add each POID to our array (to be leveraged later in our logic)   
+}
+
+for item in line_process {
+    docNum = item._document_number;
+    parentDocNum = item._parent_doc_number;
+    pid = item._part_number;
+    poID = item._part_custom_field1;
+    assetString = item.assetString_line;
+    itemType = item.piItemType_line;
+    assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+			   
+			  
+				   
+    nextBillingDate = item.nextBillingDate_line;
+    poCat = item.poCategory_line;
+    lineItemRampPlan = util.getStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_DETAIL);
+    lineDesc = item.lineDescription_line;
+    isPartOfPackage = item.isPartOfPackage_line;
+    lineRampFromMonthsGrid = item.lineRampFromMonths_line;
+    seqNum = item._sequence_number;
+    partItemType = item._part_custom_field8;
+    overrideRampPrice = item.overrideRampPrice_line;
+    assetOriginalDiscount = util.getFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_DISCOUNT); //CSYS-89775
+    disc = util.getFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT); // CSYS-96150, SN. 06-2019
+	prevDisc = item.previousDiscountBeforeRevise_line;//CSYS-103486											   
+	bMICalculatedDiscount = item.bMICalculatedDiscount_line_c; //IESCNQRCPQ-1778 (OK. 4-23-2024)
+	linePromo = item.promotionCode_line; //IESCNQRCPQ-1838 (OK. 5-17-2024)
+	promosApplied = split(linePromo, ","); //IESCNQRCPQ-1838 (OK. 5-17-2024)
+	t4CMonths = item.t4CMonths_line; //IESCNQRCPQ-1838 (OK. 5-17-2024)
+	
+  	//CSYS-100604 (N.T. 15-10-2020)		
+	if (containskey(stringsDict, parentDocNum + DELIMITER + "travelPackagePresent")) 
+	{
+		 tempAdditionalPremiumDocNum = util.getStringAttribute(stringsDict, parentDocNum, DELIMITER, "travelPackagePresent");
+		 utilResultFlag = util.putStringAttribute(stringsDict, tempAdditionalPremiumDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);
+		
+	}
+	
+
+    //CSYS-97771 (O.M. & L.N. 1-10-2020)
+    if (containskey(stringsDict, parentDocNum + DELIMITER + "additionalPremiumSupportPresent")) {
+        //We know that AP T&M flag needs to be TRUE;
+        tempAdditionalPremiumDocNum = util.getStringAttribute(stringsDict, parentDocNum, DELIMITER, "additionalPremiumSupportPresent");
+        utilResultFlag = util.putStringAttribute(stringsDict, tempAdditionalPremiumDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);	
+	
+        if (containskey(stringsDict, parentDocNum + DELIMITER + "coreHasZeroAmountSetupFee")) {
+            //We know here that the CORE Setup T&M flag needs to be TRUE;
+            tempCoreDocNum = util.getStringAttribute(stringsDict, parentDocNum, DELIMITER, "coreHasZeroAmountSetupFee");
+            utilResultFlag = util.putStringAttribute(stringsDict, tempCoreDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);
+
+            if (containskey(stringsDict, pid + DELIMITER + "coreHasMultipleSetupFees")) {
+                //We know that the Core has multiple Setup Lines & T&M needs to be TRUE for all lines;
+                tempManySetupCoreDocNum = util.getStringAttribute(stringsDict, pid, DELIMITER, "coreHasMultipleSetupFees");
+                utilResultFlag = util.putStringAttribute(stringsDict, tempManySetupCoreDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);
+            }
+
+            if (containskey(stringsDict, pid + DELIMITER + "extendedServiceHasSetup")) {
+                parentDocNum = util.getStringAttribute(stringsDict, pid, DELIMITER, "extendedServiceHasSetup");
+
+                if (containskey(stringsDict, parentDocNum + DELIMITER + "coreHasZeroAmountSetupFee") AND containskey(stringsDict, pid + DELIMITER + "extendedServiceHasSetupDocNum")) {
+                    //We know that the Ext. Serv has Bundled Setup Lines and the T&M flag needs to be TRUE;
+                    tempExtServiceDocNum = util.getStringAttribute(stringsDict, pid, DELIMITER, "extendedServiceHasSetupDocNum");
+                    utilResultFlag = util.putStringAttribute(stringsDict, tempExtServiceDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);
+                }
+            }
+        }
+    }
+
+    if (poID <> "228") {
+        if (NOT(containskey(stringsDict, docNum + DELIMITER + TIME_AND_MATERIALS_FLAG))) {
+            utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, TIME_AND_MATERIALS_FLAG, FALSE_STR);
+        }
+
+       timeAndMaterialsFlag = util.getStringAttribute(stringsDict, docNum, DELIMITER, TIME_AND_MATERIALS_FLAG);
+       utilResultString = util.formAttrValueStr(attributesDict, TIME_AND_MATERIALS_FLAG, docNum, timeAndMaterialsFlag);
+
+    }
+    
+    if (findinarray(timeAndMaterialsPoArr, poID) <> -1 AND assetAction == CREATE_ACTION) { 
+        utilResultString = util.formAttrValueStr(attributesDict, TIME_AND_MATERIALS_FLAG, docNum, TRUE_STR);
+    }   
+   
+   
+    
+    
+																									 
+	 
+
+																																										  
+																							   
+																																					 
+																												   
+	 
+																																									  
+	 
+						 
+
+																											 
+		
+	  
+    //CSYS-96150, SN. 06-2019 ; Part 1, If on an Add-on quote the existing Core Service, asset Action = MODIFY with a discount greater than the existing asset discount on the Base line only, trigger approval to CFO
+    //CSYS-106372, LIN 05-24-2022 - Removed the condition for only core service.
+	//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below line and use bMICalculatedDiscount value instead of assetOriginalDiscount.
+	//if (assetAction == MODIFY_ACTION AND itemType == BASE_FEE AND disc > assetOriginalDiscount) {
+	if (assetAction == MODIFY_ACTION AND itemType == BASE_FEE AND disc > bMICalculatedDiscount) {
+        put(triggerDict, docNum + "~" + "increasedDiscModifyExistingCoreBase", docNum + "~" + "increasedDiscModifyExistingCoreBase" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+	
+		//CSYS-103513 (OK. 7-19-2021) Start: If difference between the current discount and asset discount is less than or equal to 5% then only trigger manager approval. if its greater than 5% then trigger upto CFO.
+		increasedDiscount = disc - assetOriginalDiscount;
+		//CSYS-106372, LIN 05-24-2022 - Updated the condition for 3 %.
+		//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below if condition. Discount difference check is not required.
+        //if (increasedDiscount > 3.00) {           
+			put(triggerDict, docNum + "~" + "assetDiscountCheck", docNum + "~" + "assetDiscountCheck" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+        //}
+		//CSYS-103513 - End
+		
+	}
+	
+	//IESCNQRCPQ-1778 (OK. 4-23-2024) when the discount is less than or equal to the current BMI Calculated Discount, if the discount is greater than 50% approvals should still be required
+	if (assetAction == MODIFY_ACTION AND (itemType == BASE_FEE OR itemType == INCREMENTAL_FEE) AND disc <= bMICalculatedDiscount AND disc >= 50) {
+		put(triggerDict, docNum + "~" + "assetDiscountGreaterThan50", docNum + "~" + "assetDiscountGreaterThan50" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+	}
+ 
+	//CSYS-104388 (NT 21-10-2021)
+	//IESCNQRCPQ-1796 (OK. 6-202-2024) Comment out the approval for concur FAVR
+	 /*if (poID == "4722310"){
+			//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below line and use bMICalculatedDiscount value instead of assetOriginalDiscount.
+			//if (assetAction == MODIFY_ACTION AND disc > assetOriginalDiscount){
+			if (assetAction == MODIFY_ACTION AND disc > bMICalculatedDiscount){
+				put(triggerDict, "concurFavrExistsMODIFY", TRUE_STR);
+			}	 
+	 }*/
+	//CSYS-104388 END
+
+	//CSYS-103486 -LIN  - 07162021 - CFO should receive approval request  on REVISE when discount is increased.
+	//CSYS-106372 -LIN -05-24-2022 - updated the condition to include extended service.
+	//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below line and use bMICalculatedDiscount value instead of assetOriginalDiscount.
+	//if (assetAction == MODIFY_ACTION AND itemType == BASE_FEE AND disc > assetOriginalDiscount AND assetOriginalDiscount < prevDisc AND prevDisc <> disc AND prevDisc > 0.0) {
+	if (assetAction == MODIFY_ACTION AND itemType == BASE_FEE AND disc > bMICalculatedDiscount AND bMICalculatedDiscount < prevDisc AND prevDisc <> disc AND prevDisc > 0.0) {
+														 
+        put(triggerDict, docNum + "~" + "increasedDiscReviseCoreBase", docNum + "~" + "increasedDiscReviseCoreBase" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+		put(triggerDict, docNum + "~" + "currentDiscountAsset", docNum + "~" + "currentDiscountAsset" + TRIG_KEY_VALUE_DELIM + string(disc));
+		//CSYS-106372 -LIN -05-24-2022 - updated the logic to include 3% discount on revision.
+		//put(triggerDict, docNum + "~" + "increasedDiscModifyExistingCoreBase", docNum + "~" + "increasedDiscModifyExistingCoreBase" + TRIG_KEY_VALUE_DELIM + FALSE_STR);
+		//CSYS-106602 - increasedDiscount Code was missed
+		increasedDiscount = disc - assetOriginalDiscount;
+		//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below if condition. Discount difference check is not required.
+		//if (increasedDiscount > 3.00) { 
+			put(triggerDict, docNum + "~" + "assetDiscountCheck", docNum + "~" + "assetDiscountCheck" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+		//}
+   
+    }
+	//CSYS-106372 -LIN -05-24-2022 - updated the condition to include extended service.
+	//CSYS-106447 - Start- checking for any pending approval before revise.
+	//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below line and use bMICalculatedDiscount value instead of assetOriginalDiscount.
+	//if (assetAction == MODIFY_ACTION AND itemType == BASE_FEE AND disc > assetOriginalDiscount AND prevDisc == disc AND NOT(pendingApprover)) {
+	if (assetAction == MODIFY_ACTION AND itemType == BASE_FEE AND disc > bMICalculatedDiscount AND prevDisc == disc AND NOT(pendingApprover)) {
+        put(triggerDict, docNum + "~" + "increasedDiscReviseCoreBase", docNum + "~" + "increasedDiscReviseCoreBase" + TRIG_KEY_VALUE_DELIM + FALSE_STR);
+		//CSYS-106372 -LIN -05-24-2022 - updated the logic to include 3% discount on revision.
+		//put(triggerDict, docNum + "~" + "increasedDiscModifyExistingCoreBase", docNum + "~" + "increasedDiscModifyExistingCoreBase" + TRIG_KEY_VALUE_DELIM + FALSE_STR);
+		put(triggerDict, docNum + "~" + "assetDiscountCheck", docNum + "~" + "assetDiscountCheck" + TRIG_KEY_VALUE_DELIM + FALSE_STR);
+    }
+	if( lower(actionName) == "revise" ){
+		 utilResultString = util.formAttrValueStr(attributesDict, "previousDiscountBeforeRevise_line", docNum, string(disc));
+	}
+	//End - CSYS-103486 
+        
+        //CSYS-104391 LIN 10-22-2021 - Start -  Production Sandbox Environment - if the discount is more than 50%
+		//CSYS-104537 LIN 02-23-2022 - updated the below condition to include new business logic
+		//CSYS-105785 & CSYS-105786 - Adding PSE2 and PSE3 in the condition
+	if((pid == "36312" OR pid == "9106105" OR pid == "9106115") AND ((assetAction == CREATE_ACTION AND disc > 50 AND disc <= 55 AND quoteType_quote == NEW_BIZ) OR (disc > 50 AND quoteType_quote == ADD_ON AND (assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION OR assetAction == CREATE_ACTION) AND termNumMonths_quote <> ""))){
+		put(triggerDict, docNum + "~" + "discountPTE", docNum + "~" + "discountPTE" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+
+	}
+	else{
+		put(triggerDict, docNum + "~" + "discountPTE", docNum + "~" + "discountPTE" + TRIG_KEY_VALUE_DELIM + FALSE_STR);
+	}
+	//IESCNQRCPQ-644 SV. 19-05-2023 modified the condition to AND instead of OR
+	if((pid <> "36312" AND pid <> "9106105" AND pid <> "9106115") AND disc > 0){
+		put(triggerDict, docNum + "~" + "dP", docNum + "~" + "dP" + TRIG_KEY_VALUE_DELIM + FALSE_STR);
+	}
+	else{
+		put(triggerDict, docNum + "~" + "dP", docNum + "~" + "dP" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+	}
+	//CSYS-104391 - End		 
+	
+//CSYS-106170 Start (PG 27-5-2022)
+if (referralType_quote == "Customer Request" AND partnerAgreementType_quote == "Marketing Agreement" AND 
+poCat == CORE_SERVICE AND assetAction == CREATE_ACTION AND disc <= 20){
+	put(triggerDict, docNum + "~" + "discountMA", docNum + "~" + "discountMA" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+}
+else{
+	put(triggerDict, docNum + "~" + "discountMA", docNum + "~" + "discountMA" + TRIG_KEY_VALUE_DELIM + FALSE_STR);
+}
+//CSYS-106170 End
+ 
+    //CSYS-97522 SN. 11-2019
+    /*
+    if( quoteType_quote <> ADD_ON AND NOT(isnull(ultimateAppliedPromos)) AND ultimateAppliedPromos <> ""  AND ownerBU_quote == "SMB BU" AND disc < -50 ){
+        put(triggerDict, "promoWithNegativeDiscSMN", TRUE_STR);
+    }*/
+    //CSYS-97627 and CSYS-97626 SN. 11-2019
+    if (quoteType_quote == "New Business"
+        AND ownerBU_quote == "SMB BU"
+        AND ownerDivision_quote == "US Ent Public Sector") {
+        //CSYS-97627 SN. 11-2019
+        if (find(listOfCoreOffering_quote, "Invoice") <> -1 AND find(listOfCoreOffering_quote, "Expense") <> -1) {
+            put(triggerDict, "publicSectorMultipleCore", TRUE_STR);
+        }
+        //CSYS-97626 SN. 11-2019
+        termNoMonths = util.customAtoi(termNumMonths_quote, 0);
+        if (termNoMonths < 12) {
+            put(triggerDict, "publicSectorContractTermLess12", TRUE_STR);
+        }
+    }
+
+    //CSYS-88473
+    if (parentDocNum <> ""
+        AND assetAction <> NONE_ACTION AND hasQuoteProd == FALSE_STR) {
+        hasQuoteProd = TRUE_STR;
+    }
+	nextBillingDate = util.getStringAttribute(attributesDict, docNum, TILDE_DELIMITER, "nextBillingDate_line");//CSYS-100741
+	nextBillingDate = util.getAttributesDictValue(nextBillingDate);
+	//CSYS-104596 NP 11-09-2021 Start
+	if(poCat == CORE_SERVICE AND parentDocNum==detectByAppZenTerminateParentId){
+		nbdOldLine = substring((nextBillingDate),0,10);
+		detectParentDocNum = parentDocNum; //CSYS-106638 (OK. 7-11-2022)
+	}
+	//CSYS-104596 End
+	//CSYS-100742 NP 5-7-2021) Start
+	
+	//CSYS-106609 (OK. 4-25-2022) Updated the "if" condition with 4 detect migration scenario's
+	//CSYS-106050 (OK. 4-25-2022) comment out the below if condition and added 2 separate if conditions
+	//if(detectByAppzenTerminate_quote AND (billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly") AND find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == TERMINATE_ACTION){ //CSYS-104595 NP 10/26/2021 Removed condition for Quarterly CSYS-104596 NP 11-09-2021
+	if((billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly") AND find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == TERMINATE_ACTION AND (detectByAppzenTerminate_quote OR intelligentAuditCreate == "true" OR intelligentAuditEssentialCreate == "true" OR verifyCreate == "true")){
+		if(detectByAppzenTerminate_quote) {
+			termDateDetect="";
+			migrationScenario = "detectByAppzenTerminate"; //CSYS-106638 (OK. 7-11-2022)
+			put(anyTypeDict, "detectByAppzenTerminateNBD", nbdOldLine); //CSYS-106638 (OK. 7-11-2022) Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+			put(anyTypeDict, "detectByAppzenTerminateParentDoc", detectParentDocNum); //CSYS-106638 (OK. 7-11-2022)
+			//CSYS-104596 NP 11-09-2021 Start
+			if(billingCycle_quote == "Monthly"){
+				nPSDDetectOversight = util.addMonthsToDate (newOrderDate, string(4));
+			}
+			
+			elif(billingCycle_quote == "Quarterly"){
+				//CSYS-106638 (OK. 7-11-2022) Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+				//nPSDDetectOversight = util.addMonthsToDate (nbdOldLine, string(3));
+				nPSDDetectOversight = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+			}
+			//CSYS-104596 End
+			//Set Term date for Concur Detect by Appzen with Terminate action
+			termDateDetect = datetostr(minusdays(util.getDateFromString(nPSDDetectOversight), 1), "MM/dd/yyyy");
+			utilResultString = util.formAttrValueStr(attributesDict, "termDate_line", docNum, datetostr(util.getDateFromString(termDateDetect)));
+		}
+  
+		//CSYS-106050 (OK. 4-25-2022) Start - Future date the Termination date for detect
+		if (intelligentAuditCreate == "true") {
+			migrationScenario = "detectMigrateToIntelligentAuditAdvanced"; //CSYS-106638 (OK. 7-11-2022)
+			put(anyTypeDict, "detectMigrateToIntelligentAuditAdvancedNBD", nbdOldLine); //CSYS-106638 (OK. 7-11-2022) Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+			put(anyTypeDict, "detectMigrateToIntelligentAuditAdvancedParentDoc", detectParentDocNum); //CSYS-106638 (OK. 7-11-2022)
+			if(billingCycle_quote == "Monthly"){
+				terminationDateDelay = util.addMonthsToDate (newOrderDate, string(4));
+			}
+			elif(billingCycle_quote == "Quarterly"){
+				//CSYS-106638 (OK. 7-11-2022) Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+				//terminationDateDelay = util.addMonthsToDate (nbdOldLine, string(3));
+				terminationDateDelay = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+			}
+			
+		}
+  
+		//CSYS-106157 (OK. 5-06-2022) Future date the Termination date for detect
+		if (intelligentAuditEssentialCreate == "true") {
+			migrationScenario = "detectMigrateToIntelligentAuditEssential"; //CSYS-106638 (OK. 7-11-2022)
+			put(anyTypeDict, "detectMigrateToIntelligentAuditEssentialNBD", nbdOldLine); //CSYS-106638 (OK. 7-11-2022) Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+			put(anyTypeDict, "detectMigrateToIntelligentAuditEssentialParentDoc", detectParentDocNum); //CSYS-106638 (OK. 7-11-2022)
+			if(billingCycle_quote == "Monthly"){
+				terminationDateDelay = util.addMonthsToDate (newOrderDate, string(3));
+			}
+			elif(billingCycle_quote == "Quarterly"){
+				//CSYS-106638 (OK. 7-11-2022) Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+				//terminationDateDelay = util.addMonthsToDate (nbdOldLine, string(2));
+				terminationDateDelay = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+			}
+		}
+		
+		//CSYS-106158 (OK. 5-06-2022) Future date the Termination date for detect
+		if (verifyCreate == "true") {
+			migrationScenario = "detectMigrateToVerify"; //CSYS-106638 (OK. 7-11-2022)
+			put(anyTypeDict, "detectMigrateToVerifyNBD", nbdOldLine); //CSYS-106638 (OK. 7-11-2022) Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+			put(anyTypeDict, "detectMigrateToVerifyParentDoc", detectParentDocNum); //CSYS-106638 (OK. 7-11-2022)
+			if(billingCycle_quote == "Monthly"){
+				terminationDateDelay = util.addMonthsToDate (newOrderDate, string(2));
+			}
+			elif(billingCycle_quote == "Quarterly"){
+				//CSYS-106638 (OK. 7-11-2022) Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+				//terminationDateDelay = util.addMonthsToDate (nbdOldLine, string(1));
+				terminationDateDelay = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+			}
+		}
+		
+		if (terminationDateDelay <> "") {	   
+			termDateDetect = datetostr(minusdays(util.getDateFromString(terminationDateDelay), 1), "MM/dd/yyyy");
+			utilResultString = util.formAttrValueStr(attributesDict, "termDate_line", docNum, datetostr(util.getDateFromString(termDateDetect)));
+		}
+		//CSYS-106050 (OK. 4-25-2022) - End						 
+	}
+	elif (assetAction == TERMINATE_ACTION AND nextBillingDate <> "") {
+		if(itemType == BASE_FEE){
+			terminatedDate = nextBillingDate;
+			//print "Hello Shri terminatedDate 5 ="; print terminatedDate;
+		}
+		
+		/*CSYS-106714 (OK. 7-22-2022) Comment out below code. As part of CSYS-106714 we are populating "termDate_line" for all the terminated lines
+		if(orderEffectiveDateHDS_quote==""){
+			utilResultString = util.formAttrValueStr(attributesDict, "termDate_line", docNum, "");
+		}*/
+		
+    }
+	//CSYS-100742 End
+	
+	//CSYS-104890 Start
+	if(standardToProfessionalMigrationFlag AND parentDocNum==sTPMParentId AND poCat == CORE_SERVICE){
+		
+		//CSYS-106638 (OK. 7-11-2022) Start: Using anyTypeDict to add NBD value to the "calculateFutureDateForQuarterly" function
+		migrationScenario = "standardToProfessionalMigration"; 
+		
+		if (poCat == CORE_SERVICE AND assetAction == TERMINATE_ACTION) { //taking the NBD value from Terminated standard core. because its fecting value from asset string. This will avoid the issue with new NBD on professional core
+			nbdOldLineSTPM = substring((item.nextBillingDate_line),0,10);
+		}
+		
+		put(anyTypeDict, "standardToProfessionalMigrationNBD", nbdOldLineSTPM);
+		put(anyTypeDict, "standardToProfessionalMigrationParentDoc", parentDocNum);
+		//CSYS-106638 (OK. 7-11-2022) - End
+		
+		if(billingCycle_quote == "Monthly"){
+		newProdSetupDateSTPM = util.addMonthsToDate (newOrderDate, string(3));
+		}
+		elif(billingCycle_quote == "Quarterly"){
+			/*CSYS-106638 (OK. 7-11-2022) Start - Comment out below line and use new commerce function to get the future date for Quarterly billing cycle
+			nbdOldLineSTPM = substring((item.nextBillingDate_line),0,10);
+			futureDateSTPM = util.addMonthsToDate (newOrderDate, string(3));
+			if(nbdOldLineSTPM==futureDateSTPM){
+				newProdSetupDateSTPM=futureDateSTPM;
+			}
+			else
+			{
+			newProdSetupDateSTPM = util.addMonthsToDate (nbdOldLineSTPM, string(3));
+			}*/
+			newProdSetupDateSTPM = commerce.calculateFutureDateForQuarterly(migrationScenario, anyTypeDict, newOrderDate, attributesDict);
+			//CSYS-106638 (OK. 7-11-2022) - End
+		}
+	}
+	//CSYS-104890 End
+	
+    //Ramp delete upgrade. Line ramp check. CSYS-46488. KA. 10-5-15:
+    lineRampFromMonths = util.getXMLNodeValues(lineItemRampPlan, FROM); //This will be a string array, e.g. ["1", "2", "3"]
+    prevNumOfLineRamps = sizeofarray(split(lineRampFromMonthsGrid, DELIMITER));
+    rampPlanOverride = util.getStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_OVERRIDE);
+
+    if (prevNumOfLineRamps > 1 AND lineRampFromMonthsGrid <> ""
+        AND NOT isempty(lineRampFromMonths)) {
+        if (lineRampFromMonthsGrid <> join(lineRampFromMonths, DELIMITER)) {
+            lineRampDeletionFlag = true;
+        }
+    }
+    if (rampPlanOverride == TRUE_STR AND sizeofarray(lineRampFromMonths) > 0) {
+        lineRampDeletionFlag = true;
+    }
+
+    //CSYS-85376 (LN. If any previous TRXN values is greater than the final ramp number of TRXN, require CFO Approval)
+    lineRampToMonths = util.getXMLNodeValues(lineItemRampPlan, TO); //This will be a string array, e.g. ["1", "2", "and beyond"]
+    lineRampToMonthsTrxn = util.getXMLNodeValues(lineItemRampPlan, RAMP_TRANSACTIONS); //This will be a string array, e.g. ["100", "250", "350"]
+
+    if (NOT(isempty(lineRampToMonths)) AND NOT(isempty(lineRampToMonthsTrxn)) AND itemType == BASE_FEE AND rampPlanOverride == TRUE_STR) { //Safety checks here, utilizing the rampPlanOverride checkbox so that Quote & Line level doesn't trigger when there is only a Quote Level ramp with higher transactions than the final ramp (as this will inherit the Quote level trigger at the line level)
+
+        finalLineRampToMonths = sizeofarray(lineRampToMonths);
+        finalLineRampToMonthsIndex = finalLineRampToMonths - 1;
+        finalLineRampTrxnCnt = 0;
+
+        // Locate the final ramp index and store the value of the final ramp transaction
+        if (lineRampToMonths[finalLineRampToMonthsIndex] == "and beyond") {
+            finalLineRampTrxn = lineRampToMonthsTrxn[finalLineRampToMonthsIndex];
+
+            if (isnumber(finalLineRampTrxn)) {
+                finalLineRampTrxnCnt = util.customAtoi(finalLineRampTrxn, 0);
+            }
+        }
+
+        // Loop through the rest of the transaction array at the line level and assess their transaction value
+        for eachLineRampToMonthsTrxn in lineRampToMonthsTrxn {
+
+            trxnCount = 0;
+
+            if (isnumber(eachLineRampToMonthsTrxn)) {
+                trxnCount = util.customAtoi(eachLineRampToMonthsTrxn, 0);
+            }
+
+            // If any previous transactions are greater than the final ramp, trigger approvals
+            if (trxnCount > finalLineRampTrxnCnt) {
+                put(triggerDict, docNum + "~" + "previousRampGreaterThanFinalRampLine", docNum + "~" + "previousRampGreaterThanFinalRampLine" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+            }
+        }
+    }
+    //CSYS-85376 END
+
+    //CSYS-89775 (LN. 3/12/2018) Take in each line level assetOriginalDiscount to be used in the evaluation in the approvalTriggersTable (all CREATE's will inherently have 0.0)
+    //CSYS-93941 (LN. 12-20-2018) Do not factor in the Model into this logic
+    if (parentDocNum <> ""
+        AND assetAction <> NONE_ACTION AND assetAction <> TERMINATE_ACTION) {
+        //IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below line and use bMICalculatedDiscount value instead of assetOriginalDiscount.
+		//put(triggerDict, docNum + "~" + "assetDiscount", docNum + "~" + "assetDiscount" + TRIG_KEY_VALUE_DELIM + string(assetOriginalDiscount));
+		put(triggerDict, docNum + "~" + "assetDiscount", docNum + "~" + "assetDiscount" + TRIG_KEY_VALUE_DELIM + string(bMICalculatedDiscount));
+    }
+
+    //CSYS-56574 provide a unique identifier for multiple base cores. KA. 2-3-2015:
+    if (poCat == CORE_SERVICE AND itemType == BASE_FEE AND assetAction <> TERMINATE_ACTION AND NOT containskey(stringsDict, parentDocNum + "uniqueCoreBaseKey")) {
+        utilResultString = util.formAttrValueStr(attributesDict, "uniqueCoreBase_line", docNum, TRUE_STR);
+        put(stringsDict, parentDocNum + "uniqueCoreBaseKey", TRUE_STR);
+    }
+
+    //##########################################################//
+    //#####      Line Level Billing Exception section      #####//
+    //##########################################################//
+
+    //build Annual Bundle Billing Exception Notes. CSYS-65761. KA. 8-17-2016
+    if (billingCycle_quote == "Annually"
+        AND quoteType_quote == ADD_ON AND assetAction == CREATE_ACTION AND poCat <> CORE_SERVICE AND isPartOfPackage) {
+        if (find(annualBundleBillingExceptionStr, lineDesc) == -1) { //prevent duplicates
+            annualBundleBillingExceptionStr = annualBundleBillingExceptionStr + lineDesc + ", ";
+        }
+    }
+
+    //CSYS-82718 continued:
+    if (pid <> ""
+        AND partItemType == SETUP_FEE) {
+        append(sortPartArray, atoi(pid));
+    }
+
+    //CSYS-91306 (LN. 5-29-2018) If line items are present, and the 'State and Local Government Package' has been applied, update the variable to true
+    if (pid == "") { //Look to the Models only, skip all other line items
+
+        if (findinarray(preDefinedPackageArr, "State and Local Government") <> -1) { //If the 'State and Local Government' Package is being used, set the stateAndLocal_quote attribute to true
+            stateAndLocalPackage = true;
+        }
+    }
+
+    //CSYS-87125 continued:
+    if (util.getStringAttribute(stringsDict, docNum, DELIMITER, PACKAGE_ID) <> "") {
+        packageId = util.getStringAttribute(stringsDict, docNum, DELIMITER, PACKAGE_ID);
+        put(stringsDict, parentDocNum + DELIMITER + "packageSelectedForModel", packageId);
+    }
+
+    //CSYS-87914 continued:
+    if (partItemType == BASE_FEE AND rampPlanOverride == TRUE_STR AND overrideRampPrice == TRUE_STR) {
+        incrementalDocNum = util.getStringAttribute(stringsDict, poID, DELIMITER, "IncDocNumPOMapping");
+        rampDiscountInfo = util.getRampDiscounts(lineItemRampPlan);
+        //get any ramp discounts for the base line item:
+        baseFeeRampDiscountArray = get(rampDiscountInfo, "baseFeeRampDiscountArray");
+        incFeeRampDiscountArray = get(rampDiscountInfo, "incFeeRampDiscountArray");
+        baseFeeRampDiscountFloatArray = float[];
+        incFeeRampDiscountFloatArray = float[];
+        //Convert to float arrays:
+        for val in baseFeeRampDiscountArray {
+            if (isnumber(val)) {
+                append(baseFeeRampDiscountFloatArray, atof(val));
+                //CSYS-94311 SN. 10-2019
+                //CSYS-97991
+                /*
+                if(NOT isnull(acctPartnerDiscount) AND acctPartnerDiscount <> 0 AND assetAction == CREATE_ACTION AND acctPartnerDiscount <> atof(val)){
+                    //If the current line discount <> partner discount, trigger soft validation
+                    put(triggerDict, docNum + "~" + "partnerDiscountChange", docNum + "~" + "partnerDiscountChange" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+                }*/
+            }
+        }
+        for val in incFeeRampDiscountArray {
+            if (isnumber(val)) {
+                append(incFeeRampDiscountFloatArray, atof(val));
+                //CSYS-94311 SN. 10-2019
+                //CSYS-97991
+                /*
+                if(NOT isnull(acctPartnerDiscount) AND acctPartnerDiscount <> 0 AND assetAction == CREATE_ACTION AND acctPartnerDiscount <> atof(val)){
+                    //If the current line discount <> partner discount, trigger soft validation
+                    put(triggerDict, docNum + "~" + "partnerDiscountChange", docNum + "~" + "partnerDiscountChange" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+                }*/
+            }
+        }
+
+        //Get the highest value (discount) from each array:
+        highestBaseFeeRampDiscount = 0.0;
+        //lowestBaseFeeRampDiscount = 0.0;//CSYS-97522 SN. 11-2019
+        highestIncFeeRampDiscount = 0.0;
+        //lowestIncFeeRampDiscount = 0.0;//CSYS-97522 SN. 11-2019
+        if (NOT isempty(baseFeeRampDiscountFloatArray)) {
+            highestBaseFeeRampDiscount = max(baseFeeRampDiscountFloatArray);
+            //lowestBaseFeeRampDiscount = min(baseFeeRampDiscountFloatArray);//CSYS-97522 SN. 11-2019
+        }
+        if (NOT isempty(incFeeRampDiscountFloatArray)) {
+            highestIncFeeRampDiscount = max(incFeeRampDiscountFloatArray);
+            //lowestIncFeeRampDiscount = min(incFeeRampDiscountFloatArray);//CSYS-97522 SN. 11-2019
+        }
+
+        //Overwrite the lineDiscountPercent values in the triggerDict:
+        if (NOT(isnull(highestBaseFeeRampDiscount)) AND highestBaseFeeRampDiscount > 0) {
+            //CSYS-96150, SN. 06-2019 ; Part 1, If on an Add-on quote the existing Core Service, asset Action = MODIFY with a discount greater than the existing asset discount on the Base line only, trigger approval to CFO
+            //CSYS-106372, LIN 05-24-2022 - Removed Core service condition as it should include all assets
+			//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below line and use bMICalculatedDiscount value instead of assetOriginalDiscount.
+			//if (assetAction == MODIFY_ACTION AND highestBaseFeeRampDiscount > assetOriginalDiscount) {
+			if (assetAction == MODIFY_ACTION AND highestBaseFeeRampDiscount > bMICalculatedDiscount) {
+                put(triggerDict, docNum + "~" + "increasedDiscModifyExistingCoreBase", docNum + "~" + "increasedDiscModifyExistingCoreBase" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+				
+				//CSYS-103513 (OK. 7-19-2021) Start: If difference between the current discount and asset discount is less than or equal to 5% then only trigger manager approval. if its greater than 5% then trigger upto CFO.
+				increasedRampDiscount = highestBaseFeeRampDiscount - assetOriginalDiscount;
+				//CSYS-106372, LIN 05-24-2022 - Updated the condition to 3%
+				//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below if condition. Discount difference check is not required.
+				//if (increasedRampDiscount > 3.00) {
+					put(triggerDict, docNum + "~" + "assetDiscountCheck", docNum + "~" + "assetDiscountCheck" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+				//}
+				//CSYS-103513 - End
+            }
+
+            //check if core and modify and > than asset discount
+            put(triggerDict, docNum + "~" + "lineDiscountPercent", docNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(highestBaseFeeRampDiscount));
+        }
+        if (NOT(isnull(highestIncFeeRampDiscount)) AND highestIncFeeRampDiscount > 0) {
+            put(triggerDict, incrementalDocNum + "~" + "lineDiscountPercent", incrementalDocNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(highestIncFeeRampDiscount));
+        }
+        //CSYS-97522 SN. 11-2019
+        /*
+        if(quoteType_quote <> ADD_ON AND NOT(isnull(lowestBaseFeeRampDiscount)) AND NOT(isnull(ultimateAppliedPromos)) AND ultimateAppliedPromos <> ""  AND ownerBU_quote == "SMB BU" AND lowestBaseFeeRampDiscount < -50 ){
+                put(triggerDict, "promoWithNegativeDiscSMN", TRUE_STR);
+        }
+        //CSYS-97522 SN. 11-2019
+        if(quoteType_quote <> ADD_ON AND NOT(isnull(lowestIncFeeRampDiscount)) AND NOT(isnull(ultimateAppliedPromos)) AND ultimateAppliedPromos <> ""  AND ownerBU_quote == "SMB BU" AND lowestIncFeeRampDiscount < -50 ){
+                put(triggerDict, "promoWithNegativeDiscSMN", TRUE_STR);
+        }*/
+        //CSYS-95501
+        index = 0;
+        howManyRamps = util.getIntegerAttribute(integersDict, docNum, DELIMITER, NUMBER_RAMP_ENTRIES);
+        rollup = util.getStringAttribute(stringsDict, docNum, DELIMITER, ROLL_UP);
+        isGrouped = util.getStringAttribute(stringsDict, docNum, DELIMITER, IS_GROUPED);
+        rampPrice = util.getXMLNodeValues(lineItemRampPlan, "baseFeeNonUnifiedNet");
+        monthsWaived = 0;
+        if (howManyRamps > 1 AND((poCat == CORE_SERVICE AND rollup == "Y") OR isGrouped <> TRUE_STR) AND assetAction <> TERMINATE_ACTION AND assetAction <> NONE_ACTION) {
+            if (NOT(isempty(lineRampToMonths))) {
+                for ramp in lineRampToMonths {
+                    rampCyclePrice = getcurrencyvalue(rampPrice[index]);
+                    if (isnumber(ramp)) {
+                        if (atoi(ramp) <= 12 AND rampCyclePrice == 0.0) {
+                            if (index == 0) {
+                                monthsWaived = atoi(ramp);
+                            } else {
+                                monthsWaived = monthsWaived + (atoi(ramp) - atoi(lineRampToMonths[index - 1]));
+                            }
+                        }
+                    }
+                    index = index + 1;
+                }
+                if (monthsWaived <> 0) {
+                    append(waivePeriodArray, monthsWaived);
+                }
+            }
+        }       
+    }
+    
+    //CSYS-100194 - Start (OK. 4-8-2020)Remove discount approvals for ADP Integration
+    discountFromGrid = item.discount_line;   
+	if (poID == "5793980" AND assetAction == CREATE_ACTION) {
+		if (discountFromGrid > 0) {
+			put(triggerDict, docNum + "~" + "lineDiscountPercent", docNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(0));
+		}
+		if (rampPlanOverride == TRUE_STR AND overrideRampPrice == TRUE_STR) {
+			incDocNum = util.getStringAttribute(stringsDict, poID, DELIMITER, "IncDocNumPOMapping"); //getting the doc number for Incremental line
+			put(triggerDict, docNum + "~" + "lineDiscountPercent", docNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(0));
+			put(triggerDict, incDocNum + "~" + "lineDiscountPercent", incDocNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(0));
+		}			
+	}	
+	//CSYS-100194 -End
+	
+	//CSYS-100603 (OK. 10-5-2020) Start: For Resell Opp we are removing discount approvals for Pre Prod fee lines
+	//CSYS-100964 (OK. 11-2-2020) Commenting out below line to update the condition for resell to check the new field value
+	//if(quoteType_quote == "New Business" AND primaryReferringPartnerCategory_quote == "VAR") {
+	if(quoteType_quote == "New Business" AND referralStatus_quote == "Accept" AND referringPartnerCategory_quote == "VAR") {
+		if (itemType == "Pre Prod") {			
+			put(triggerDict, docNum + "~" + "lineDiscountPercent", docNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(0));
+		}
+	}
+	//CSYS-100603 - End	
+	
+	//IESCNQRCPQ-1838 (OK. 5-17-2024) Start - Approval Process Updates GTM
+	solExneedApproval = "";
+	rampNeedApproval = "";
+	if (findinarray(solExProdutPOArray, poID) <> -1){
+		//Approvals required if the SolEx Products that selected also have a Termination for Convenience month populated 
+		if (itemType == BASE_FEE AND t4CMonths <> "") {
+			solExneedApproval = "true";
+		}
+		
+		//Approvals required if the SolEx Products and their associated Promotions selected on a quote
+		for val in promosApplied {
+			if (findinarray(solExProductPromoArray, val) <> -1) {
+				solExneedApproval = "true";
+			}
+		}
+		
+		if (solExneedApproval == "true") {
+			put(triggerDict, "solExProductwithT4CMonth", TRUE_STR);
+		}
+	}
+	
+	rampSize = sizeofarray(lineRampToMonths);
+	if (rampSize > 1) {		
+		//Approvals required if the Opt-out promotions selected on a quote that also has more than one Ramp Plan line item
+		for val in promosApplied {
+			if (findinarray(optOutPromoArray, val) <> -1) {
+				rampNeedApproval = "true";
+			}
+		}
+		
+		//Approvals required if the Termination for Convenience MONTH populated on a quote that also has more than one Ramp Plan line item
+		if (t4CMonths <> "") {
+			rampNeedApproval = "true";
+		}
+		
+		if (rampNeedApproval == "true") {
+			put(triggerDict, "rampwithT4CMonth", TRUE_STR);
+		}
+	}
+	//IESCNQRCPQ-1838 - End
+	
+	//IESCNQRCPQ-1834 (OK. 5-19-2024) For SMB BU if a professional service setup fee is added with a discount of 40% or greater, then require MISC approval
+	if(ownerBU_quote == "SMB BU" AND poCat == "Professional Service" AND assetAction == CREATE_ACTION AND itemType == SETUP_FEE AND discountFromGrid >= 40){
+		put(triggerDict, "professionalServiceDiscountMisc", TRUE_STR);
+	}
+}
+
+monthlyRampWaivePeriod = 0;
+if (NOT isempty(waivePeriodArray)) {
+    maxWaivePeriod = max(waivePeriodArray);
+    if (maxWaivePeriod <> 0 /*AND maxWaivePeriod > waivePeriod*/ ) {
+        monthlyRampWaivePeriod = maxWaivePeriod; //CSYS-97404
+    }
+}
+put(triggerDict, "monthlyRampWaivePeriod", string(monthlyRampWaivePeriod)); //CSYS-97404
+
+//CSYS-93618 (LN. 10-8-2018) For all New Business, SMN - United States quotes with a Professional Edition requires approvals up and through SVP
+impMethods = split(listOfImplementationMethods_quote, "$$");
+
+if (quoteType_quote == NEW_BIZ AND ownerBU_quote == "SMB BU"
+    AND ownerMarket_quote == "United States"
+    AND findinarray(impMethods, "Professional") <> -1) {
+    put(triggerDict, "smbUnitedStatesProfessionalEdition", TRUE_STR);
+}
+//CSYS-98419 SN. 02/2020
+/*
+if(quoteType_quote == NEW_BIZ AND ownerDivision_quote == "US Ent New Business" AND ownerTeam_quote == "US ENT Digital NB" AND findinarray(impMethods, "Professional") <> -1 ){
+    put(triggerDict, "professionalEditionforNewBusiness", TRUE_STR);
+}*/
+
+//CSYS-98591 SN. 02/2020 , CSYS-99283 SN. 05/2020 (totalArrNet -> convetedArrNet), CSYS-99335 SN. 05/2020
+/*if (quoteType_quote == NEW_BIZ AND ownerBU_quote == "Enterprise BU"
+    AND ownerTheater_quote == "Americas"
+    AND(ownerMarket_quote == "United States"
+        OR ownerMarket_quote == "Canada"
+        OR ownerMarket_quote == "US Government") AND convertedArrNet > 350000 AND findinarray(impMethods, "Premium") == -1 AND(implementationPartner_quote == ""
+        OR isnull(implementationPartner_quote))) {
+    put(triggerDict, "dealSizeRequiresPremiumEdition", TRUE_STR);
+}*/
+//CSYS-106163 & CSYS-106286 TJG 04/2022
+if (quoteType_quote == NEW_BIZ AND ownerBU_quote == "Enterprise BU" AND findinarray(impMethods, "Premium") == -1 AND (implementationPartner_quote == "" OR isnull(implementationPartner_quote)))  {  
+
+															  
+	if (convertedArrNet > 350000 AND ownerTheater_quote == "Americas" AND (ownerMarket_quote == "United States" OR ownerMarket_quote == "Canada" OR ownerMarket_quote == "US Government") ) { 
+		  put(triggerDict, "dealSizeRequiresPremiumEdition", TRUE_STR); 
+             	  put(triggerDict, "dealSizeRequiresPremiumEdition_Misc", TRUE_STR);
+        }
+ 	if (convertedArrNet > 250000 AND ownerTheater_quote == "EMEA") {
+           	  put(triggerDict, "dealSizeRequiresPremiumEdition", TRUE_STR); 
+             	  put(triggerDict, "dealSizeRequiresPremiumEdition_MiscEMEA", TRUE_STR);
+        }
+        //if (convertedArrNet > 100000 AND ownerTheater_quote == "APAC") { //IESCNQRCPQ-525 TJG 3/29/2023
+        if (convertedArrNet > 100000 AND ownerTheater_quote == "APAC" AND ownerMarket_quote <> "Japan") {
+           	  put(triggerDict, "dealSizeRequiresPremiumEdition", TRUE_STR); 
+             	  put(triggerDict, "dealSizeRequiresPremiumEdition_MiscAPAC", TRUE_STR);
+        }            
+} 
+
+//IESCNQRCPQ-1814 (OK. 5-3-2024) Start - Create Approval Process for Partner
+referringPartnerArray = string[] { "VAR", "PS", "SCR", "BPO", "ISD", "CCF" };
+if ((opportunityRecordType_quote_c == "Demand Funnel" OR opportunityRecordType_quote_c == "SMB Opportunity") AND referralStatus_quote == "Accept" AND findinarray(referringPartnerArray, referringPartnerCategory_quote) <> -1) {
+	if(ownerTheater_quote == "Americas") {
+		put(triggerDict, "partnerRegionalMiscAmericas", TRUE_STR);
+	}
+	if(ownerTheater_quote == "EMEA") {
+		put(triggerDict, "partnerRegionalMiscEMEA", TRUE_STR);
+	}
+	if(ownerTheater_quote == "APAC") {
+		put(triggerDict, "partnerRegionalMiscAPAC", TRUE_STR);
+	}
+}
+//IESCNQRCPQ-1814 - End
+	 
+//CSYS-98466
+if (ownerBU_quote <> "Enterprise BU"
+    AND totalArrList > 100000) {
+    put(triggerDict, "totalArrListConstraint", TRUE_STR);
+}
+if (ownerBU_quote <> "SMB BU") {
+    put(triggerDict, "ignoretotalArrList", TRUE_STR);
+}
+
+//CSYS-91306 (LN. 5-29-2018) Write the final value of 'stateAndLocalPackage' to the 'stateAndLocal_quote' attribute - this value is leveraged in Commerce and Config rules for State and Local development
+utilResultString = util.formAttrValueStr(attributesDict, "stateAndLocal_quote", QUOTE_DOC_NUM, string(stateAndLocalPackage));
+
+//CSYS-88473
+if (hasQuoteProd == TRUE_STR) {
+    utilResultString = util.formAttrValueStr(attributesDict, HAS_PRODUCTS, QUOTE_DOC_NUM, TRUE_STR);
+} else {
+    utilResultString = util.formAttrValueStr(attributesDict, HAS_PRODUCTS, QUOTE_DOC_NUM, FALSE_STR);
+}
+
+//CSYS-103219 NP 06/21/2021 Starts
+detectByOversightCreateVar=false;//CSYS-103219 NP 06/21/2021
+detectByAppzenTerminateVar=false;//CSYS-103219 NP 06/21/2021
+detectByAppzenTerm=detectByAppzenTerminate_quote;
+for line in line_process{
+	docNum = line._document_number;   
+	pi = line._part_number;
+	extNetPrice = line.extendedNetPrice_line;	//CSYS-104116 																					  
+	poID = util.getStringAttribute(stringsDict, docNum, DELIMITER, PO_ID);
+	assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+			   
+			  
+				   
+							  
+	if(find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == "TERMINATE")
+	{
+		detectByAppZenTerminateVar=true;
+	}
+	if(pi=="7526964" AND assetAction == "CREATE" )
+	{
+		detectByOversightCreateVar=true;
+	}
+ 
+	//CSYS-104116 LIN 09-07-2021 - Start - Extended Net BASE/INC for Expense Pay Classic (NA, EMEA, APA, Japan) 
+	if((pi == "480" OR pi == "466" OR pi == "478" OR pi == "1040" OR pi == "36994" OR pi == "36995" OR pi == "1268813" OR pi == "1268804") AND extNetPrice > 0.0){
+		put(triggerDict, "extNetPriceForExpensePayClassic", TRUE_STR);
+	}
+	//CSYS-104116 - End	
+	//CSYS-106469 Start
+	poCategory = line.poCategory_line;
+	t4CMonths = terminationForConvenienceMonths_quote;
+	promocodes = util.getStringAttribute(stringsDict, docNum, DELIMITER, PROMO_CODES_LINE);	
+	//CSYS-107446 SV 16-11-2022 included NONE and MODIFY in the below code
+	//if(ownerBU_quote == "Enterprise BU" AND poCategory == "Extended Service" AND (assetAction==CREATE_ACTION OR assetAction==NONE_ACTION OR assetAction==MODIFY_ACTION) AND (line.piItemType_line==BASE_FEE OR line.piItemType_line==INCREMENTAL_FEE)){
+	//CSYS-107912 SV. 10-01-2023 removed the association of Enterprise BU in the above condition
+	if(poCategory == "Extended Service" AND (assetAction==CREATE_ACTION OR assetAction==NONE_ACTION OR assetAction==MODIFY_ACTION) AND (line.piItemType_line==BASE_FEE OR line.piItemType_line==INCREMENTAL_FEE)){
+		if (promoCodes <> "") { //If a promotion has been applied, continue
+			promoArr = split(promoCodes, ","); //Convert the string of promotions into an array 
+			for each in promoArr{
+				if(find(T4CPromoString,"*"+each+"*")<>-1){					
+					put(T4CPromoIdMonthDict,poID, each);					
+				}
+			}
+		}
+	}
+	//CSYs-106469 End
+}
+if(detectByAppZenTerminateVar AND detectByOversightCreateVar){
+	detectByAppZenTerminateRes=true;
+	if(not(detectByAppZenTerm)){	
+		utilResultString = util.formAttrValueStr(attributesDict, "detectByAppzenTerminate_quote", QUOTE_DOC_NUM, TRUE_STR);
+		for line in line_process{
+			docNum = line._document_number;  
+			pi = line._part_number;
+			assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+				 
+				
+					 
+			listPrice = round(util.getFloatAttribute(floatsDict, docNum, DELIMITER, LIST_PRICE), 2);
+			if(assetAction == "CREATE" AND pi=="7526964"){
+				utilResultString = util.formAttrValueStr(attributesDict, "discount_line", docNum, string(84.00));
+				utilResultString = util.formAttrValueStr(attributesDict, "discountPercent_line", docNum, string(84.00));
+				utilResultString = util.formAttrValueStr(attributesDict, "netPriceEach_line", docNum, string(0.2 * listPrice));
+				utilResultString = util.formAttrValueStr(attributesDict, "extendedNetPrice_line", docNum, string(0.2 * listPrice));
+			}
+		}
+	}
+}
+else{
+	utilResultString = util.formAttrValueStr(attributesDict, "detectByAppzenTerminate_quote", QUOTE_DOC_NUM, FALSE_STR);
+}
+//CSYS-103219 Ends
+
+//CSYS-87125 continued:
+for line in line_process {
+    docNum = line._document_number;
+    parentDocNum = line._parent_doc_number;
+	
+    //CSYS-87125 continued:
+    if (containskey(stringsDict, parentDocNum + DELIMITER + "packageSelectedForModel")) {
+        packageId = get(stringsDict, parentDocNum + DELIMITER + "packageSelectedForModel");
+        //CSYS-92131
+        if (containskey(packageDict, packageId) AND find(preDefinedPackages, get(packageDict, packageId)) == -1) {
+            preDefinedPackages = preDefinedPackages + get(packageDict, packageId) + ", ";
+        }
+        //The packageSelectedForModel_line attribute is used in the State and Local Government line level constraint rule:
+        utilResultString = util.formAttrValueStr(attributesDict, "packageSelectedForModel_line", docNum, packageId);
+    } else {
+        utilResultString = util.formAttrValueStr(attributesDict, "packageSelectedForModel_line", docNum, "");
+    }
+	
+    //CSYS-99707 (NT. 10-7-2020) Start
+    PO_ID = line.poId_line;   
+    //curDiscount = line.discount_line; 	
+    pi = line._part_number;
+    referringPartner = referringPartner_quote;
+    //assetAction = line.assetAction_line;
+	assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+	trans = line.numCommittedTransaction_line; //IESCNQRCPQ-164														
+			   
+			  
+				   
+    //aIP in the below line refers to invoice processing products fro Amex
+    //if((PO_ID == "573" OR PO_ID == "8718" OR PO_ID == "2490985" OR PO_ID == "4810507") AND curDiscount > 25.0 AND pi <> ""){
+    if((PO_ID == "573" OR PO_ID == "8718" OR PO_ID == "2490985" OR PO_ID == "4810507") AND assetAction == CREATE_ACTION AND partnerSegment_quote == "Card" AND referralStatus_quote == "Accept" AND (find(referringPartner, "Amex") <> -1 OR find(referringPartner, "American Express") <> -1)){
+	put(triggerDict, docNum + "~" + "aIP", docNum + "~" + "aIP" + TRIG_KEY_VALUE_DELIM + "true");
+	put(triggerDict, docNum + "~" + "assetDiscount", docNum + "~" + "assetDiscount" + TRIG_KEY_VALUE_DELIM + string(25));
+    }
+    else{
+	put(triggerDict, docNum + "~" + "aIP", docNum + "~" + "aIP" + TRIG_KEY_VALUE_DELIM + "false");
+    }
+    //CSYS-99707 End
+	//CSYS-103219 Start
+	if(line.piItemType_line==SETUP_FEE AND assetAction==CREATE_ACTION AND line.discount_line<=84.00 AND pi=="7526964"AND detectByAppZenTerminateRes){
+		detectByOversightCreate=true;
+		put(triggerDict, docNum + "~" + "lineDiscountPercent", docNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(0));
+	}
+	//CSYS-103219 End
+	//CYS-106469 Start
+	ist4C = get(T4CPoIdDict,PO_ID);	
+	t4C = line.t4C_line;
+	poCategory = line.poCategory_line;
+	t4CMonths = terminationForConvenienceMonths_quote;
+	promocodes = util.getStringAttribute(stringsDict, docNum, DELIMITER, PROMO_CODES_LINE);
+	//CSYS-107446 SV 16-11-2022 included NONE and MODIFY in the below code
+	//if(ownerBU_quote == "Enterprise BU" AND poCategory == "Extended Service" AND (assetAction==CREATE_ACTION OR assetAction==NONE_ACTION OR assetAction==MODIFY_ACTION) AND (line.piItemType_line==BASE_FEE OR line.piItemType_line==INCREMENTAL_FEE)){
+	//CSYS-107912 SV. 10-01-2023 removed the association of Enterprise BU in the above condition
+	if(((poCategory == "Extended Service" AND (isnull(accountLevelT4C_quote) OR accountLevelT4C_quote == "")) OR (NOT(isnull(accountLevelT4C_quote)) AND accountLevelT4C_quote <> "")) AND (assetAction==CREATE_ACTION OR assetAction==NONE_ACTION OR assetAction==MODIFY_ACTION) AND (line.piItemType_line==BASE_FEE OR line.piItemType_line==INCREMENTAL_FEE)){	
+		T4CpoidArray = keys(T4CPromoIdMonthDict);		
+		if(findinarray(T4CpoidArray,PO_ID)<>-1){								
+			t4CPromoCode = get(T4CPromoIdMonthDict,PO_ID);
+			t4CPromoMonth = get(T4CPromoDict,t4CPromoCode);			
+			utilResultString = util.formAttrValueStr(attributesDict, "t4C_line", docNum, "Promo");
+			utilResultString = util.formAttrValueStr(attributesDict, "t4CMonths_line", docNum, t4CPromoMonth);
+			utilResultString = util.formAttrValueStr(attributesDict, "isT4C_line", docNum, FALSE_STR);			
+		}			             
+		else{
+//if(ist4C == "true" AND (NOT(isnull(t4CMonths)) AND t4CMonths<> "") AND NOT (accountLevelT4C_quote == "Full T4C by Request with Penalty" AND t4CFullTerminationPenalty_quote > 10.0)){
+			//if(ist4C == "true" AND (NOT(isnull(t4CMonths)) AND t4CMonths<> "") AND (isnull(accountLevelT4C_quote) OR accountLevelT4C_quote == "" AND poCategory == "Extended Service") ){	
+			if(ist4C == "true" AND (isnull(accountLevelT4C_quote) OR accountLevelT4C_quote == "" AND poCategory == "Extended Service")){
+				utilResultString = util.formAttrValueStr(attributesDict, "t4C_line", docNum, "Yes");
+				utilResultString = util.formAttrValueStr(attributesDict, "t4CMonths_line", docNum, t4CMonths);
+				append(isT4cTrueArray,"true"); 
+			}
+			else{
+				//if(NOT(isnull(accountLevelT4C_quote)) AND accountLevelT4C_quote <> ""){	
+				if(accountLevelT4C_quote == "Public Sector Non-Appropriation of Funds" OR accountLevelT4C_quote == "Full T4C by Request with Penalty"){
+				utilResultString = util.formAttrValueStr(attributesDict, "t4C_line", docNum, "Yes");					
+				//utilResultString = util.formAttrValueStr(attributesDict, "t4CMonths_line", docNum, string(12));					
+				//utilResultString = util.formAttrValueStr(attributesDict, "terminationForConvenienceMonths_quote", QUOTE_DOC_NUM, string(12));					
+				append(isT4cTrueArray,"true");
+				utilResultString = util.formAttrValueStr(attributesDict, "isT4C_line", docNum, TRUE_STR); 
+				if(accountLevelT4C_quote == "Full T4C by Request with Penalty" AND t4CFullTerminationPenalty_quote > 10.0){
+						utilResultString = util.formAttrValueStr(attributesDict, "t4CMonths_line", docNum, "");
+				}
+					else{
+						utilResultString = util.formAttrValueStr(attributesDict, "t4CMonths_line", docNum, t4CMonths);
+					}
+				}												 
+				else{
+					utilResultString = util.formAttrValueStr(attributesDict, "t4C_line", docNum, "");
+					utilResultString = util.formAttrValueStr(attributesDict, "t4CMonths_line", docNum, "");
+					utilResultString = util.formAttrValueStr(attributesDict, "isT4C_line", docNum, FALSE_STR);
+				}
+			}
+		}
+		if(poCategory <> "Extended Service" AND (NOT(isnull(t4CMonths)) AND t4CMonths<> "") AND (isnull(accountLevelT4C_quote) OR accountLevelT4C_quote == "")){
+			utilResultString = util.formAttrValueStr(attributesDict, "t4C_line", docNum, "");
+			utilResultString = util.formAttrValueStr(attributesDict, "t4CMonths_line", docNum, "");
+			utilResultString = util.formAttrValueStr(attributesDict, "isT4C_line", docNum, FALSE_STR);
+			//append(isT4cTrueArray,"false");
+		}
+	}
+	else{
+		utilResultString = util.formAttrValueStr(attributesDict, "t4C_line", docNum, "");
+		utilResultString = util.formAttrValueStr(attributesDict, "t4CMonths_line", docNum, "");
+		utilResultString = util.formAttrValueStr(attributesDict, "isT4C_line", docNum, FALSE_STR);
+		//append(isT4cTrueArray,"false");
+	}
+	//CYS-106469 End
+ 
+	//IESCNQRCPQ-164 - Approval for Configuration Services if transaction is greater than 1
+	if(PO_ID == "9451097"  AND (assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND trans > 1){
+		if(ownerTheater_quote == "Americas"){
+			put(triggerDict, "configSerUnitAmerica", TRUE_STR);
+		}
+		if(ownerTheater_quote == "APAC"){
+			put(triggerDict, "configSerUnitAPAC", TRUE_STR);
+		}
+		if(ownerTheater_quote == "EMEA"){
+			put(triggerDict, "configSerUnitEMEA", TRUE_STR);
+		}
+	}
+	//IESCNQRCPQ-164 - End																					
+}
+
+//CYS-106469 Start
+if(NOT(isempty(isT4cTrueArray))){
+	utilResultString = util.formAttrValueStr(attributesDict, "isT4CTrue_quote", QUOTE_DOC_NUM, TRUE_STR);
+}
+else{
+	utilResultString = util.formAttrValueStr(attributesDict, "isT4CTrue_quote", QUOTE_DOC_NUM, FALSE_STR);
+}
+//CYS-106469 End
+//CSYS-103219 Start
+if(detectByOversightCreate){
+	setupDiscPI=false;
+	for line in line_process{
+		docNum = line._document_number;
+		parentDocNum = line._parent_doc_number; 
+		pi = line._part_number;
+		assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+		if(line.piItemType_line==SETUP_FEE AND assetAction==CREATE_ACTION AND line.discount_line>0 AND pi<>"7526964"){
+			setupDiscPI=true;
+		}
+
+	}
+	if(NOT(setupDiscPI)){
+			put(triggerDict, "dBO", TRUE_STR);
+		}
+	else{
+		put(triggerDict, "dBO", FALSE_STR);
+	}
+}
+else{
+	put(triggerDict, "dBO", FALSE_STR);
+}
+//CSYS-103219 End
+
+//CSYS-94755 (LN. 2-4-2019) If the quote qualifies, set the Pre-Defined Package to include "Prime"
+primePackageOnly = "";
+primePackageMany = "";
+
+if (get(stringsDict, PRIME_PACKAGE_PRESENT) == TRUE_STR) {
+    primePackageOnly = "Prime";
+    primePackageMany = "Prime, ";
+}
+
+//CSYS-92131
+if (preDefinedPackages <> "") {
+    utilResultString = util.formAttrValueStr(attributesDict, "predefinedPackages_quote", QUOTE_DOC_NUM, primePackageMany + substring(preDefinedPackages, 0, -2));
+} else {
+    utilResultString = util.formAttrValueStr(attributesDict, "predefinedPackages_quote", QUOTE_DOC_NUM, primePackageOnly + "");
+}
+
+//CSYS-82718 continued:
+sort(sortPartArray, "asc");
+locCnt = 3;
+for part in sortPartArray {
+    newLineOrderCustom = locCnt;
+    put(sort_PB_PartsDict, string(part), newLineOrderCustom);
+    locCnt = locCnt + 1;
+}
+hasCoreCreate = false;
+if (partnerBillingQuote_quote) { //CSYS-95097
+    for line in line_process {
+        docNum = line._document_number;
+        pid = line._part_number;
+        currentAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+        if (pid <> ""
+            AND NOT(isnull(pid))) {
+            if (containskey(sort_PB_PartsDict, pid)) {
+                newLineOrderCustom = get(sort_PB_PartsDict, pid);
+                //assign the correct integer to lineOrderCustom_line to address the sorting issue:
+                utilResultString = util.formAttrValueStr(attributesDict, CUSTOM_SEQ_NUM, docNum, string(newLineOrderCustom));
+            }
+        }
+        if (quoteType_quote == ADD_ON AND line._part_custom_field8 == BASE_FEE AND currentAction == CREATE_ACTION AND line.poCategory_line == CORE_SERVICE) {
+            hasCoreCreate = true;
+        }
+    }
+    //CSYS-97532
+    put(triggerDict, "partnerBilling", TRUE_STR);
+} else {
+    put(triggerDict, "partnerBilling", FALSE_STR);
+}
+
+//CSYS-65761 continued:
+if (annualBundleBillingExceptionStr <> "") {
+    utilResultString = util.formAttrValueStr(attributesDict, "annualBundleBillingException_quote", QUOTE_DOC_NUM, "Annual account with new product(s) " + annualBundleBillingExceptionStr + "added to the bundle.");
+} else {
+    utilResultString = util.formAttrValueStr(attributesDict, "annualBundleBillingException_quote", QUOTE_DOC_NUM, "");
+}
+//CSYS-95378
+extServOnlyFlag = util.getStringAttribute(stringsDict, QUOTE_DOC_NUM, DELIMITER, "extServOnlyFlag_quote");
+//CSYS-81115 LN. 5/3/17 Billing Exception in Preproduction
+if (accountPreProductionStatic_quote AND quoteType_quote == ADD_ON AND extServOnlyFlag == FALSE_STR) {
+    utilResultString = util.formAttrValueStr(attributesDict, "preproductionBillingException_quote", QUOTE_DOC_NUM, "Add-on order for account in Pre-Production");
+} else {
+    utilResultString = util.formAttrValueStr(attributesDict, "preproductionBillingException_quote", QUOTE_DOC_NUM, "");
+}
+
+if (comparedates(createdDate, strtojavadate("10/08/2015", "MM/dd/yyyy")) > 0) { //only activate October 2015 and onward. 
+    if (lineRampDeletionFlag) {
+        deleteSalesforceRamps = true;
+    }
+    utilResultString = util.formAttrValueStr(attributesDict, "deleteSFDCRamps_quote", QUOTE_DOC_NUM, string(deleteSalesforceRamps));
+}
+
+//CSYS-100742 Start
+if(terminatedDate=="" AND nPSDDetectOversight<>""){
+	terminatedDate=nPSDDetectOversight;//Assigning future date by 3 whole months to the terminated date for Concur Detect by AppZen
+	//print "Hello Shri terminatedDate 1 ="; print terminatedDate;
+}//CSYS-100742 End
+
+//CSYS-106050 (OK. 4-25-2022) future date the terminated date for Concur Detect by AppZen
+if(terminatedDate == "" AND terminationDateDelay <> ""){
+	terminatedDate = terminationDateDelay; print "Hello Shri terminatedDate 2 ="; print terminatedDate;
+}
+
+//CSYS-104890 Start
+if(standardToProfessionalMigrationFlag){
+	terminatedDate=newProdSetupDateSTPM;//Assigning future date by 3 whole months to the terminated date for Standard to Professional migration
+	//print "Hello Shri terminatedDate 3 ="; print terminatedDate;
+}//CSYS-104890 End
+
+//CSYS-103372 (SV. 19-08-2021) Start
+isAccountPreProdTerminate = isAccountPreProdTerminate_quote;
+if(isAccountPreProdTerminate){	
+	OEDForAccPreProd = split(OED, " ");	
+	terminatedDate = util.setDateToLastDayOfMonth(OEDForAccPreProd[0]);	
+	//print "Hello Shri terminatedDate 4 ="; print terminatedDate;
+}
+//CSYS-103372 End
+
+terminatedDate2 = getDate();
+if (terminatedDate <> "") {
+    if (find(terminatedDate, "/") <> -1) {
+		//CSYS-103372 (SV. 19-08-2021) added the new if condition
+		if(isAccountPreProdTerminate){
+			terminatedDate2 = (strtojavadate(terminatedDate, "MM/dd/yyyy"));
+		}
+		else{
+			terminatedDate2 = minusdays((strtojavadate(terminatedDate, "MM/dd/yyyy")), 1);
+		}
+    } else {
+        //CSYS-103372 (SV. 19-08-2021) added the new if condition
+		if(isAccountPreProdTerminate){
+			terminatedDate2 = (strtojavadate(terminatedDate, "yyyy-MM-dd"));
+		}
+		else{
+			terminatedDate2 = minusdays((strtojavadate(terminatedDate, "yyyy-MM-dd")), 1);
+		}
+    }
+    terminatedDate3 = datetostr(terminatedDate2, "yyyy-MM-dd");
+	//CSYS-105450 (SV. 14-02-2022) commented the below line and Added new attribute 
+    //utilResultString = util.formAttrValueStr(attributesDict, "terminatedDate_quote", QUOTE_DOC_NUM, terminatedDate3);
+	utilResultString = util.formAttrValueStr(attributesDict, "terminationDate_quote", QUOTE_DOC_NUM, terminatedDate3);
+ 
+	//CSYS-104349 (OK. 10-22-2021) New field "systemTerminatedDate_quote" will store the system calculated terminated date value. If legal updated termination date and In revise we again need that new legal date should maintained in termination date
+	utilResultString = util.formAttrValueStr(attributesDict, "systemTerminatedDate_quote", QUOTE_DOC_NUM, terminatedDate3);
+	if (legalUpdatedTerminationDate_quote == "true") { 
+		//CSYS-105450 (SV. 14-02-2022) commented the below line and Added new attribute 
+		//utilResultString = util.formAttrValueStr(attributesDict, "terminatedDate_quote", QUOTE_DOC_NUM, terminatedDate_quote);
+		utilResultString = util.formAttrValueStr(attributesDict, "terminationDate_quote", QUOTE_DOC_NUM, terminationDate_quote);
+	}
+}
+
+//CSYS-83893
+utilResultString = util.formAttrValueStr(attributesDict, "quoteTotalSalesARRCurrency_quote", QUOTE_DOC_NUM, string(quoteTotalSalesARR_quote));
+
+//CSYS-82783 LN. 7/24/2017// Set Term (no. of months) to Dec. 31 of the following year
+//CSYS-97532
+
+if (partnerBillingQuote_quote) { //CSYS-95097
+    if (quoteType_quote == NEW_BIZ OR(quoteType_quote == ADD_ON AND hasCoreCreate == true)) {
+        timezone = util.getUserTimeZone(); //get the timezone the user is in - Parameter needed by util.reconcileCurrentDate
+        currentDateDict = util.reconcileCurrentDate(timezone); //reconcile the current date into string components
+
+        CURRENT_MONTH_TZ = util.getStringAttribute(currentDateDict, "CURRENT_MONTH_TZ", "", ""); //get the current month
+        currentMonthInt = util.customAtoi(CURRENT_MONTH_TZ, 0); //Convert string representation of an integer, to an integer data type
+        cipTermNumMonthsStr = "";
+        if (currentMonthInt <> 12) {
+            cipTermNumMonthsStr = string((12 - currentMonthInt));
+        } else {
+            if (quoteType_quote == NEW_BIZ) {
+                cipTermNumMonthsStr = string(12);
+            } else {
+                cipTermNumMonthsStr = "";
+            }
+        }
+        utilResultString = util.formAttrValueStr(attributesDict, TERM_NUM_MONTHS, QUOTE_DOC_NUM, cipTermNumMonthsStr);
+    }
+}
+
+//CSYS-87441 Part 2 Start (LN. 1/3/2018) Need to make more room in Pricing Function
+
+//SYSTEMATIZED TERMINATIONS - MAP CORE SERVICE TERMINATIONS FOR USE BY DOCUMENT ENGINE//
+utilResultString = commerce.systematizedTerminations(isCoreChangedDict, isEditionChangedDict, attributesDict);
+
+//Reset the Tier change preview table to blank
+if (quoteType_quote == ADD_ON) {
+    utilResultString = util.formAttrValueStr(attributesDict, "tierChangePreviewText_quote", QUOTE_DOC_NUM, "");
+}
+//CSYS-87441 Part 2 End
+
+//CSYS-99508 (OK. 6-23-2020) Triggering approvals when the Credit status is Disapproved
+//CSYS-100478 (OK. 9-11-2020) Updated the condition to support new field values of Credit Status
+//if (quoteType_quote == ADD_ON AND creditStatus_quote == "Disapproved") {
+if (quoteType_quote == ADD_ON AND find("*Disapproved - Level 2*Disapproved - Level 3*Disapproved - Level 4*", "*"+creditStatus_quote+"*") <> -1) {
+    put(triggerDict, "bADCreditStatus", TRUE_STR);
+} else {
+    put(triggerDict, "bADCreditStatus", FALSE_STR);
+}
+
+//CSYS-101131 (OK. 11-17-2020) Triggering approvals when the Termination for Convenience is selected
+//CSYS-106469 (SV. 15-06-2022) Removing productsForTerminationForConvenience_quote from the below conditions
+//if (productsForTerminationForConvenience_quote <> "" AND terminationForConvenienceMonths_quote <> "") {
+if (terminationForConvenienceMonths_quote <> "") {
+	put(triggerDict, "terminationForConvenienceApproval", TRUE_STR);
+} else {
+    put(triggerDict, "terminationForConvenienceApproval", FALSE_STR);
+}
+
+//CSYS-103193 (LIN 07-15-2021) Triggering approvals when the Termination for Convenience is modified after approval
+//CSYS-106469 (SV. 15-06-2022) Removing productsForTerminationForConvenience_quote from the below conditions			 
+//if (productsForTerminationForConvenience_quote <> "" AND terminationForConvenienceMonths_quote <> "" AND previousTerminationForConvenienceMonths_quote <> "") {
+if (terminationForConvenienceMonths_quote <> "" AND previousTerminationForConvenienceMonths_quote <> "") {
+	if(atoi(previousTerminationForConvenienceMonths_quote) > atoi(terminationForConvenienceMonths_quote)){
+		put(triggerDict, "reduceTerminationForConvenience", TRUE_STR);
+		put(triggerDict, "terminationForConvenienceApproval", FALSE_STR);
+	}
+	//CSYS-106447 - updated condition for checking pendingApprover.
+	elif(NOT(pendingApprover) AND (atoi(previousTerminationForConvenienceMonths_quote) == atoi(terminationForConvenienceMonths_quote)) OR (atoi(previousTerminationForConvenienceMonths_quote) < atoi(terminationForConvenienceMonths_quote))){
+		put(triggerDict, "reduceTerminationForConvenience", FALSE_STR);
+		put(triggerDict, "terminationForConvenienceApproval", FALSE_STR);
+	}
+	//CSYS-106447 - Start
+	elif(pendingApprover AND (atoi(previousTerminationForConvenienceMonths_quote) == atoi(terminationForConvenienceMonths_quote))){
+		put(triggerDict, "reduceTerminationForConvenience", FALSE_STR);
+		put(triggerDict, "terminationForConvenienceApproval", TRUE_STR);
+	}
+	//CSYS-106447 -End
+	else {
+		put(triggerDict, "reduceTerminationForConvenience", FALSE_STR);
+	}
+	
+}
+//END - CSYS-103193																												   
+
+//CSYS-101279 (OK. 12-3-2020) - Start: when the not Allowed SMB Prime Products present, trigger approvals. 
+notAllowedSMBProductsPresent = commerce.sMBPrimeProductsApprovalCheck();
+if (notAllowedSMBProductsPresent == "true") {
+	put(triggerDict, "notAllowedSMBProductsPresent", TRUE_STR);
+} else {
+    put(triggerDict, "notAllowedSMBProductsPresent", FALSE_STR);
+}
+//CSYS-101279 - End
+
+//CSYS-103156 (OK. 6-2-2021) - Start: Remove the approval for Pre-Prod Waiver when the ENTNEWAMPLIFYWAIVER promo is selected
+selectedPromowithPreProd = "";
+if(externalPromotion_quote <> "" AND NOT(isnull(externalPromotion_quote))) {	
+	promosSelected = split(externalPromotion_quote, "~");
+	
+	for promo in promosSelected {
+		if(promo == "ENTNEWAMPLIFYWAIVER") {
+			selectedPromowithPreProd = "true";
+		}		
+	}
+}
+
+if(selectedPromowithPreProd == "true"){
+	put(triggerDict, "PromoPreProd", TRUE_STR);
+}
+else{
+	put(triggerDict, "PromoPreProd", FALSE_STR);
+}
+//CSYS-103156 - End
+
+//CSYS-106655 (OK. 8-8-2022) Start - If account level field "Partner Protected Account" <> Null then trigger misc approver
+if (partnerProtectedAccount_quote <> "") {
+	put(triggerDict, "partnerProtectedAccount", TRUE_STR);
+}
+else{
+	put(triggerDict, "partnerProtectedAccount", FALSE_STR);
+}
+//CSYS-106655 - End
+
+//CSYS-107365 (OK. 10-21-2022) Always require CFO Approval on quotes once CFO Approval has occurred
+if (cFOApprovalComplete_quote == true) {
+	put(triggerDict, "cFOApprovalAlwaysRequired", TRUE_STR);
+}
+else{
+	put(triggerDict, "cFOApprovalAlwaysRequired", FALSE_STR);
+}
+
+//CSYS-106403 Start (PG 08-06-2022)
+if(appliedPromotion_quote == "SMBADDCARDWAIVE"){
+put(triggerDict, "SMBADDCARDWAIVEExists", TRUE_STR);
+}
+//CSYS-106403 End
+
+//CSYS-99100 (SV. 04/27/2020)
+//sC in the below lines indicates sAPSellsConur
+//CSYS-100331 (OK. 8-27-2020) second condition added for Shadow harmony addon quotes
+contractingEntity = contractingEntity_quote;
+sC = sAPSellsConcur_quote;
+if ((contractingEntity == "SAP Other" AND sC == "Shadow Harmony Quote") OR (SAPSellsConcurFromAccount_quote == "Shadow Harmony Quote" AND quoteType_quote == ADD_ON)) {
+    put(triggerDict, "sC", TRUE_STR);
+} else {
+    put(triggerDict, "sC", FALSE_STR);
+}
+//CSYS-99100 End
+
+//CSYS-100991 (SV. 12/11/2020) Start
+termNotice = termNotice_quote;
+accTermNotice = termNoticeAcc_quote;
+orderEffectiveDateHDS = orderEffectiveDateHDS_quote;
+if(termNotice <> accTermNotice AND orderEffectiveDateHDS <> ""){
+    put(triggerDict, "isHDSCreate", TRUE_STR);
+} else {
+    put(triggerDict, "isHDSCreate", FALSE_STR);
+}
+//CSYS-100991 End
+
+//CSYS-102897 (LIN 09/03/2021) Start 
+if(quoteType_quote == ADD_ON AND customerType_quote == "Former Customer"){
+    put(triggerDict, "formerCustomerFlag", TRUE_STR);
+} else {
+    put(triggerDict, "formerCustomerFlag", FALSE_STR);
+}
+//CSYS-102897 End
+									 
+//CSYS-102063 (SV. 16/02/2021) Start
+includeAllProductsOnContract = string(includeAllProductsOnContract_quote);
+contractSource = contractSource_quote;
+accountContractSource = accountContractSource_quote;
+if(quoteType_quote == "Add-On Business" AND contractSource == "SAP GTC" AND accountContractSource == "Concur Paper"){
+	utilResultString = util.formAttrValueStr(attributesDict, "includeAllProductsOnContract_quote", QUOTE_DOC_NUM, TRUE_STR);
+}
+else{
+	utilResultString = util.formAttrValueStr(attributesDict, "includeAllProductsOnContract_quote", QUOTE_DOC_NUM, includeAllProductsOnContract);
+}
+//CSYS-102063 End
+//CSYS-103586 (SV. 06/09/2021) Start
+if(contractSource == "Third Party Paper"){
+	put(triggerDict, "isThirdPartyPaper", TRUE_STR);
+}
+else{
+	put(triggerDict, "isThirdPartyPaper", FALSE_STR);
+}
+//CSYS-103586 End
+//CSYS-107507 (SV. 18/11/2022) Start
+if(accountLevelT4C_quote <> ""){print "Hello Shri t4c account ";
+	put(triggerDict, "isaccountLevelT4C", TRUE_STR);
+}
+else{
+	put(triggerDict, "isaccountLevelT4C", FALSE_STR);
+}
+//CSYS-107507 End
+//CSYS-104790 Start Added new block. Kept it in the end as it is derived from rampplan details calculations
+if(quoteType == "New Business"){
+	utilResultString = commerce.calculateForecastedYearlyARR(stringsDict, attributesDict);
+}
+//CSYS-104790 End
+
+//IESCNQRCPQ-493 (PG 28/3/2023) On Custom Pricing, if Action Code=NONE, and the price is changed, change Action Code to MODIFY
+for line in line_process{
+	docNum = line._document_number;  
+	specialWorkFlowFlag = line.specialWorkflowFlag_line ;
+	prevDiscount = line.prevDiscount_line;
+	//lineDiscount = line.discount_line;
+	currentAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+	lineDiscount = util.getFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT); 
+	if (actionName == "updateCustomPrice"){
+		if (specialWorkFlowFlag == "Advantage Services" AND lineDiscount <> prevDiscount AND (currentAction == NONE_ACTION OR currentAction == MODIFY_ACTION)){
+			utilResultFlag = util.putStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION, MODIFY_ACTION);
+			utilResultString = util.formAttrValueStr(attributesDict, ASSET_ACTION, docNum, MODIFY_ACTION);
+			utilResultFlag = util.putStringAttribute(stringsDict, QUOTE_DOC_NUM, DELIMITER, "updateCustomPriceForAdvantageServices_quote", TRUE_STR);
+			utilResultString = util.formAttrValueStr(attributesDict, "updateCustomPriceForAdvantageServices_quote", QUOTE_DOC_NUM, TRUE_STR);
+		}
+	}
+}
+
+return "";

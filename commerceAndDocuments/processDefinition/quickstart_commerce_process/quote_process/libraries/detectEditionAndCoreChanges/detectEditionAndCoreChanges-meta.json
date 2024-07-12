@@ -1,0 +1,17 @@
+{
+  "name" : "Detect Edition and Core Changes",
+  "variableName" : "detectEditionAndCoreChanges",
+  "description" : "Moved from Pricing. Detects core and edition changes, both coming out of config and within commerce.",
+  "libraryFunctions" : [ "util.getConfigValue" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "isCoreChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "isEditionChangedDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_part_number", "_config_attr_info", "_parent_doc_number", "_part_custom_field20", "_line_item_comment" ],
+  "mainDocAttributes" : [ ],
+  "systemAttributes" : [ ]
+}

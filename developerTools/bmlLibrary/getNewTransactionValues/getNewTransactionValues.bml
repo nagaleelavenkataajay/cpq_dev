@@ -1,0 +1,14 @@
+/* util -> getNewTransactionValues
+quoteRampPlanTransactionRatios - Float[]
+currentLineItemTransactionCount - Integer
+
+*/
+newTransactionValues = string[];
+
+for ratio in quoteRampPlanTransactionRatios {
+	newTransactionValue = integer(round(ratio * currentLineItemTransactionCount, 0));
+	append(newTransactionValues, string(newTransactionValue));
+
+
+}
+return newTransactionValues;

@@ -1,0 +1,15 @@
+{
+  "name" : "initStrList",
+  "variableName" : "initStrList",
+  "description" : "NOT USED.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "numElement",
+    "type" : "Integer"
+  }, {
+    "name" : "defaultValue",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

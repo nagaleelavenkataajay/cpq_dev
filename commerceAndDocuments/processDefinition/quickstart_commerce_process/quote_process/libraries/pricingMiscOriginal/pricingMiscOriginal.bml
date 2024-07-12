@@ -1,0 +1,2929 @@
+//PRICING MISC
+/*
+    Moved from Pricing function for CSYS-79264 (KA. 3-20-2017).
+    Takes the following parameters:
+        AttributesDict,
+        StringsDict,
+        assetBillingDict,
+        QUOTE_LEVEL_RAMP_PLAN,
+        createdDate
+*/
+
+//Declare constants:
+QUOTE_RAMP_FROM_MONTHS = "quoteRampFromMonths_quote";
+QUOTE_DOC_NUM = "1";
+DELIMITER = "@.@";
+TILDE_DELIMITER = "~";
+SETUP_FEE = "Setup";
+ADD_ON = "Add-On Business";
+TRUE_STR = "true";
+FALSE_STR = "false";
+CORE_SERVICE = "Core Service";
+FROM = "from";
+TERM_NUM_MONTHS = "termNumMonths_quote";
+MODIFY_ACTION = "MODIFY"; //CSYS-87864 (LN 12/4/2017)
+RAMP_MESSAGE = "rampValidationMessage_quote";
+LEVEL1FEE = "selectAccessLevel1FeesPerTransaction_quote";
+LEVEL2FEE = "selectAccessLevel2FeesPerTransaction_quote";
+LEVEL3FEE = "selectAccessLevel3FeesPerTransaction_quote";
+LEVEL4FEE = "selectAccessLevel4FeesPerTransaction_quote";
+CONVERSION_RATE = "conversionRate_quote";
+COUNTRY_ISO_CODE = "billTo_countryISOCode_quote";
+QUOTE_CURRENCY = "quoteCurrency_quote";
+PROMO_VALIDATION_TRIGGER = "promoValidationTrigger_quote";
+//CSYS-83676 - Moved from pricing
+currentDateTextFull = datetostr(getdate());
+EXPIRATION_ADDITIONAL_DAYS = 90;
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd"; //substring(_system_user_date_pref, 0, 10);
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+defaultForNumberOfTransactionsMultiples = 0;
+terminatedDate = "";
+//CSYS-87441 Part 1 - START (LN. 1/9/2018) - Migrating more code from Pricing
+
+/* -------------------- Constants for Line Item Attributes ---------------- */
+PARENT_DOC_NUM = "_parent_doc_number";
+PART_NUM = "_part_number";
+SEQ_NUM = "_sequence_number";
+CUSTOM_SEQ_NUM = "lineOrderCustom_line";
+NUM_DECIMAL_USD = 2;
+TRANSACTIONS = "numCommittedTransaction_line";
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";
+PRE_PRODUCTION = "Pre Prod";
+EXT_SERVICE = "Extended Service";
+INCREMENTAL_TRANSACTION_DEFAULT = 1;
+IS_TRANS_OVERRIDDEN = "numTransOverride_line";
+TIER_CHANGE = "tierChange_line";
+PO_CATEGORY = "poCategory_line";
+TRIG_KEY_VALUE_DELIM = "$,$";
+IMPLEMENTATION_METHOD = "implementationMethod_line";
+NEW_BIZ = "New Business";
+IS_GROUPED = "isPartOfPackage_line"; //This form field is checked if the user wishes to DYNAMICALLY GROUP this line item
+DESCRIPTION = "lineDescription_line";
+PREV_TRANSACTIONS = "prevNumCommittedTransaction_line";
+PREV_TRANSACTIONS_AUTO = "prevTransactionsAuto_line";
+ADDL_DISC_DISALLOWED = "addlDiscDisallowed_line";
+TERM_BASED_DISC = "termBasedDiscount_line";
+MODEL_HAS_GROUPING = "modelHasGrouping_line";
+PACKAGE_ID = "package_line";
+SUBSCRIP_ID = "subscriptionID_line";
+BUNDLE_ID = "bundleID_line";
+CORE_OFFERING = "coreOffering_line";
+USE_CUSTOM_PRICE = "useCustomPrice_line";
+CORE_HAS_SETUP = "coreHasSetup_line"; //@RC. Flag used to determine if a model's core offering has a setup fee, as additions with setup fees can only be grouped when true. CSYS-7458
+NON_CORE_HAS_SETUP = "nonCoreHasSetup_line"; //CSYS-80655 LN 4/26/17 Flag used to determine whether an extended service or Professional Service has a Setup
+IS_UNITBASED = "unitBasedTransaction";
+IS_PRODUCTBASED = "productBasedTransaction_line";//CSYS-94381
+
+//Constants for part custom field names
+PI_ITEM_TYPE = "piItemType_line";
+PO_ID = "poId_line";
+PO_NAME = "poName_line";
+PO_START_DATE = "poStartDate_line";
+PO_END_DATE = "poEndDate_line";
+USAGE_QUALIFCATION_GROUP = "usageQualificationGroup_line";
+TERM_OF_COMMITMENT = "termOfCommitment_line";
+EDITION = "edition_line";
+PARAMETER_ID = "parameterId_line";
+RAMP_FLAG = "rampFlag_line";
+SPECIAL_WORKFLOW_FLAG = "specialWorkflowFlag_line";
+UOM_TYPE = "uomType_line";
+ROLL_UP = "rollUp_line";
+UOM_BLOCK = "uomBlock_line";
+BUNDLE_FLAG = "bundleFlag_line";
+PO_CATEGORY = "poCategory_line";
+UNIT_OR_FIXED = "unitOrFixed_line";
+ONE_DAY_SUB = "oneDaySub_line";//CSYS-83106 LN. 7/20/2017
+
+/*--------------------------------- Pricing Attribute Variable Names -------------------------*/
+TIER_PRICE = "tierPrice_line";
+LIST_PRICE = "listPrice_line";
+EXT_TIER_PRICE = "extTierPrice_line";
+PROD_BASED_PRICE = "productBasedPrice_line";
+EXT_PROD_BASED_PRICE = "extProductBasedPrice_line";
+CUSTOM_LIST_PRICE = "customListPrice_line";
+ARR_NET = "arrNet_line";
+ARR_LINE = "arr_line";
+EXT_LIST_PRICE = "extendedList_line";
+LIST_PRICE_USD = "listPriceUSD_line";
+EXT_LIST_PRICE_USD = "extListPriceUSD_line";
+DISCOUNT = "discount_line";
+DISCOUNT_TYPE = "discountType_line";
+DISCOUNT_AMOUNT = "discountAmt_line";
+DISCOUNT_PERCENT = "discountPercent_line";
+ORIG_NET_PRICE = "origNetPriceEa_line";
+NET_PRICE = "netPriceEach_line";
+NET_PRICE_USD = "netPriceUSD_line";
+NET_PRICE_UNIFIED = "netPriceUnified_line";
+EXT_NET_PRICE = "extendedNetPrice_line";
+EXT_NET_PRICE_USD = "extNetPriceUSD_line";
+EXT_NET_PRICE_UNIFIED = "extNetPriceUnified_line";
+TERM_BASED_PRICE = "termBasedListPrice_line";
+EXT_TERM_BASED_PRICE = "extTermBasedListPrice_line";
+BILLING_EXT_NET_PRICE  = "billingExtNetPrice_line";
+NET_PRICE_NON_UNIFIED = "netPriceNonUnified_line";
+EXT_NET_PRICE_NON_UNIFIED = "extNetPriceNonUnified_line";
+NET_PRICE_NON_UNIFIED_USD = "netPriceNonUnifiedUSD_line";
+EXT_NET_PRICE_NON_UNIFIED_USD = "extNetPriceNonUnifiedUSD_line";
+NET_PRICE_UNIFIED_USD = "netPriceUnifiedUSD_line";
+EXT_NET_PRICE_UNIFIED_USD = "extNetPriceUnifiedUSD_line";
+EXT_NET_PER_BILLING_PERIOD = "extNetPricePerBillingPeriod_line";
+NUM_TRANSACTIONS_PER_BILLING_PERIOD = "numTransPerBillingPeriod_line";
+LIST_PRICE_NON_UNIFIED = "listPriceNonUnified_line";
+EXT_LIST_PRICE_NON_UNIFIED = "extListPriceNonUnified_line";
+LIST_PRICE_NON_UNIFIED_USD = "listPriceNonUnifiedUSD_line";
+EXT_LIST_PRICE_NON_UNIFIED_USD = "extListPriceNonUnifiedUSD_line";
+PREV_DISCOUNT = "prevDiscount_line";
+LONG_DISCOUNT = "longDiscount_line";
+DISCOUNTHIDDEN = "discountHidden_line";
+ASSETS_ADJUSTED_ARR = "assetAdjustedArr_line";
+EXT_NET_UNGROUPED = "extNetPriceUngrouped_line";
+NET_UNGROUPED = "netPriceUngrouped_line";
+ASSETS_ORIGINAL_DISCOUNT = "assetsOriginalDiscount_line";
+
+
+/* ------------------------- Constants for Promotions   ----------------------- */
+PROMO_DISC_PERCENT = "promoDiscPercent_line";
+PROMO_PRICE = "promoPrice_line";
+PROMO_CODE = "promotionCode_line";
+PROMO_DETAILS = "promotionDetails_line";
+PROMO_DETAILS_STR = "promotionDetailsStr_line";
+
+/* ------------------------- Variables for assets management (add on) -------------------- */
+ASSETS_LIST_PRICE = "ASSETS_LIST_PRICE";
+TERMINATE_ACTION = "TERMINATE";
+CREATE_ACTION = "CREATE";
+NONE_ACTION = "NONE";
+ASSET_ACTION = "assetAction_line";
+ASSET_STRING = "assetString_line";
+
+/* ------------------------ Constants for XML ----------------------------- */
+INC_FEE_LIST_XML = "increFeeList";
+BASE_FEE_LIST_XML = "baseFeeList";
+BASE_FEE_NET_XML = "baseFeeNet";
+INC_FEE_NET_XML = "increFeeNet";
+BASE_FEE_LIST_XML_USD = "baseFeeListUSD";
+BASE_FEE_NET_XML_USD = "baseFeeNetUSD";
+BASE_FEE_NET_NON_UNIFIED = "baseFeeNonUnifiedNet";
+BASE_FEE_NET_NON_UNIFIED_USD = "baseFeeNonUnifiedNetUSD";
+INC_FEE_LIST_XML_USD = "increFeeListUSD";
+INC_FEE_NET_XML_USD = "increFeeNetUSD";
+INC_FEE_NON_UNIFIED_NET = "increFeeNonUnifiedNet";
+INC_FEE_NON_UNIFIED_NET_USD = "increFeeNonUnifiedNetUSD";
+TRANSACTION_XML_NODE_NAME = "transactions"; //This value must match the node name of the "transactions" node on the Ramp Plan XML
+BASE_FEE_LIST_NON_UNIFIED_XML = "baseFeeListNonUnified";
+BASE_FEE_LIST_NON_UNIFIED_USD_XML = "baseFeeListNonUnifiedUSD";
+INC_FEE_LIST_NON_UNIFIED_XML = "incFeeListNonUnified";
+INC_FEE_LIST_NON_UNIFIED_USD_XML = "incFeeListNonUnifiedUSD";
+EXT_NET_PRICE_NON_UNIFIED = "extNetPriceNonUnified_line";
+TRANSACTION_BY_BC = "transactionsBC";
+TO = "to";
+RAMP_TRANSACTIONS = "transactions";
+BASE_INC_KEY = "baseIncKey";
+RAMP_DELIMITER = "-_**_-";
+NUMBER_RAMP_ENTRIES = "numRampEntries";
+RAMP_PLAN_DETAIL = "rampPlanDetails_line";
+RAMP_PARENT_NODE = "rampPlanDetail";
+RAMP_PLAN_DETAIL_SAVE_XML = "rampPlanDetailXMLSave_line";
+RAMP_PLAN_MESSAGE = "rampPlanMessageText_line";
+IS_RAMPABLE = "isRampable";
+RAMP_PLAN_OVERRIDE = "overrideDefaultRampPlan_line";
+PRIME_PACKAGE_PRESENT = "primePackagePresent";//CSYS-94755
+
+/* ------------------------- Variables for Quote Totals ------------------- */
+totalArrNet = 0.0;          //Sum of all Rampable parts (Ext. Net Price * 12)
+convertedArrNet = 0.0;
+totalCIPSetupFee = 0.0;//CSYS-92389 (LN. 7-3-2018) , CSYS-96073 (SN. 06-2019) Moved from Pricing
+totalSetupFeeList = 0.0;
+totalSetupFeeNet = 0.0;
+totalBaseFeeList = 0.0;
+totalBaseFeeNet = 0.0;
+totalArrList = 0.0;         //Sum of all Rampable parts (Ext. List Price * 12)
+totalExtendedListPrice = 0.0;
+totalLineItemDiscounts = 0.0;
+totalExtendedNetPrice = 0.0;
+totalPreProductionFeeList = 0.0;
+totalPreProductionFeeNet = 0.0;
+totalIncrFeeList = 0.0;
+totalIncrFeeNet = 0.0;
+//CSYS-77796
+ICP_INCREMENTAL_FEE_NET = 0.0;
+ICP_INCREMENTAL_FEE_NET_USD = 0.0;
+ICP_INC_FEE_NON_UNIFIED_NET = 0.0;
+ICP_INC_FEE_NON_UNIFIED_NET_USD = 0.0;
+PROMO_CODES_LINE = "promotionCode_line";
+CUSTOM_PRICING_HAS_OCCURED = "customPricingHasOccured_line";//CSYS-85811 (LN. 9/27/2017)
+INCREMENTAL_FEE_LIST = "incrementalFeeList";
+INCREMENTAL_FEE_NON_UNIFIED_LIST = "increFeeNonUnifiedList";
+INCREMENTAL_FEE_NET = "incrementalFeeNet";
+BASE_LIST_PRICE_UNIFIED_USD = "listPriceUnifiedUSD";    //Heidi add 1/7/2014
+PROD_BASED_PRICE_USD = "extProductBasedPriceUSD_line";
+INCREMENTAL_FEE_LIST_USD = "incrementalFeeListUSD";
+INCREMENTAL_FEE_NON_UNIFIED_LIST_USD = "increFeeNonUnifiedListUSD";
+INCREMENTAL_FEE_NET_USD = "incrementalFeeNetUSD";
+CIP_SETUP_FEE = "cIPSetupFee_line";//CSYS-96801 (LN. 8-23-2019)
+CIP_PRODUCT = "cipProduct_line";//CSYS-96801 (LN. 8-23-2019)
+ASSETS_ORIGINAL_EXT_NET_PRICE = "assetOriginalExtendedNetPrice_list";
+ASSETS_ORIGINAL_NET_PRICE = "assetOriginalNetPrice_list";
+INCREMENTAL_FEE_RATIO_VALUE = "incrementalFeeRatioValue";
+PRIMARY_BASE_FEE = "primaryBaseFee";
+BASE_LIST_PRICE_UNIFIED = "listPriceUnified";
+TIME_AND_MATERIALS_FLAG = "timeMaterialsFlag_line";//CSYS-95855 Initializing constants
+TIME_AND_MATERIALS_BILLING_EXCEPTION = "timeMaterialsBillingException_quote";//CSYS-95855 Initializing constants
+PROMOTION_BILLING_EXCEPTION = "promotionBillingException_quote";//CSYS-96721 (SN. 08/2019)
+PARTNER_EXPANSION_SKU_PI = "4459125";//CSYS-97924 (MJ 1/13/2020)
+PARTNER_IMPLEMENTATION_PI = "6845718"; //CSYS-98798 (MJ 5/19/2020)
+
+QUOTE_TOTAL_SALES_ARR = 0.0;//CSYS-87441 (LN. 1/5/2018)
+PERCENTAGE_DISCOUNT_TYPE = "%";
+HUNDRED_PERCENT = 100.0;
+INTERNAL_DELIMITER = "$$";
+//Asset String Related
+ASSET_PID = 0;
+ASSET_IS_BUNDLE = 2;
+ASSET_EDITION = 3;
+ASSET_SUBSCRIP_ID = 5; //CASE 121961 - 1/4/13
+ASSET_COMMITED_TRNS = 7;
+ASSET_EXT_NET_PRICE = 8;
+ASSET_NET_PRICE = 9;
+ASSET_CUSTOMER_CURRENCY_REV_REC = 10;
+ASSET_EXT_LIST_PRICE = 11;
+ASSET_LIST_PRICE = 12;
+ASSET_DISCOUNT = 13;
+ASSET_ORG_BUNDLE_ID = 14;
+ASSET_NEXT_BILLING_DATE = 15;
+ASSET_ADJUSTED_ARR = 17;
+ASSET_SERVICE_ACCT_ID = 16;
+ASSET_BILLING_ID = 19;
+ASSET_TIER_PRICE = 20;//CSYS-95251
+
+convertedArrNetStr = "";
+timeAndMaterialsPoArr = String[];//CSYS-95855   
+timeAndMaterialsBillingException = "";//CSYS-95855
+promotionBillingException = "";//CSYS-96721 (SN. 08/2019)
+
+//##########################################################//
+//#####    Invoice Check Payments Ramp XML Section     #####//
+//##########################################################//
+//Invoice Check Payments needs 1 ramp at 0 transactions, for CSYS-51118. KA. 10-6-2015.
+//Updated to full XML on 11-30-15.
+//Updated to assign 1.00 to ramp IncFee values on 8-29-2016 as part of CSYS-68659
+LINE_RAMP_CONSTANT = "<rampPlanDetails className='undefined' rowCounterDisplayName='undefined' parentNodeName='rampPlanDetails' childNodeName='rampPlanDetail'>" + "\n" +
+"<rampPlanDetail rampPlanID ='1'>" + "\n" +
+"<from displayArray='undefined' displayName='From Months' readOnly='false'>1</from>" + "\n" +
+"<to displayArray='undefined' displayName='To Months' readOnly='true'>and beyond</to>" + "\n" +
+"<transactions displayArray='undefined' displayName='Transactions / Units' readOnly='false'>0</transactions> <increFeeList displayArray='none' displayName='Inc Fee List' readOnly='true'>1.00</increFeeList><baseFeeList displayArray='none' displayName='Base Fee List' readOnly='true'>0.00</baseFeeList><baseFeeNet displayArray='inline' displayName='Base Fee Net' readOnly='true' isCurrency='true'>0.00</baseFeeNet><increFeeNet displayArray='inline' displayName='Inc Fee Net' readOnly='true' isCurrency='true'>ICP_INCREMENTAL_FEE_NET</increFeeNet><baseFeeListUSD displayArray='none' readOnly='true'>0.00</baseFeeListUSD><baseFeeNetUSD displayArray='none' readOnly='true'>0.00</baseFeeNetUSD><baseFeeNonUnifiedNet displayArray='none' readOnly='true'>0.00</baseFeeNonUnifiedNet><baseFeeNonUnifiedNetUSD displayArray='none' readOnly='true'>0.00</baseFeeNonUnifiedNetUSD><increFeeListUSD displayArray='none' readOnly='true'>1.00</increFeeListUSD><increFeeNetUSD displayArray='none' readOnly='true'>ICP_INCREMENTAL_FEE_NET_USD</increFeeNetUSD><increFeeNonUnifiedNet displayArray='none' readOnly='true'>ICP_INC_FEE_NON_UNIFIED_NET</increFeeNonUnifiedNet><increFeeNonUnifiedNetUSD displayArray='none' readOnly='true'>ICP_INC_FEE_NON_UNIFIED_NET_USD</increFeeNonUnifiedNetUSD><baseFeeListNonUnified displayArray='none' readOnly='true'>0.00</baseFeeListNonUnified><baseFeeListNonUnifiedUSD displayArray='none' readOnly='true'>0.00</baseFeeListNonUnifiedUSD><incFeeListNonUnified displayArray='none' readOnly='true'>1.00</incFeeListNonUnified><incFeeListNonUnifiedUSD displayArray='none' readOnly='true'>1.00</incFeeListNonUnifiedUSD><baseFeeNetBC displayArray='none' readOnly='true'>0.00</baseFeeNetBC><transactionsBC>0</transactionsBC><baseIncKey>569</baseIncKey>" + "\n" +
+"</rampPlanDetail>" + "\n" +
+"</rampPlanDetails>"; //Invoice Check Payments needs 1 ramp at 0 transactions, for CSYS-51118. KA. 10-6-2015. Updated to full XML on 11-30-15. Updated to assign 1.00 to ramp IncFee values on 8-29-2016 as part of CSYS-68659*/
+
+//CSYS-94166 (LN. 1-16-2019) Establishing Constants to support Concur FAVR with one Ramp Plan, and a final ARR (not ARR * 12 months)
+CONCUR_FAVR_PO_ID = "4722310";
+CONCUR_FAVR_BASE_PI = "4722311";
+LINE_RAMP_CONSTANT_FAVR = "<rampPlanDetails className='undefined' rowCounterDisplayName='undefined' parentNodeName='rampPlanDetails' childNodeName='rampPlanDetail'>" + "\n" +
+"<rampPlanDetail rampPlanID ='1'>" + "\n" +
+"<from displayArray='undefined' displayName='From Months' readOnly='false'>1</from>" + "\n" +
+"<to displayArray='undefined' displayName='To Months' readOnly='true'>and beyond</to>" + "\n" +
+"<transactions displayArray='undefined' displayName='Transactions / Units' readOnly='false'>0</transactions>" + "\n" +
+"</rampPlanDetail>" + "\n" +
+"</rampPlanDetails>";
+
+//CSYS-97907
+for item in line_process{
+    docNum = item._document_number;
+    extNetPriceEa = item.extendedNetPrice_line;
+    netPriceEa = item.netPriceEach_line;
+    pi = item._part_number;
+    listPrice = round(util.getFloatAttribute(floatsDict, docNum, DELIMITER, LIST_PRICE), 2);
+    cipProduct = util.getStringAttribute(stringsDict, docNum, DELIMITER, CIP_PRODUCT); //CSYS-99419
+    if (pi <> "" AND _system_current_step_var <> "pendingAdvantageServices_step" AND cipProduct <> TRUE_STR){
+        if ( listPrice == 0 AND extNetPriceEa <> 0 AND NOT(isnull(extNetPriceEa)) ){
+            utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "zeroListOverride" + EXT_NET_PRICE, extNetPriceEa);
+            utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "zeroListOverride" + NET_PRICE, netPriceEa);
+        }
+    }
+}
+
+/*===================================================CSYS-96356 - START - =============================================================================*/
+/* ======================================================================== */
+/*                  Calculate Net Prices, Totals, and misc.                 */
+/* ======================================================================== */
+//This section is INCOMPLETE until final pricing script completion
+//CSYS-97908
+unifiedPricingForModelDict = dict("string[]");
+for modelDocNum in docNumList {
+    pi = util.getStringAttribute(stringsDict, modelDocNum, DELIMITER, PART_NUM);
+    lineItemDocNums = string[];
+    lineItemDocNums = util.getStrListDict(modelToLineDocNumsDict, modelDocNum, lineItemDocNums);
+    modelExtendedNetPrice = 0.0;
+    modelNetPrice = 0.0;
+    modelListPrice = 0.0;
+    modelPromoPrice = 0.0;
+    modelExtListPrice = 0.0;
+    modelExtTierPrice = 0.0;
+    modelExtProdPrice = 0.0;
+    
+    if (pi == "") {
+        
+        // if(debug){
+        //  printTempVal = util.printDebugSubsection("modelDocNum: " + modelDocNum, 1);
+        //  printTempVal = util.printDebug("with lineItemDocNums:", "", 1);
+        //  print(lineItemDocNums);
+        // }
+        //CSYS-97908
+        unifiedPricingForModelDict = util.getUnifiedPricingInfoForModel(unifiedPricingDataDict, modelDocNum);
+        for lineDocNum in lineItemDocNums {
+            // Promotion 
+            promotionCode = "";
+            promoDiscPercent = 0.0;
+            promoPrice = 0.0;
+            promotionCodeList = string[];
+            internalPromoDescLine = "";
+            externalPromoDescLine = "";
+            customerFriendlyPromoDescLine = "";
+            legalPromoDescLine = "";
+            extendedListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE);
+            extendedListPriceNonUnified = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED); //Heidi add 01/08/2014
+            disc = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT);
+            longDisc = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT); //CSYS-52578. KA. 10-12-2015
+            discountType = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, DISCOUNT_TYPE);
+            incListNonUnifiedUSD = 0.0;
+            parentDocNum = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, PARENT_DOC_NUM);
+            piItemType = util.getStringAttribute( stringsDict, lineDocNum, DELIMITER, PI_ITEM_TYPE );
+
+            
+            /* Calculate Discounts */
+            if (discountType == PERCENTAGE_DISCOUNT_TYPE) {
+                discountAmount = extendedListPrice * (disc/HUNDRED_PERCENT);
+                discountPercent = disc;
+
+
+
+            } else {
+                discountAmount = disc;
+                
+                if(containskey(unbundledExtendedListPriceDict,lineDocNum)){ // Case 00182107 conditional to check dictionary has a value ~BI
+                    if (get(unbundledExtendedListPriceDict,lineDocNum) > 0.0) {
+                        discountPercent = (disc/get(unbundledExtendedListPriceDict,lineDocNum)) * HUNDRED_PERCENT;
+                    }
+                }
+            }
+            
+            roundedDiscountAmount = round(discountAmount, numDecimals);
+            roundedDiscountPercent = round(discountPercent, 2);
+            
+            //ANITHA - 12/20/2012 - Case 120088 : Removing rounding, so commenting the 2 lines below and adding the next 2 lines
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT_AMOUNT, roundedDiscountAmount);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT_PERCENT, roundedDiscountPercent);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LONG_DISCOUNT, longDisc); //CSYS-52578. We need more decimal precision for calculating the line ramp plan Base Fee Net. This will get passed into the getRampXMLStringArrayDict util library to accurately calculate the line ramp Base Fee Net.
+            
+            pi = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, PART_NUM);
+            piItemType = util.getStringAttribute(stringsDict, pi, DELIMITER, PI_ITEM_TYPE );
+            
+            /* ------------------------ Calculate Net Prices ---------------------- */
+            currentAction = "";
+            currentAssetString = string[];
+            netPriceEach = 0.0;
+            multiplier = util.getMultiplier(lineDocNum, DELIMITER, stringsDict, integersDict, floatsDict);          
+            implementationMethod = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, IMPLEMENTATION_METHOD);
+            listPrice = round(util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE), 2); //rounding to 2 places (ATG)
+            currentAction = util.getStringAttribute( stringsDict, lineDocNum, DELIMITER, ASSET_ACTION); 
+            extListPrice = round(util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE), 2); //rounding to 2 places (ATG) so it's the value on the grid, not a weird 3 decimal place number.
+            discountAmount = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT_AMOUNT);
+            trxns = util.getIntegerAttribute(integersDict, lineDocNum, DELIMITER, TRANSACTIONS);//CSYS-89523
+            isGrouped = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, IS_GROUPED);//CSYS-97907
+            
+            //add-on specific By Sai Krishna @Pramati Case:106407
+            //CSYS-97924 (MJ 1/13/2020) We are exlcuding the Partner Delivered Expansion SKU (Setup Fee) from the below logic CSYS-98798 partner implementation also excluded
+            if( quoteType_quote == ADD_ON AND currentAction == NONE_ACTION AND pi <> PARTNER_EXPANSION_SKU_PI AND pi <> PARTNER_IMPLEMENTATION_PI){
+                currentAssetString = split(util.getStringAttribute( stringsDict, lineDocNum, DELIMITER, ASSET_STRING ),INTERNAL_DELIMITER);
+
+                if( currentAssetString[ASSET_EXT_NET_PRICE] <> "" and isnumber(currentAssetString[ASSET_EXT_NET_PRICE]) ){
+                    extendedNetPrice = atof(currentAssetString[ASSET_EXT_NET_PRICE]);
+                    //CSYS-95956 (LN. 6-5-2019) Store the Asset Ext. Net Price to be leveraged further down in the logic
+                    utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, "ASSET_EXT_NET_PRICE", extendedNetPrice);
+                }                   
+            }
+            //end add-on specific
+            else{
+                //CSYS-97907
+                if (containskey(floatsDict, lineDocNum + DELIMITER + "zeroListOverride" + EXT_NET_PRICE) AND isGrouped == FALSE_STR){
+                    extendedNetPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, "zeroListOverride" + EXT_NET_PRICE);
+                }
+                else{
+                    extendedNetPrice = extListPrice - discountAmount;
+                }
+            }
+
+            if (multiplier <> 0) {
+                netPriceEach = extendedNetPrice/multiplier;
+            }
+
+            // Apply term based discount
+            termOfCommitment = util.getStringAttribute(stringsDict, pi, DELIMITER, TERM_OF_COMMITMENT);
+            
+            if(termOfCommitment == "Y" AND currentAction <> NONE_ACTION) {
+                termDiscount = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, TERM_BASED_DISC);
+                listPrice = listPrice * (1 - (termDiscount/100));
+                extListPrice = extListPrice * (1 - (termDiscount/100));
+                netPriceEach = netPriceEach * (1 - (termDiscount/100));
+                extendedNetPrice = extendedNetPrice * (1 - (termDiscount/100));
+            }
+
+            /*CSYS-89523 (LN. 2/20/2018) Analytics Reporting Service Product, ensure Net Price Each is divided by number of TRXNs
+            (LN. 2-6-2019) Rolling back this functionality as ARS is no longer a fixed cost product, but a Unit based with updated pricing.
+
+            if(pi == "3724957" AND trxns <> 0){
+                netPriceEach = round((netPriceEach/trxns), 2);
+            }*/
+
+            // Calculate attribute for billing cycle
+            billingExtNetPrice = extendedNetPrice;
+            
+            if( isnumber( billingCycleNumber ) ){   
+                billingExtNetPrice = billingExtNetPrice * util.customAtoi(billingCycleNumber, 0);
+            }
+            
+            utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, BILLING_EXT_NET_PRICE, billingExtNetPrice );
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE, netPriceEach);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, ORIG_NET_PRICE, netPriceEach);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_USD, extendedNetPrice );
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE, extendedNetPrice);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE, listPrice);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE, extListPrice);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, TERM_BASED_PRICE, listPrice);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_TERM_BASED_PRICE, extListPrice);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, PROMO_PRICE, listPrice);
+
+            netPriceEach =  util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE);
+
+            // if (debug) {
+            //  printTempVal = util.printDebugSubsection("lineDocNum: " + lineDocNum, 2);
+            //  printTempVal = util.printDebug("PI", pi, 2);
+            //  printTempVal = util.printDebug("netPriceEach", string(netPriceEach), 2);
+            //  printTempVal = util.printDebug("extendedNetPrice", string(extendedNetPrice), 2);
+            // }
+
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE, listPrice);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE, extListPrice);
+            /* SET INCREMENTAL FEES USD */
+            trxnCount = util.getIntegerAttribute(integersDict, lineDocNum, DELIMITER, TRANSACTIONS);
+            // If we are a ramp, use the Incremental List Fee in place of list fee
+            // We set this is the parent
+            //currentAction = util.getStringAttribute( stringsDict, lineDocNum, DELIMITER, ASSET_ACTION);
+            
+            if ( find( lineDocNum, RAMP_DELIMITER ) <> -1 AND currentAction <> NONE_ACTION){
+                listPrice = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_LIST );
+                utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, LIST_PRICE, listPrice );
+            }
+            
+            if ( trxnCount <> 0 ) {
+                incListUSD = listPrice; // / (trxnCount * 1.0);
+                incNetUSD = netPriceEach; // / (trxnCount * 1.0);
+            }else{
+                incListUSD = 0.0;
+                incNetUSD = 0.0;
+            }
+
+            
+            /* ------------------ Summation for Dynamic Grouping ---------- */
+            /* If this is a grouped ramp plan, we must use the PBB of the incremental line item as the lsit price for nonunified */
+            if ( find( lineDocNum, RAMP_DELIMITER ) <> -1 /*AND isGrouped == TRUE_STR*/){
+                listPriceNonUnified = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_RATIO_VALUE );
+                extListPriceNonUnified = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED);
+            }else{
+                listPriceNonUnified = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE_NON_UNIFIED);
+                extListPriceNonUnified = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED);
+            }
+            
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE_NON_UNIFIED, listPriceNonUnified );
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED, extListPriceNonUnified );
+            netPriceNonUnified = 0.0;
+            extNetPriceNonUnified = 0.0;
+            nonUnifiedDisc = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT);
+            nonUnifiedDiscType = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, DISCOUNT_TYPE);
+                /*print "unifiedPricingDataDict";
+                print unifiedPricingDataDict;
+                print "modelToLineDocNumsDict";
+                print modelToLineDocNumsDict;
+                print "stringsDict";
+                print stringsDict;
+                print "integersDict";
+                print integersDict;*/
+            primaryBaseDocNum = util.getStringAttribute( stringsDict, modelDocNum, DELIMITER, PRIMARY_BASE_FEE );
+
+            //CSYS-80655 LN.4/27/17 Gathering attributes to determine whether NON_CORE_HAS_SETUP should be set to true
+            listPriceNonUnifiedCustom = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE_NON_UNIFIED);
+            poCategory = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, PO_CATEGORY);
+            poID = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, PO_ID );
+            //CSYS-80655 LN. 4/26/17 Checking whether an Extended Service or Professional Service has a Setup and the list price non-unified is greater than zero
+            if(poCategory <> CORE_SERVICE AND piItemType == SETUP_FEE AND listPriceNonUnifiedCustom <> 0){
+                utilResultFlag = util.putStringAttribute(stringsDict, poID, DELIMITER, NON_CORE_HAS_SETUP, TRUE_STR);
+            }
+            //CSYS-95048
+            if(poCategory == EXT_SERVICE AND isGrouped == TRUE_STR){
+                utilResultFlag = util.putStringAttribute(stringsDict, lineDocNum, DELIMITER, "isExtServiceBundled", TRUE_STR);
+            }
+            
+            //CSYS-99331, Phil S, 06/11/2020
+			utilResultFlag = util.putStringAttribute(stringsDict, "", "", "promoBundleExtServComp_quote", promoBundleExtServComp_quote);
+			//end of CSYS-99331
+
+            //CSYS-99236, promo RENEWALOFFER90DAYS, Phil S, 04/26/2020
+            /*
+            if( currentAction <> TERMINATE_ACTION AND currentAction <> NONE_ACTION AND currentAction <> MODIFY_ACTION){
+                promoLineResultsDict = util.calculatePromotion(promotionsDataDict, tempPromoCodeAppliedArr, lineDocNum, stringsDict, integersDict, floatsDict, tempPromoCodeAppliedDict);
+            }
+            */
+            if(findinarray(tempPromoCodeAppliedArr, "RENEWALOFFER90DAYS") <> -1){
+                if(currentAction <> NONE_ACTION AND currentAction <> MODIFY_ACTION){
+                    //renewalPromoToRemoveIndex = findinarray(tempPromoCodeAppliedArr, "RENEWALOFFER90DAYS");
+                    //remove(tempPromoCodeAppliedArr, renewalPromoToRemoveIndex);
+                    dummy = 0;
+                }else{
+                    promoLineResultsDict = util.calculatePromotion(promotionsDataDict, tempPromoCodeAppliedArr, lineDocNum, stringsDict, integersDict, floatsDict, tempPromoCodeAppliedDict);
+                }
+            }elif(currentAction <> TERMINATE_ACTION AND currentAction <> NONE_ACTION AND currentAction <> MODIFY_ACTION){
+                    //original statement before CSYS-99236
+                    promoLineResultsDict = util.calculatePromotion(promotionsDataDict, tempPromoCodeAppliedArr, lineDocNum, stringsDict, integersDict, floatsDict, tempPromoCodeAppliedDict);
+            }
+        
+            // CSYS-82292: comment out the action code check in the next line (KA. 6-13-2017) 
+            // CSYS-86387: un-comment out the action code, need this for Add-On pricing support (LN. 11/3/2017)
+            // CSYS-95251 (LN. 4-30-2019)
+            if (isGrouped == TRUE_STR and find( lineDocNum, RAMP_DELIMITER ) == -1 /*AND currentAction <> NONE_ACTION AND primaryBaseDocNum == lineDocNum*/) {
+                rowCount = sizeofarray(values(unifiedPricingForModelDict));//CSYS-97908
+
+                /*print "before unified Pricing";
+                print "modelToLineDocNumsDict";
+                print modelToLineDocNumsDict;
+                print "rowCount";
+                print rowCount;
+                print "floatDict"; 
+                print floatsDict;
+                print "unifiedPricingDataDict";
+                print unifiedPricingDataDict;
+                print "stringsDict";
+                print stringsDict;*/
+                /* ======================================================================== */
+                /*                      Calculate Unified Pricing                           */
+                /* ======================================================================== */
+                //CSYS-97908
+                unifiedExists = util.calculateUnifiedPricing(unifiedPricingForModelDict, rowCount, modelToLineDocNumsDict, modelDocNum, stringsDict, integersDict, floatsDict);
+                
+                // print util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, ASSETS_LIST_PRICE);
+                // print "after unified Pricing";
+                // print "listPrice";
+                // print util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, ASSETS_LIST_PRICE);
+                
+                incListUSD = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_LIST );
+                incNetUSD = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NET );
+                
+                //print lineDocNum + "*********incListUSD=" + string(incListUSD);
+                //print lineDocNum + "*********incNetUSD=" + string(incNetUSD);
+                
+            }
+            
+            incListNonUnifiedUSD = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NON_UNIFIED_LIST );
+            /* Reset the custom list price after grouping */
+            customListPrice = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, CUSTOM_LIST_PRICE );
+            //add on related - start
+            //if this is a NONE action - don't use the manipulated value, but the original pre grouping value.
+            //CSYS-95251 (LN. 4-30-2019) - CSYS-95956 (LN. 5-6-2019)
+            pricebookChangeDetected = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, "pricebookChange_line");
+            //CSYS-97595 (LN. 10-24-2019) Need to ensure this logic doesn't get triggered upon the first reconfigure
+            reconfig = get(stringsDict, "reconfigure");
+            if(currentAction == NONE_ACTION){
+
+                if(pricebookChangeDetected == TRUE_STR AND reconfig == FALSE_STR){//CSYS-97595 (LN. 10-24-2019)
+
+                    if(currencyCode <> "USD"){
+
+                        listPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE);
+                        extListPriceUSD = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE);
+
+                        utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, "LIST_PRICE_USD", listPrice);
+                        utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, "EXT_LIST_PRICE_USD", extListPriceUSD);
+
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, LIST_PRICE, conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE, conversionRate, numDecimals );
+
+                        //Retrieve the updated List Price and updated Ext. List Price
+                        updatedListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE);
+                        updatedExtListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE);
+                        netPriceEach =  util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, ASSETS_ORIGINAL_NET_PRICE);
+                    }
+                    else {
+
+                        updatedListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE);
+                        updatedExtListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE);
+                    }
+
+                    if(netPriceEach <> 0 AND updatedListPrice <> 0){
+                        //Calculate updated discount
+                        discountPercent = 100 - ((netPriceEach/updatedListPrice)*100);
+                        roundedDiscountPercent = round(discountPercent, 2);
+
+                        utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT_PERCENT, roundedDiscountPercent);
+                        utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LONG_DISCOUNT, discountPercent);
+                        utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT, roundedDiscountPercent);
+                        utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, ASSETS_ORIGINAL_DISCOUNT, roundedDiscountPercent);
+
+                        utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_DISCOUNT, lineDocNum, string(roundedDiscountPercent));
+                        utilResultString = util.formAttrValueStr(attributesDict, "pricebookChangeUpdatedDiscount_line", lineDocNum, string(roundedDiscountPercent));
+
+                        if(isGrouped == TRUE_STR){
+                            put(floatsDict, parentDocNum + DELIMITER + piItemType + DELIMITER + LONG_DISCOUNT, discountPercent);
+
+                            //CSYS-97680 LN. 11-05-2019
+                            utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum, DELIMITER, "pricebookChangeWithinBundle", TRUE_STR );
+                        }
+
+                    }
+
+                    //Expanison of CSYS-82292 due to CSYS-95251
+                    if( piItemType == INCREMENTAL_FEE /*AND NOT containskey(floatsDict, poID + DELIMITER + "assetIncExtListPrice")*/ ){
+                        utilResultFlag = util.putFloatAttribute( floatsDict, poID, DELIMITER, "assetIncExtListPrice", updatedExtListPrice );
+                    }
+                    elif(piItemType == BASE_FEE /*AND NOT containskey(floatsDict, poID + DELIMITER + "assetBaseExtListPrice")*/){
+                        utilResultFlag = util.putFloatAttribute( floatsDict, poID, DELIMITER, "assetBaseExtListPrice", updatedExtListPrice );
+                        utilResultFlag = util.putStringAttribute( stringsDict, lineDocNum, DELIMITER, "firstBaseofPoId", TRUE_STR );
+                    }
+
+                    //Write to dictionaries
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, ASSETS_LIST_PRICE, updatedListPrice );
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, ASSETS_ORIGINAL_EXT_NET_PRICE,  extendedNetPrice );
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, ASSETS_ORIGINAL_NET_PRICE, netPriceEach );
+
+                }
+                else {
+                    //CSYS-100038 (BS 07-21-2020) Added below line to get the latest list price after Unified Pricing calculation (total price for bundled products)
+                    listPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE);
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, ASSETS_LIST_PRICE, listPrice );
+                    //CSYS-97595 - temporary fix; reconcile with Lauren
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, ASSETS_ORIGINAL_EXT_NET_PRICE,  extendedNetPrice );
+                }
+            }else{
+                listPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE);
+                utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, ASSETS_LIST_PRICE, listPrice );         
+            }
+            //add on related - end
+            
+            if(_system_current_step_var == "pendingAdvantageServices_step") {
+                    customListPrice = listPrice;
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, CUSTOM_LIST_PRICE, customListPrice );
+            }
+            
+            promoDiscPercent = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, PROMO_DISC_PERCENT);
+            extListNonUnifiedAfterPromo = extListPriceNonUnified - (extListPriceNonUnified * promoDiscPercent/HUNDRED_PERCENT); 
+            listNonUnifiedAfterPromo = listPriceNonUnified - (listPriceNonUnified * promoDiscPercent/HUNDRED_PERCENT); 
+            
+            //print lineDocNum + "**********promoDiscPercent=" + string(promoDiscPercent);
+            //print lineDocNum + "**********extListNonUnifiedAfterPromo=" + string(extListNonUnifiedAfterPromo);
+            //print lineDocNum + "**********listPriceNonUnified=" + string(listPriceNonUnified);
+            //print lineDocNum + "**********listNonUnifiedAfterPromo=" + string(listNonUnifiedAfterPromo);
+                        
+            if (nonUnifiedDiscType == PERCENTAGE_DISCOUNT_TYPE) {
+                nonUnifiedDiscAmt = round(extListNonUnifiedAfterPromo * (nonUnifiedDisc/HUNDRED_PERCENT), 2); //Rounding the disc amt to 2 places for CSYS-56717
+            } else {
+                nonUnifiedDiscAmt = nonUnifiedDisc;
+            }
+            
+            //print lineDocNum + "**********nonUnifiedDiscType=" + nonUnifiedDiscType;
+            //print lineDocNum + "**********nonUnifiedDisc=" + string(nonUnifiedDisc);
+            //print lineDocNum + "**********nonUnifiedDiscAmt=" + string(nonUnifiedDiscAmt);
+            
+            if( quoteType_quote == ADD_ON AND currentAction == NONE_ACTION ){
+                currentAssetString = split(util.getStringAttribute( stringsDict, lineDocNum, DELIMITER, ASSET_STRING ),INTERNAL_DELIMITER);
+                
+                if( currentAssetString[ASSET_CUSTOMER_CURRENCY_REV_REC] <> "" and isnumber(currentAssetString[ASSET_CUSTOMER_CURRENCY_REV_REC]) ){
+                    extNetPriceNonUnified = atof(currentAssetString[ASSET_CUSTOMER_CURRENCY_REV_REC]);
+                }
+                
+            } else {
+                extNetPriceNonUnified = extListNonUnifiedAfterPromo-nonUnifiedDiscAmt; //NS Case 168179
+            }
+            
+            if(extListPriceNonUnified > 0.0) {
+                netPriceNonUnified = listNonUnifiedAfterPromo;
+            }
+            if ( trxnCount <> 0 ) {
+                incNetNonUnifiedUSD = netPriceNonUnified; // / (trxnCount * 1.0);
+            }else{
+                incNetNonUnifiedUSD = 0.0;
+            }
+            //CSYS-95041
+            if (multiplier <> 0) {
+                netPriceNonUnified = extNetPriceNonUnified/multiplier;
+            }
+            //debugMOD = true;
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE_NON_UNIFIED, netPriceNonUnified);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED, extNetPriceNonUnified);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE_NON_UNIFIED, listPriceNonUnified );
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED, extListPriceNonUnified );
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE_NON_UNIFIED_USD, listPriceNonUnified );
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED_USD, extListPriceNonUnified );
+            
+            //##### Currency Conversion for Unified Pricing ########/
+            netPriceUnified = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE_UNIFIED);
+            extNetPriceUnified = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_UNIFIED);
+            baseFeeListUnified = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, BASE_LIST_PRICE_UNIFIED);    //Heidi add 1/7/2014
+            
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE_UNIFIED_USD, netPriceUnified);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_UNIFIED_USD, extNetPriceUnified);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, BASE_LIST_PRICE_UNIFIED_USD, baseFeeListUnified);    //Heidi add 1/7/2014
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE_NON_UNIFIED_USD, netPriceNonUnified);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED_USD, extNetPriceNonUnified);
+            // Unified Pricing Ends
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_LIST_USD, round(incListUSD, NUM_DECIMAL_USD));
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NON_UNIFIED_LIST_USD, round(incListNonUnifiedUSD, NUM_DECIMAL_USD));
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, INC_FEE_NON_UNIFIED_NET_USD, round(incNetNonUnifiedUSD,NUM_DECIMAL_USD));
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_LIST, incListUSD);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NON_UNIFIED_LIST, incListNonUnifiedUSD);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, INC_FEE_NON_UNIFIED_NET, incNetNonUnifiedUSD);
+
+            //CSYS-86616 (KA. 11-9-2017): prevent reassigning of INCREMENTAL_FEE_NET and INCREMENTAL_FEE_NET_USD
+            //when user has elected to override the ramp price: 
+            if(NOT containskey(stringsDict, lineDocNum + DELIMITER + "userEnteredRampPricing")){
+                utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NET, incNetUSD);
+                utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NET_USD, round(incNetUSD,NUM_DECIMAL_USD));
+            }
+
+            /* END INCREMENTAL FEES USD */
+            // List Price in USD before multi currency conversion
+            /* ### Reload Attributes after conversion ### */
+            netPriceEach = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE);
+            extendedNetPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE);
+            //add on related
+            listPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, ASSETS_LIST_PRICE);
+            extListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE);
+
+            //discountAmount = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT_AMOUNT);
+            //extTierPrice = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_TIER_PRICE);
+            //extProdPrice = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_PROD_BASED_PRICE );
+            
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE_USD, listPrice);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_USD, extListPrice);
+            
+            extNetPricePerBillingPeriod = extendedNetPrice * util.customAtoi(billingCycleNumber, 0 );
+            numTransactionsPerBillingPeriod = trxnCount * util.customAtoi(billingCycleNumber, 0 );
+            
+            utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_NET_PER_BILLING_PERIOD, extNetPricePerBillingPeriod );
+            utilResultFlag = util.putIntegerAttribute( integersDict, lineDocNum, DELIMITER, NUM_TRANSACTIONS_PER_BILLING_PERIOD, numTransactionsPerBillingPeriod );
+            // Net Price in USD before multi currency conversion
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE_USD, netPriceEach);
+            utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_USD, extendedNetPrice);
+
+            if(pricebookChangeDetected == TRUE_STR AND currencyCode <> "USD"){//CSYS-95956 (LN. 5-6-2019) Run currency conversion accordingly for Non-USD Pricebook changes
+                
+                listPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, "LIST_PRICE_USD");
+                extListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, "EXT_LIST_PRICE_USD");
+
+                utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE_USD, listPrice);
+                utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_USD, extListPrice);
+
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, NET_PRICE_NON_UNIFIED_USD, 1/conversionRate, numDecimals );
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED_USD, 1/conversionRate, numDecimals );
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, TIER_PRICE, conversionRate, numDecimals );
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, LIST_PRICE_NON_UNIFIED, conversionRate, numDecimals );
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED, conversionRate, numDecimals );
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_TIER_PRICE, conversionRate, numDecimals );
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, PROD_BASED_PRICE, conversionRate, numDecimals );
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_PROD_BASED_PRICE, conversionRate, numDecimals );
+                conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, TERM_BASED_PRICE, conversionRate, numDecimals );
+            }
+        }
+    } 
+}
+//CSYS-93097 (LN. 9-5-2018) Query the noArrPromotions table to gather all Promo's that when applied should zero out the ARR, commissions will not be paid out.
+noArrPromotions = BMQL("SELECT promotionName FROM noArrPromotions");    
+//CSYS-95471
+ultimateAppliedPromos = "";
+ultimateAppliedPromosArr = string[];
+
+// Run the currency conversion over the prices, and get the totals.
+for modelDocNum in docNumList {
+    pi = util.getStringAttribute(stringsDict, modelDocNum, DELIMITER, PART_NUM);
+    cIPSetupFee = 0.0;//CSYS-92389 (LN. 7-3-2018)
+    
+    if (pi == "") {
+        lineItemDocNums = string[];
+        lineItemDocNums = util.getStrListDict(modelToLineDocNumsDict, modelDocNum, lineItemDocNums);
+        
+        for lineDocNum in lineItemDocNums{
+            //CSYS-96326
+            cipProductLine = FALSE_STR;
+            currentAction = util.getStringAttribute( stringsDict, lineDocNum, DELIMITER, ASSET_ACTION);
+            isGrouped = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, IS_GROUPED);
+            pi = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, PART_NUM);
+            piItemType = util.getStringAttribute(stringsDict, pi, DELIMITER, PI_ITEM_TYPE );
+            poID = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, PO_ID );//CSYS-82843 LN. 6/16/2017 
+            promoCodes = util.getStringAttribute( stringsDict, lineDocNum, DELIMITER, PROMO_CODES_LINE );//CSYS-93097 LN. 9/6/2018 
+            //94153
+            customPricingHasOccured = util.getStringAttribute (stringsDict, lineDocNum, DELIMITER, CUSTOM_PRICING_HAS_OCCURED);
+            parentDocNum = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, PARENT_DOC_NUM);
+            discountAmount = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT_AMOUNT);
+            pricebookChangeDetected = util.getStringAttribute(stringsDict, lineDocNum, DELIMITER, "pricebookChange_line");//CSYS-95956 (LN. 6-10-2019)
+
+            //CSYS-95251 (LN. 5-14-2019) Ensure that for all bundled products where a Price Book Change has been implemented, that the discount is updated for all line-items in the bundle
+            if(isGrouped == TRUE_STR AND currentAction == NONE_ACTION){
+                if(containskey(floatsDict, parentDocNum + DELIMITER + piItemType + DELIMITER + LONG_DISCOUNT) ){
+                    discountPercent = get(floatsDict, parentDocNum + DELIMITER + piItemType + DELIMITER + LONG_DISCOUNT);
+                    roundedDiscountPercent = round(discountPercent, 2);
+
+                    utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT_PERCENT, roundedDiscountPercent);
+                    utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, LONG_DISCOUNT, discountPercent);
+                    utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT, roundedDiscountPercent);
+                    utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, ASSETS_ORIGINAL_DISCOUNT, roundedDiscountPercent);
+
+                    utilResultString = util.formAttrValueStr(attributesDict, ASSETS_ORIGINAL_DISCOUNT, lineDocNum, string(roundedDiscountPercent));
+                    utilResultString = util.formAttrValueStr(attributesDict, "pricebookChangeUpdatedDiscount_line", lineDocNum, string(roundedDiscountPercent));
+
+                    //CSYS-97680 LN. 11-05-2019
+                    if(containskey(stringsDict, parentDocNum + DELIMITER + "pricebookChangeWithinBundle")){
+                        utilResultString = util.formAttrValueStr(attributesDict, "pricebookChangeWithinBundle_line", lineDocNum, TRUE_STR);
+                    }
+                }
+            }
+            
+            //CSYS-95310 (LN. 07-09-2019) Allow currency conversion to run on the ramps where the user entered their own prices:
+            //CSYS-86113 (KA. 11-8-2017): do not run currency conversion for the ramps that the user can enter their own prices on:
+            // if( NOT containskey(stringsDict, lineDocNum + DELIMITER + "userEnteredRampPricing") ){
+                /* ###                      Multi Currency Conversion Section               ### */
+                if( ( quoteType_quote <> ADD_ON OR (quoteType_quote == ADD_ON AND currentAction <> NONE_ACTION)) AND customPricingHasOccured <> TRUE_STR ) {
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, NET_PRICE_UNIFIED, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_UNIFIED, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, NET_PRICE_NON_UNIFIED, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, LIST_PRICE_NON_UNIFIED, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, BILLING_EXT_NET_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, TIER_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_TIER_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, PROD_BASED_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_PROD_BASED_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, LIST_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, ASSETS_LIST_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, TERM_BASED_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, PROMO_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, CUSTOM_LIST_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, DISCOUNT_AMOUNT, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, NET_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_LIST, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NON_UNIFIED_LIST, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NET, conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, INC_FEE_NON_UNIFIED_NET, conversionRate, numDecimals );
+                    //CSYS-95310 (LN. 07-09-2019) Sending more data through currency conversion to support non-USD User Defined Ramp Pricing
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, "userExtProductBasedPrice", conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, "userIncFeeNet", conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, "systemIncFeeNet", conversionRate, numDecimals );
+                    conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, BASE_LIST_PRICE_UNIFIED, conversionRate, numDecimals ); 
+                } else {
+                    if(pricebookChangeDetected <> TRUE_STR){
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, NET_PRICE_UNIFIED_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_UNIFIED_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, BASE_LIST_PRICE_UNIFIED_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, NET_PRICE_NON_UNIFIED_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, LIST_PRICE_NON_UNIFIED_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED_USD, 1/conversionRate, numDecimals );
+
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, PROD_BASED_PRICE_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, LIST_PRICE_USD, 1/conversionRate, numDecimals );
+                        //conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, CUSTOM_LIST_PRICE, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, NET_PRICE_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_LIST_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NON_UNIFIED_LIST_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NET_USD, 1/conversionRate, numDecimals );
+                        conversionResult = util.convertDictCurrency( floatsDict, lineDocNum, DELIMITER, INC_FEE_NON_UNIFIED_NET_USD, 1/conversionRate, numDecimals );
+                   }
+
+                }
+    
+                //CSYS-70755: recalculate net/extendedNet price for Non-USD currency 
+                //since the currency conversion logic above can throw it off by a cent, if the user enters a predefined net price:
+                if(currencyCode <> "USD" AND currentAction <> NONE_ACTION){//CSYS-86387 (LN. 11/3/2017)
+                    nonUSD_ListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, LIST_PRICE);
+                    nonUSD_ExtendedListPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE);
+    
+                    nonUSD_Discount = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, DISCOUNT);
+                    nonUSD_PromoDiscount = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, PROMO_DISC_PERCENT);
+                    
+                    //nonUSD_NetPrice = nonUSD_ListPrice * (1 - ((nonUSD_Discount + nonUSD_PromoDiscount)/100));
+                    //nonUSD_ExtendedNetPrice = nonUSD_ExtendedListPrice * (1 - ((nonUSD_Discount + nonUSD_PromoDiscount)/100));
+    
+                    //CSYS-76397 (KA. 2-1-2017): replace the 2 lines above with the next 4 lines.
+                    //Promo Discount needs applied to the list price first, THEN sales discount needs applied to that value:
+                    promoList = nonUSD_ListPrice - round((nonUSD_ListPrice * (nonUSD_PromoDiscount / 100)), 2);
+                    promoExtendedList = nonUSD_ExtendedListPrice - round((nonUSD_ExtendedListPrice * (nonUSD_PromoDiscount/100)), 2); 
+                    //CSYS-97907
+                    if (containskey(floatsDict, lineDocNum + DELIMITER + "zeroListOverride" + EXT_NET_PRICE)){
+                        nonUSD_ExtendedNetPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, "zeroListOverride" + EXT_NET_PRICE);
+                        nonUSD_NetPrice = util.getFloatAttribute(floatsDict, lineDocNum, DELIMITER, "zeroListOverride" + NET_PRICE);
+                    }
+                    else{
+                        nonUSD_NetPrice = promoList - round((promoList * (nonUSD_Discount / 100)), 2); 
+                        nonUSD_ExtendedNetPrice = promoExtendedList - round((promoExtendedList * (nonUSD_Discount/100)), 2); 
+                    }
+                    
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, NET_PRICE, nonUSD_NetPrice );
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE, nonUSD_ExtendedNetPrice );
+                }
+            // } CSYS-95310 (LN. 07-09-2019)
+    
+            /* ********** RAMP PLAN ******** */
+            if ( find( lineDocNum, RAMP_DELIMITER ) <> - 1 ){
+                if ( isGrouped == TRUE_STR ){
+                    // Move the unified prices to the net prices
+                    unifiedBaseFee = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_UNIFIED );
+                    unifiedIncrFee = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, NET_PRICE_UNIFIED );
+                    utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE, unifiedBaseFee );
+                    utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE, unifiedIncrFee );
+                }
+                // Do not calculate totals for ramp plan
+                continue;
+            }
+            /* ------------------------- Calculate Totals ------------------------- */
+            //08/22/11: NB. All data is being stored for each child line item - do not duplicate by summing over Model Lines as well!
+            // Any data that was currency converted will need to be recalled for the total.
+            //extNetPriceNonUnified = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED );
+            extListPrice = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_LIST_PRICE );
+
+            //CSYS-95956 (LN. 6-5-2019)
+            if(pricebookChangeDetected == TRUE_STR){
+                extendedNetPrice = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, ASSETS_ORIGINAL_EXT_NET_PRICE );
+                netPriceEach = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, ASSETS_ORIGINAL_NET_PRICE );
+
+                utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE, extendedNetPrice);
+                utilResultFlag = util.putFloatAttribute(floatsDict, lineDocNum, DELIMITER, NET_PRICE, netPriceEach);
+            }
+            else {
+                extendedNetPrice = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, EXT_NET_PRICE );
+                netPriceEach = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, NET_PRICE );
+            }
+            //rampFlag = util.getStringAttribute(stringsDict, pi, DELIMITER, RAMP_FLAG);
+
+
+            if (piItemType == BASE_FEE AND currentAction <> TERMINATE_ACTION) {//CSYS-95225 (LN. 3-29-2019) Do not include TERMINATES in the Total ARR Net 
+
+                arrVal = 0.0;
+                noArrPromoExists = false;
+
+                //CSYS-93097 (LN. 9-5-2018)
+                if(promoCodes <> ""){//If a promotion has been applied, continue
+                    promoArr = split(promoCodes, ",");//Convert the string of promotions into an array 
+
+                    for entry in noArrPromotions {//Loop through each entry returned from the noArrPromotions table
+
+                        promotionName = get(entry, "promotionName");//Retrieve the promotion name
+
+                        if( findinarray(promoArr, promotionName) <> -1 ){//If the promotion applied to the product is found in the table, set the value to zero.
+                            arrVal = 0.0;
+                            utilResultFlag = util.putStringAttribute(stringsDict, pi, DELIMITER, "noArrPromotion_line", TRUE_STR);//If the ARR was set to zero, flag this product to be used in Pricing Misc.
+                            noArrPromoExists = true;
+                        }
+                    }
+                }
+
+                if(NOT(noArrPromoExists)) { //otherwise, business as usual
+                    arrVal = extListPrice * RAMP_FLAG_MULTIPLIER;
+                }
+
+                totalArrList = totalArrList + arrVal;
+                
+                utilResultFlag = util.putFloatAttribute( floatsDict, lineDocNum, DELIMITER, ARR_LINE, arrVal );
+                
+            }
+            
+            if ( piItemType <> INCREMENTAL_FEE ){
+                totalExtendedListPrice = totalExtendedListPrice + extListPrice;
+                totalLineItemDiscounts = totalLineItemDiscounts + discountAmount;
+                totalExtendedNetPrice = totalExtendedNetPrice + extendedNetPrice;
+            }
+
+            if ( piItemType == SETUP_FEE ){
+                totalSetupFeeList = totalSetupFeeList + extListPrice;
+                totalSetupFeeNet = totalSetupFeeNet + extendedNetPrice;
+            }
+            
+            if ( piItemType == BASE_FEE ){
+                totalBaseFeeList = totalBaseFeeList + extListPrice;
+                totalBaseFeeNet = totalBaseFeeNet + extendedNetPrice;
+            }
+            
+            if ( piItemType == PRE_PRODUCTION ){
+                totalPreProductionFeeList = totalPreProductionFeeList + extListPrice;
+                totalPreProductionFeeNet = totalPreProductionFeeNet + extendedNetPrice;
+            }
+            
+            if ( piItemType == INCREMENTAL_FEE ){
+                //CSYS-82843 LN. 6/15/2017 Excluding Invoice Check Payments & Invoice Check Payments Canada from being accured in the total Incremental List & Net
+                if( poID <> "566" AND poID <> "416635"){
+                totalIncrFeeList = totalIncrFeeList + extListPrice;
+                totalIncrFeeNet = totalIncrFeeNet + extendedNetPrice;                   
+                }
+
+            }
+            
+            //Populate Model description
+            poCategory = util.getStringAttribute(stringsDict, pi, DELIMITER, PO_CATEGORY);
+            editionStr = util.getStringAttribute(stringsDict, pi, DELIMITER, EDITION);
+            desc = util.getStringAttribute(stringsDict, pi, DELIMITER, PO_NAME);
+            
+            if (poCategory == CORE_SERVICE AND currentAction <> TERMINATE_ACTION) {
+                modelDescription = desc;
+                if (editionStr <> "") {
+                    modelDescription = editionStr + " " + modelDescription;
+                }
+                
+                utilResultFlag = util.putStringAttribute(stringsDict, modelDocNum, DELIMITER, PO_NAME, modelDescription);
+            }
+            //CSYS-77796
+            if (pi == "416644" OR pi == "569"){
+
+
+                ICP_INCREMENTAL_FEE_NET = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NET );
+                ICP_INCREMENTAL_FEE_NET_USD = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, INCREMENTAL_FEE_NET_USD );
+                //ICP_INC_FEE_NON_UNIFIED_NET = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, INC_FEE_NON_UNIFIED_NET );
+                //ICP_INC_FEE_NON_UNIFIED_NET_USD = util.getFloatAttribute( floatsDict, lineDocNum, DELIMITER, INC_FEE_NON_UNIFIED_NET_USD );
+                ICP_INC_FEE_NON_UNIFIED_NET = ICP_INCREMENTAL_FEE_NET;
+                ICP_INC_FEE_NON_UNIFIED_NET_USD = ICP_INCREMENTAL_FEE_NET_USD;
+            }
+            //CSYS-95471
+            if(promoCodes <> "" AND NOT isnull(promoCodes)){
+                promoLineArr = split(promoCodes, ",");
+                for promoItem in promoLineArr {
+                    if ( findinarray(ultimateAppliedPromosArr,promoItem) == -1 ){
+                        append (ultimateAppliedPromosArr, promoItem);
+                    }
+                }
+            }
+        }
+        utilResultFlag = util.putFloatAttribute(floatsDict, modelDocNum, DELIMITER, EXT_NET_PRICE, modelExtendedNetPrice);
+        utilResultFlag = util.putFloatAttribute(floatsDict, modelDocNum, DELIMITER, EXT_LIST_PRICE, modelExtListPrice);
+        utilResultFlag = util.putFloatAttribute(floatsDict, modelDocNum, DELIMITER, PROMO_PRICE, modelPromoPrice);
+        utilResultFlag = util.putFloatAttribute( floatsDict, modelDocNum, DELIMITER, EXT_TIER_PRICE, modelExtTierPrice );
+        utilResultFlag = util.putFloatAttribute( floatsDict, modelDocNum, DELIMITER, EXT_LIST_PRICE, modelExtListPrice );
+        utilResultFlag = util.putFloatAttribute( floatsDict, modelDocNum, DELIMITER, EXT_PROD_BASED_PRICE, modelExtProdPrice );
+    }   
+}
+
+//CSYS-95048
+if (containskey(stringsDict, QUOTE_DOC_NUM + DELIMITER + "displayExtServiceBundledMsg")){
+    utilResultString = util.formAttrValueStr(attributesDict, "displayBundledExtServiceMsg_quote", QUOTE_DOC_NUM, TRUE_STR);
+}
+else{
+    utilResultString = util.formAttrValueStr(attributesDict, "displayBundledExtServiceMsg_quote", QUOTE_DOC_NUM, FALSE_STR);
+}
+//CSYS-95471
+ultimateAppliedPromos = join( ultimateAppliedPromosArr, "#^#" );
+//promoCodeApplied = ultimateAppliedPromos;
+//CSYS-81229 Discount Approvals Update LN. 5/8/2017
+totalsDict = dict("float");
+totalSetupFeeDiscountAmount = totalSetupFeeList - totalSetupFeeNet;
+totalBaseDiscountAmount = totalBaseFeeList - totalBaseFeeNet;
+//Taking the total Setup Fee Discount Amount and adding as an approval criteria for GM/EVP
+put(triggerDict, "totalSetupFeeDiscountAmount", string(totalSetupFeeDiscountAmount));
+//Storing the total Base Fee Discount Amount to be used later
+put(totalsDict, "totalBaseDiscountAmount", totalBaseDiscountAmount);
+
+/*===================================================CSYS-96356 - END - =============================================================================*/
+
+//CSYS-92131
+packageDict = dict("string");
+packageDetails = bmql( "SELECT packageID, packageName, packageIdentifier FROM packageDef" );//CSYS-92350 (LN. 11-15-2018) New table column added "packageIdentifier"
+
+for package in packageDetails{
+    packageID = get( package, "packageID" );
+    packageName = get( package, "packageName" );
+    packageIdentifier = get( package, "packageIdentifier" );
+
+    //CSYS-92350 (LN. 11-15-2018) - If a packageIdentifier is found, update the packageName with the appended text
+    if(packageIdentifier <> "" ){
+        packageName = packageName + " - " + packageIdentifier;
+    }
+
+    if (NOT containskey(packageDict, packageID) ){
+        put( packageDict, packageID,  packageName );    
+    }
+}
+
+
+
+//CSYS-77796
+LINE_RAMP_CONSTANT = replace(LINE_RAMP_CONSTANT, "ICP_INCREMENTAL_FEE_NET", string(ICP_INCREMENTAL_FEE_NET), 1);
+LINE_RAMP_CONSTANT = replace(LINE_RAMP_CONSTANT, "ICP_INCREMENTAL_FEE_NET_USD", string(ICP_INCREMENTAL_FEE_NET_USD), 1);
+LINE_RAMP_CONSTANT = replace(LINE_RAMP_CONSTANT, "ICP_INC_FEE_NON_UNIFIED_NET", string(ICP_INC_FEE_NON_UNIFIED_NET), 1);
+LINE_RAMP_CONSTANT = replace(LINE_RAMP_CONSTANT, "ICP_INC_FEE_NON_UNIFIED_NET_USD", string(ICP_INC_FEE_NON_UNIFIED_NET_USD), 1);
+
+/*
+print "CSYS-77796";
+print "LINE_RAMP_CONSTANT" + LINE_RAMP_CONSTANT;
+*/
+
+/*
+if (debug) {
+    printTempVal = util.printDebugHeader("Quote state check");
+    print("stringsDict:");
+    print(stringsDict);
+    print("integersDict:");
+    print(integersDict);
+    print("floatsDict:");
+    print(floatsDict);
+}
+*/
+
+/* ======================================================================== */
+/*                          Return Statements                               */
+/* ======================================================================== */
+// if (debug) {
+//  printTempVal = util.printDebugHeader("Return statements");
+// }
+// ARR LOGIC 1 of 2 - QUOTE LEVEL - ARR TERM AND WAIVE PERIOD LOGIC - ATG 5/19 //
+//---Set the Arr Term based on the term---//
+
+//original arrTerm logic:
+arrTerm = 12;
+if(isnumber(termNumMonths_quote)){
+    if(atoi(termNumMonths_quote) < 12){
+        arrTerm = 12;
+    }else{
+        arrTerm = atoi(termNumMonths_quote);
+    }
+}
+
+//CSYS-16186 (moved CRD calculations to a separate util)
+calculateCRD = commerce.calculateContractRenewalDate(attributesDict);
+
+//multiple ramp add-on arr term logic:
+CRD = "";
+if(containskey(attributesDict, QUOTE_DOC_NUM + TILDE_DELIMITER + "contractRenewalDate_quote")){
+    CRD = get(attributesDict, QUOTE_DOC_NUM + TILDE_DELIMITER + "contractRenewalDate_quote");
+    CRD = util.getAttributesDictValue(CRD);
+}
+
+OED = orderEffectiveDate_quote;
+CED = contractEffectiveDate_quote;
+
+remainingTerm = 1;
+if(OED <> "" AND CRD <> ""){
+    remainingTerm = util.getDifferenceInMonths(OED, CRD);
+}
+
+//CSYS-80779 (KA. 5-1-2017): get the difference in months between the Contract Effective Date and the Order Effective Date
+durationOfCustomer = 0;
+if(OED <> "" AND CED <> ""){
+    durationOfCustomer = util.getDifferenceInMonths(CED, OED);
+}
+
+multiRampAddonArrTerm = 0; // for CSYS-53776
+if(termNumMonths_quote == ""){
+    multiRampAddonArrTerm = remainingTerm;
+}
+else{
+    if(atoi(termNumMonths_quote) < 12){
+        multiRampAddonArrTerm = 12;
+    }
+    else{
+        multiRampAddonArrTerm = atoi(termNumMonths_quote);
+    }
+}
+
+//---Convert the Monthly Waive Period to a numerical value---//
+//CSYS-94744
+/*
+if( monthlyWaivePeriod_quote == "30 days"){
+    waivePeriod = 1;
+}elif(monthlyWaivePeriod_quote == "60 days"){
+    waivePeriod = 2;
+}elif(monthlyWaivePeriod_quote == "90 days"){
+    waivePeriod = 3;
+}else{
+    waivePeriod = 0;
+}
+*/
+if ( monthlyWaivePeriod_quote <> "" AND NOT (isnull(monthlyWaivePeriod_quote)) ){
+    daysArr = split(monthlyWaivePeriod_quote, " ");
+    if (daysArr[0] <> "" AND isnumber(daysArr[0])){
+        if ( find(daysArr[1], "days") <> -1 ){
+            waivePeriod = atoi(daysArr[0])/30;
+        }
+        else{
+            waivePeriod = atoi(daysArr[0]);
+        }
+    }
+}else{
+    waivePeriod = 0;
+}
+put(triggerDict, "monthlyWaivePeriod", string(waivePeriod));
+
+// END ARR LOGIC 1 of 2 - ATG 5/19 //
+//finalResultArray = string[];
+multiRampFlag = false;
+
+greaterThanFourPromos = false;
+//CSYS-81229 LN. 5/8/2017 Using basePartnerDiscTotal to accrue the discount amount soley from the Partner Discount
+basePartnerDiscTotal = 0.0;
+
+for docNum in docNumList {
+    tempWaivePeriod = waivePeriod;
+    currentAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+    //if this is a ramp subline skip it, it does not have a seperate output
+    if ( find( docNum, RAMP_DELIMITER ) <> -1){
+        continue;
+    }
+    //CSYS-83206 LN. 7/20/2017 -- Not being used, commented out to make more room in Pricing    
+    // if (debug) {
+    //  printTempVal = util.printDebugSubsection("Return statements for docNum: " + docNum, 1);
+    // }
+    
+    /* ======================================================================== */
+    /*                      BUILD RAMP XML                                      */
+    /* ======================================================================== */
+    // Find out how many ramps this line item has.  Use that number as a range in order to find all the values of the prices for each index
+    howManyRamps = util.getIntegerAttribute( integersDict, docNum, DELIMITER, NUMBER_RAMP_ENTRIES );
+    isGrouped = util.getStringAttribute( stringsDict, docNum, DELIMITER, IS_GROUPED );
+    parentDocNum = util.getStringAttribute( stringsDict, docNum, DELIMITER, PARENT_DOC_NUM );
+    poID = "";
+    
+    if ( howManyRamps > 0 ){
+        poID = util.getStringAttribute( stringsDict, docNum, DELIMITER, PO_ID );
+        USD = "USD";
+        eachElementFloat = 0.0;
+        lineItemRampPlanStrArrDict = dict("string[]");
+        lineItemRampPlanKeysArr = String[]{INC_FEE_LIST_XML, BASE_FEE_LIST_XML, BASE_FEE_NET_XML, INC_FEE_NET_XML, BASE_FEE_LIST_XML_USD, BASE_FEE_NET_XML_USD, 
+                                            BASE_FEE_NET_NON_UNIFIED, BASE_FEE_NET_NON_UNIFIED_USD, INC_FEE_LIST_XML_USD, INC_FEE_NET_XML_USD, 
+                                            INC_FEE_NON_UNIFIED_NET, INC_FEE_NON_UNIFIED_NET_USD, TRANSACTION_XML_NODE_NAME, 
+                                            BASE_FEE_LIST_NON_UNIFIED_XML, BASE_FEE_LIST_NON_UNIFIED_USD_XML,
+                                            INC_FEE_LIST_NON_UNIFIED_XML, INC_FEE_LIST_NON_UNIFIED_USD_XML, "baseFeeNetBC", TRANSACTION_BY_BC, BASE_INC_KEY};
+        //The below line is from original code and is not part of the below array section - lineItemRampPlanKeysArr - Anitha Oct 26 2012
+        lineItemRampPlan = util.getStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_DETAIL);
+        //CSYS-95701 SN. 09-2019 Add travelAndExpenseWithTriplinkProductArr to argument list
+        lineItemRampPlanStrArrDict = util.getRampXMLStringArrayDict(stringsDict, floatsDict, integersDict, docNum, parentDocNum, howManyRamps, isGrouped, billingCycleNumber, CURRENCY_SYMBOL, incToBaseDict, travelAndExpenseWithTriplinkProductArr);
+        
+        //eachKey is the CONSTANT_XML(string) and eachArr is the stringArr which contains the prices in string format but not adjusted using fomatPrice UTIL
+        //That adjustment is done below - Anitha Oct 26 2012
+        
+		/*CSYS-98985, Phil S 04/05/2020, block CSYS-94166
+        // CSYS-94166 (LN. 1-16-2019) 
+            Utilize the LINE_RAMP_CONSTANT_FAVR Ramp XML Constant for Concur FAVR. Forcing only one Base Ramp.
+        if(poID == CONCUR_FAVR_PO_ID){
+            lineItemRampPlan = LINE_RAMP_CONSTANT_FAVR;
+        }
+		*/
+		
+        for eachKey in lineItemRampPlanKeysArr{
+        
+            if(containskey(lineItemRampPlanStrArrDict, eachKey)){
+                eachArr = get(lineItemRampPlanStrArrDict, eachKey);
+                
+                if(find(eachKey, USD) <> -1){ //We must make sure, USD related attributes should always be appended with USD at the end 
+    
+                    for eachElement in eachArr{
+                    
+                        if(isnumber(eachElement)){
+                            eachElementFloat = atof(eachElement);
+                            indx = findinarray(eachArr, eachElement);   
+                            //fomatPrice takes first parameter as float and here we reconstruct the array again after formatting price
+                            eachArr[indx] = util.fomatPrice(eachElementFloat, "", NUM_DECIMAL_USD); 
+                        }
+                    }
+                }
+
+                /* CSYS-94166 (LN. 1-16-2019) 
+                    In order to support forcing Concur FAVR to have one ramp, if the global ramp is greater than one, 
+                    retrieve only the final index of the Ramp XML array to return only one final ramp.
+                */
+				/*CSYS-98985, Phil S 04/05/2020, block CSYS-94166
+                if(poID == CONCUR_FAVR_PO_ID){
+
+                    lastRampIndex = sizeofarray(eachArr) - 1;
+                    newArr = String[];
+                    append(newArr, eachArr[lastRampIndex]);
+
+                    eachArr = newArr;
+                }
+                */
+                lineItemRampPlan = util.spliceXMLNodeValuesExtended(lineItemRampPlan, eachKey, eachArr, RAMP_PARENT_NODE);
+            }
+        }
+        
+        rampFormatDelimiter = DELIMITER;
+        elementArr = String[]{BASE_FEE_LIST_XML_USD, BASE_FEE_NET_XML_USD, INC_FEE_LIST_XML_USD, INC_FEE_NET_XML_USD,
+                                BASE_FEE_LIST_XML, BASE_FEE_NET_XML, INC_FEE_LIST_XML, INC_FEE_NET_XML,BASE_FEE_NET_NON_UNIFIED
+                                    , BASE_FEE_NET_NON_UNIFIED_USD, INC_FEE_NON_UNIFIED_NET, INC_FEE_NON_UNIFIED_NET_USD,
+                                    BASE_FEE_LIST_NON_UNIFIED_XML, BASE_FEE_LIST_NON_UNIFIED_USD_XML, INC_FEE_LIST_NON_UNIFIED_XML,
+                                    INC_FEE_LIST_NON_UNIFIED_USD_XML, "baseFeeNetBC"};
+        attributeArr = String[]{ "displayArray", "displayName", "readOnly", "isCurrency" };
+        attributeValueDict = dict("string");
+        
+        /* ****** FORMAT XML FOR PROPER DISPLAY BY JAVASCRIPT ****** */
+        attributeValueDict = util.getAttrValueDictForLineItemRamp();
+        lineItemRampPlan = util.setXMLAttribute( elementArr, attributeArr, rampFormatDelimiter, attributeValueDict, howManyRamps, lineItemRampPlan );
+        utilFlagResult = util.putStringAttribute( stringsDict, docNum, DELIMITER, RAMP_PLAN_DETAIL, lineItemRampPlan );
+        utilFlagResult = util.putStringAttribute( stringsDict, docNum, DELIMITER, RAMP_PLAN_DETAIL_SAVE_XML, lineItemRampPlan );
+        print "Lauren here in Pricing Misc 11-6";
+        print elementArr;
+        print lineItemRampPlan;
+    }
+    /* END RAMP XML ******************** */
+    
+    //Initialize local variables for return
+    pi = util.getStringAttribute(stringsDict, docNum, DELIMITER, PART_NUM);
+    desc = util.getStringAttribute(stringsDict, pi, DELIMITER, PO_NAME);
+    
+    if (pi == "") {
+        desc = util.getStringAttribute(stringsDict, docNum, DELIMITER, PO_NAME);
+    }
+    
+    trxns = util.getIntegerAttribute(integersDict, docNum, DELIMITER, TRANSACTIONS);
+    piItemType = util.getStringAttribute(stringsDict, pi, DELIMITER, PI_ITEM_TYPE );
+    
+    if ( piItemType == INCREMENTAL_FEE ){
+        trxns = INCREMENTAL_TRANSACTION_DEFAULT;
+    }
+    
+    monthlyTransictionValidationRequired = false;
+    isTransOverridden = util.getStringAttribute(stringsDict, docNum, DELIMITER, IS_TRANS_OVERRIDDEN);
+    tierChange = util.getStringAttribute(stringsDict, docNum, DELIMITER, TIER_CHANGE); // Added Tier Change for ARR Enhancement
+    thisTransaction = util.getIntegerAttribute( integersDict, docNum, DELIMITER, TRANSACTIONS );
+    piType = util.getStringAttribute(stringsDict, docNum, DELIMITER, PI_ITEM_TYPE);
+    poCategory = util.getStringAttribute(stringsDict, pi, DELIMITER, PO_CATEGORY);
+    firstItt = util.getStringAttribute(stringsDict, docNum, DELIMITER, "assetsFirstIteration_line");
+    
+    if(pi <> ""){
+        //add on related
+        numOfTrans = -1;
+        numOfTrans = util.getIntegerAttribute(integersDict, parentDocNum, DELIMITER, "modelNumOfTransDict");
+        if(numOfTrans <> -1){
+            if(findinarray(listOfNumOfTransPOs,poID)<>-1 AND thisTransaction <> numOfTrans AND currentAction <> TERMINATE_ACTION){
+                monthlyTransictionValidationRequired = true;
+            }
+        }
+        /*if(debug){
+            print "testing transaction trigger";
+            print "poCategory: " + poCategory;
+            print "piType: " + piType;
+            print "isTransOverridden: " + isTransOverridden;
+            print "thisTransaction: " + string(thisTransaction);
+            print "numCommittedTransaction_quote: " + string(numCommittedTransaction_quote);
+            print "PAST_QUOTE_TRANSACTIONS: " + string(PAST_QUOTE_TRANSACTIONS);
+            print monthlyTransictionValidationRequired;
+            print "----------";
+        }*/
+
+        //Moved from above:
+        put(triggerDict, docNum + "~" + "assetAction", docNum + "~" + "assetAction" + TRIG_KEY_VALUE_DELIM + currentAction); 
+    }
+
+    implementationMethod = util.getStringAttribute(stringsDict, docNum, DELIMITER, IMPLEMENTATION_METHOD);
+    lineItemRampPlan = "";
+    rampFlag = util.getStringAttribute( stringsDict, docNum, DELIMITER, RAMP_FLAG );
+    
+    if ( piItemType == BASE_FEE ){
+        noArrProduct = util.getStringAttribute(stringsDict, pi, DELIMITER, "noArrPromotion_line");//CSYS-93097 (LN. 9-6-2018)
+        lineItemRampPlan = util.getStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_DETAIL);
+        // ARR LOGIC 2 of 2 - QUOTE LEVEL - NET BASE MONTHS, TOTAL VALUE BY PRODUCT LOGIC - ATG 5/19 //
+        //VARIABLES FOR ARR WORK
+        extNetPriceNonUnified = util.getFloatAttribute( floatsDict, docNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED );
+        rampToMonths = util.getXMLNodeValues(lineItemRampPlan, TO);
+        lastRamp = util.getIntegerAttribute( integersDict, docNum, DELIMITER, NUMBER_RAMP_ENTRIES );
+        lastRampNum = lastRamp - 2;
+        rampPrice = util.getXMLNodeValues(lineItemRampPlan, "baseFeeNonUnifiedNet");
+        totalValueByProduct  = 0.0;
+        cnt = 0;
+        specialWorkFlowFlag = util.getStringAttribute( stringsDict, pi, DELIMITER, SPECIAL_WORKFLOW_FLAG ); //KA. 9-29-2015. Added for Connector ARR
+
+        //Net Base Months - logic is used to set line level attributes based on each product: 
+        if(lastRamp > 1 AND quoteType_quote <> ADD_ON AND isnumber(rampToMonths[lastRampNum])){
+            //CSYS-94966
+            //netBaseMonths = arrTerm - waivePeriod - atoi(rampToMonths[lastRampNum]);
+            netBaseMonths = arrTerm - atoi(rampToMonths[lastRampNum]);
+            //print "NBM 1"; print netBaseMonths;
+        }elif(lastRamp > 1 AND quoteType_quote == ADD_ON AND isnumber(rampToMonths[lastRampNum])){
+            netBaseMonths = arrTerm - atoi(rampToMonths[lastRampNum]);
+            //print "NBM 2"; print netBaseMonths;
+        }else{
+            netBaseMonths = arrTerm - tempWaivePeriod;
+            //print "NBM 3"; print netBaseMonths;
+        }
+        //Total Value By Product - logic used to be able to total the ARR Net values from each ramp
+        if(lastRamp > 1 OR tempWaivePeriod <> 0){
+
+            //############################################################################//
+            //########## Total Value by Product for New Business and SMB Add-on ##########//
+            //############################################################################//
+            
+            if(quoteType_quote == NEW_BIZ OR (quoteType_quote == ADD_ON AND businessUnit == "SMB BU")){ //new biz and SMB Add-ons inherit the original multi-ramp logic (KC's logic)
+                toMonths = 0;
+                
+                for ramp in rampToMonths{
+                
+                    if(netBaseMonths < 0){
+                        netBaseMonths = 0;
+                    }
+    
+                    if(rampToMonths[cnt] <> "and beyond" AND atoi(rampToMonths[cnt]) >= arrTerm){
+                        toMonths = arrTerm;
+                        netBaseMonths = 0;
+    
+                    }elif(rampToMonths[cnt] <> "and beyond" AND atoi(rampToMonths[cnt]) <= arrTerm AND cnt >= 0){
+                        toMonths = atoi(rampToMonths[cnt]);
+    
+                    }else{
+                        toMonths = 0;
+                    }
+                    rampCyclePrice = 0.0;
+
+                    //Extended Net Price Non Unified with Billing Cycle Taken into Account
+                    if (billingCycle_quote == "Monthly"){
+                        rampCyclePrice = (getcurrencyvalue(rampPrice[cnt]));
+                    }elif(billingCycle_quote == "Quarterly"){
+                        rampCyclePrice = (getcurrencyvalue(rampPrice[cnt]) / 3);
+                    //CSYS-90719, Phil S. 02/06/2020 (09/30/2019), Semi-Annually
+                    }elif(billingCycle_quote == "Semi-Annually"){
+                        rampCyclePrice = (getcurrencyvalue(rampPrice[cnt]) / 6);
+                    //
+                    }elif(billingCycle_quote == "Annually"){
+                        rampCyclePrice = (getcurrencyvalue(rampPrice[cnt]) / 12);
+                    }
+                    if(rampToMonths[cnt] <> "and beyond" AND rampToMonths[cnt] <> "" AND cnt == 0){ //first ramp                        
+                        //CSYS-94966
+                        if (quoteType_quote <> ADD_ON AND tempWaivePeriod <> 0 ){
+                            if (toMonths - tempWaivePeriod > 0){
+                                toMonths = (toMonths - tempWaivePeriod);
+                                tempWaivePeriod = 0;
+                            }
+                            else{
+                                tempWaivePeriod = tempWaivePeriod - toMonths;
+                                toMonths = 0;
+                            }
+                        }
+                        totalValueByProduct =  totalValueByProduct + (rampCyclePrice * toMonths);
+                        cnt = cnt + 1;
+                        
+                    }elif(rampToMonths[cnt] <> "and beyond" AND rampToMonths[cnt] <> "" AND cnt > 0){ //middle ramp(s)
+                        //CSYS-94966
+                        rampMultiplier = (toMonths - atoi(rampToMonths[cnt-1]));
+                        if (quoteType_quote <> ADD_ON AND tempWaivePeriod <> 0 ){
+                            if (rampMultiplier - tempWaivePeriod > 0){
+                                rampMultiplier = (rampMultiplier - tempWaivePeriod);
+                                tempWaivePeriod = 0;
+                            }
+                            else{
+                                tempWaivePeriod = tempWaivePeriod - rampMultiplier;
+                                rampMultiplier = 0;
+                            }
+                        }       
+                        if( rampMultiplier >= 0){
+                        totalValueByProduct =  totalValueByProduct + (rampCyclePrice *rampMultiplier);
+    
+                        cnt = cnt + 1;
+                        }else{
+                        totalValueByProduct = totalValueByProduct; 
+                        cnt = cnt + 1; 
+                        }
+                    }elif (rampToMonths[cnt] == "and beyond"){ //last month
+                        if(lastRamp > 1){
+                            //CSYS-94966
+                            if (quoteType_quote <> ADD_ON AND tempWaivePeriod <> 0 ){
+                                if (netBaseMonths - tempWaivePeriod > 0){
+                                    netBaseMonths = (netBaseMonths - tempWaivePeriod);
+                                    tempWaivePeriod = 0;
+                                }
+                                else{
+                                    tempWaivePeriod = tempWaivePeriod - netBaseMonths;
+                                    netBaseMonths = 0;                                  
+                                }
+                            }
+                            totalValueByProduct = totalValueByProduct + (rampCyclePrice * netBaseMonths);
+                        }else{
+                        totalValueByProduct = extNetPriceNonUnified * netBaseMonths;
+                        }
+                        cnt = cnt + 1; 
+                    }
+                }
+            }
+
+            //##################################################################//
+            //########## Total Value by Product for Enterprise Add-on ##########//
+            //##################################################################//
+
+            //if(quoteType_quote == ADD_ON){  //commented out and using the next 'else' for CSYS-71410. KA. 11-29-2016. 
+            else{ //Enterprise Add-on gets the new multi-ramp logic for CSYS-53776 (KA's logic). 11-4-2015. 
+
+                remainingMonths = multiRampAddonArrTerm;
+
+                for ramp in rampToMonths{
+                    if(remainingMonths > 0){
+
+                        //Extended Net Price Non Unified with Billing Cycle Taken into Account
+                        if (billingCycle_quote == "Monthly"){
+                            rampCyclePrice = (getcurrencyvalue(rampPrice[cnt]));
+                        }elif(billingCycle_quote == "Quarterly"){
+                            rampCyclePrice = (getcurrencyvalue(rampPrice[cnt]) / 3);
+                        //CSYS-90719, Phil S. 02/06/2020 (09/30/2019), Semi-Annually
+                        }elif(billingCycle_quote == "Semi-Annually"){
+                            rampCyclePrice = (getcurrencyvalue(rampPrice[cnt]) / 6);
+                        //
+                        }elif(billingCycle_quote == "Annually"){
+                            rampCyclePrice = (getcurrencyvalue(rampPrice[cnt]) / 12);
+                        }
+        
+                        if(rampToMonths[cnt] <> "and beyond" AND rampToMonths[cnt] <> "" AND cnt == 0){ //first ramp
+                        
+                            if(remainingMonths >= atoi(rampToMonths[cnt])){ //if remainingMonths >= 'To Months:', roll with the original TVBP calculation. ToMonths is the multiplier
+                                totalValueByProduct = totalValueByProduct + (rampCyclePrice * atoi(rampToMonths[cnt])); //original calculation
+                                
+                            } else{
+                                totalValueByProduct = totalValueByProduct + (rampCyclePrice * remainingMonths); //else we use all remaining months in the 1st ramp. Ex: remaining months is 12, toMonths of first ramp is 15
+                                break; //we're done calculating since we've burned all remaining months
+                            }
+                            
+                            remainingMonths = remainingMonths - atoi(rampToMonths[cnt]); //burn off the remaining months used up by this ramp
+        
+                            cnt = cnt + 1;
+                            
+                        }elif(rampToMonths[cnt] <> "and beyond" AND rampToMonths[cnt] <> "" AND cnt > 0){ //middle ramp(s)
+                        
+                            if(atoi(rampToMonths[cnt]) - atoi(rampToMonths[cnt-1]) >= 0 AND remainingMonths >= (atoi(rampToMonths[cnt]) - atoi(rampToMonths[cnt - 1]))){ //if remainingMonths >= 'To Months Difference', roll with the original TVBP calculation.
+                                totalValueByProduct = totalValueByProduct + (rampCyclePrice *(atoi(rampToMonths[cnt]) - atoi(rampToMonths[cnt - 1]))); //To Months difference is the multiplier
+                                
+                                remainingMonths = remainingMonths - (atoi(rampToMonths[cnt]) - atoi(rampToMonths[cnt - 1])); //burn off the remaining months used up by this ramp
+                                
+                                cnt = cnt + 1; 
+                                
+                            } else {                                
+                                totalValueByProduct = totalValueByProduct + (rampCyclePrice * remainingMonths); //remaining months is the multiplier 
+                                break; //we're done calculating since we've burned all remaining months
+                                
+                            }   
+                            
+                        }elif (rampToMonths[cnt] == "and beyond"){ //last ramp
+                            if(lastRamp > 1){ //multiple ramps
+                            //totalValueByProduct = totalValueByProduct + (rampCyclePrice * netBaseMonths);
+                            totalValueByProduct = totalValueByProduct + (rampCyclePrice * remainingMonths);
+        
+                            }else{
+                                
+                                //totalValueByProduct = extNetPriceNonUnified * netBaseMonths;
+                                totalValueByProduct = extNetPriceNonUnified * remainingMonths;
+        
+                            }
+                            cnt = cnt + 1; 
+        
+                        }
+                    }
+                }
+            }
+        
+            //ARR Net - logic for when more than 1 ramp is found Arr Net will be based off of Total Value By Product divided by the Arr Term times 12 (excluding custom pricing products)
+            if(arrTerm <> 0 AND arrTerm <> -1 AND currentAction <> TERMINATE_ACTION){ //added the TERMINATE check 1-6-15 (ATG). arrNet for TERMINATE's should be 0 and not touched by the calculation below
+                if(specialWorkFlowFlag == "Advantage Services" OR specialWorkFlowFlag == "Learning Services" OR specialWorkFlowFlag == "Partner Services"){  //added the flag checks for CSYS-51322. KA. 9-21-2014.
+                    arrNet = (extNetPriceNonUnified * RAMP_FLAG_MULTIPLIER);
+                }
+                else{
+                    if(quoteType_quote <> ADD_ON OR (quoteType_quote == ADD_ON AND businessUnit == "SMB BU")){
+                        arrNet = round((totalValueByProduct/arrTerm)*12,2);
+                    }
+                    else{ //arrNet calculation for multi ramp Enterprise add-on. CSYS-53776. KA. 12-4-2015.
+                        if(multiRampAddonArrTerm <> 0){ //fix divide by 0 issue when arrTerm is 0. CSYS-58331. KA. 2-9-2016.
+                            arrNet = round((totalValueByProduct/multiRampAddonArrTerm)*12,2);
+                        }
+                        else{
+                            arrNet = 0;
+                        }
+                    }
+                }
+                //CSYS-93097 (LN. 9-5-2018)
+                if(noArrProduct == TRUE_STR){
+                    arrNet = 0;
+                }
+
+                /*CSYS-98985, Phil S 04/05/2020, block CSYS-94166
+				//CSYS-94166 (LN. 1-15-2019) For the Concur FAVR Base Fee ArrNet, ensure it matches the Extended Net Price & isn't multiplied by 12
+                if(pi == CONCUR_FAVR_BASE_PI){
+                    arrNet = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE);
+                }
+				*/
+            }
+
+            totalArrNet = totalArrNet + arrNet;
+    
+            utilResultFlag = util.putFloatAttribute( floatsDict, docNum, DELIMITER, ARR_NET, arrNet );
+            multiRampFlag = true;
+        
+        }else{
+            //CSYS-93097 (LN. 9-5-2018)
+            if(noArrProduct == TRUE_STR){
+                arrNet = 0;
+            }
+            /*CSYS-98985, Phil S 04/05/2020, block CSYS-94166
+			//CSYS-94166 (LN. 1-15-2019) For the Concur FAVR Base Fee ArrNet, ensure it matches the Extended Net Price & isn't multiplied by 12
+            elif(pi == CONCUR_FAVR_BASE_PI){
+                arrNet = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE);
+            }
+			*/
+            else {
+                //ARR Net - logic for when there is only 1 ramp (ORIGINAL LOGIC)
+                //CSYS-97907
+                if (containskey(floatsDict, docNum + DELIMITER + "zeroListOverride" + EXT_NET_PRICE) AND isGrouped == FALSE_STR){
+                    extNetPriceNonUnified = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "zeroListOverride" + EXT_NET_PRICE);
+                }
+                arrNet = (extNetPriceNonUnified * RAMP_FLAG_MULTIPLIER);
+            }
+
+            if(currentAction <> TERMINATE_ACTION){//CSYS-95225 (LN. 3-29-2019) Do not include TERMINATES in the Total ARR Net 
+                totalArrNet =  totalArrNet + arrNet;
+            }
+            
+            utilResultFlag = util.putFloatAttribute( floatsDict, docNum, DELIMITER, ARR_NET, arrNet );
+        }
+        
+        // END ARR LOGIC 2 of 2 - ATG 5/19 //
+    }
+
+    //approvalLineTrigger = false;
+    //Populate any messages
+    rampPlanMessage = util.getStringAttribute( stringsDict, docNum, DELIMITER, RAMP_PLAN_MESSAGE );
+    
+    if ( rampPlanMessage <> "" AND containskey(  errorDict, rampPlanMessage )){
+        rampPlanMessage = get( errorDict, rampPlanMessage );
+    }
+    
+    // Translate the promo codes to sfdc
+    promoCode = util.getStringAttribute( stringsDict, docNum, DELIMITER, PROMO_CODE );
+    promoCodeNewTranslateStr = "";
+    if ( promoCode <> "" ){
+        promoCodeTranslateArr = split( promoCode, "," );
+        promoCodeNewTranslateArr = String[];
+        
+        //CSYS-53658: capture whether or not the product has greater than 4 promos
+        if(sizeofarray(promoCodeTranslateArr) > 4){
+            greaterThanFourPromos = true;
+        }
+        
+        for promoCodeTranslate in promoCodeTranslateArr{
+            append( promoCodeNewTranslateArr, util.getStringAttribute( stringsDict, "promoCodeSFDC", DELIMITER, promoCodeTranslate ));
+        }
+        promoCodeNewTranslateStr = join( promoCodeNewTranslateArr, "," );
+    }
+    
+    //Pricing attributes
+    tierPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, TIER_PRICE);
+    extTierPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_TIER_PRICE);
+    productBasedPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, PROD_BASED_PRICE);
+    extProductBasedPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_PROD_BASED_PRICE);
+    //add on related
+    listPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_LIST_PRICE);
+    customListPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, CUSTOM_LIST_PRICE);
+    extListPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_LIST_PRICE);
+    listPriceUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, LIST_PRICE_USD);
+    extListPriceUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_LIST_PRICE_USD);
+    disc = util.getFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT);
+    discountType = util.getStringAttribute(stringsDict, docNum, DELIMITER, DISCOUNT_TYPE);
+    discountAmount = util.getFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT_AMOUNT);
+    discountPercent = util.getFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT_PERCENT);
+    promoDiscPercent = util.getFloatAttribute(floatsDict, docNum, DELIMITER, PROMO_DISC_PERCENT);
+    netPriceEach = util.getFloatAttribute(floatsDict, docNum, DELIMITER, NET_PRICE);
+    netPriceEachUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, NET_PRICE_USD);
+    netPriceEaUnified = util.getFloatAttribute(floatsDict, docNum, DELIMITER, NET_PRICE_UNIFIED);
+    extendedNetPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE);
+    extendedNetPriceUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE_USD);
+    extNetPriceUnified = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE_UNIFIED);
+    promoPrice = util.getFloatAttribute( floatsDict, docNum, DELIMITER, PROMO_PRICE );
+    termBasedPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, TERM_BASED_PRICE);
+    extTermBasedPrice = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_TERM_BASED_PRICE);
+    billingExtNetPrice = util.getFloatAttribute( floatsDict, docNum, DELIMITER, BILLING_EXT_NET_PRICE );
+    netPriceEaNonUnified = util.getFloatAttribute(floatsDict, docNum, DELIMITER, NET_PRICE_NON_UNIFIED);
+    extNetPriceNonUnified = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED);
+    netPriceEaNonUnifiedUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, NET_PRICE_NON_UNIFIED_USD);
+    extNetPriceNonUnifiedUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE_NON_UNIFIED_USD);
+    netPriceEaUnifiedUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, NET_PRICE_UNIFIED_USD);
+    extNetPriceUnifiedUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PRICE_UNIFIED_USD);
+    arrVal = util.getFloatAttribute(floatsDict, docNum, DELIMITER, ARR_LINE );
+    arrNet = util.getFloatAttribute( floatsDict, docNum, DELIMITER, ARR_NET );
+    extNetPerBillingPeriod = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_NET_PER_BILLING_PERIOD );
+    numTransactionsPerBillingPeriod = util.getIntegerAttribute( integersDict, docNum, DELIMITER, NUM_TRANSACTIONS_PER_BILLING_PERIOD );
+    isRampable = util.getStringAttribute( stringsDict, docNum, DELIMITER, IS_RAMPABLE );
+    rampPlanOverride = util.getStringAttribute( stringsDict, docNum, DELIMITER, RAMP_PLAN_OVERRIDE );
+    listPriceNonUnified = util.getFloatAttribute(floatsDict, docNum, DELIMITER, LIST_PRICE_NON_UNIFIED );
+    extListPriceNonUnified = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED );
+    listPriceNonUnifiedUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, LIST_PRICE_NON_UNIFIED_USD );
+    extListPriceNonUnifiedUSD = util.getFloatAttribute(floatsDict, docNum, DELIMITER, EXT_LIST_PRICE_NON_UNIFIED_USD );
+    lineSequenceNumber = util.getIntegerAttribute( integersDict, docNum, DELIMITER, SEQ_NUM );
+    cIPSetupFee = util.getFloatAttribute(floatsDict, docNum, DELIMITER, CIP_SETUP_FEE);//CSYS-96801 (LN. 8-23-2019)
+    cIPProduct = util.getStringAttribute( stringsDict, docNum, DELIMITER, CIP_PRODUCT);//CSYS-96801 (LN. 8-23-2019)
+    customQuantity = util.getIntegerAttribute( integersDict, docNum, DELIMITER, "customQuantity_line");//CSYS-96366 SN. 07-2019 
+    quantity = util.getIntegerAttribute( integersDict, docNum, DELIMITER, "_price_quantity");//CSYS-96366 SN. 07-2019   
+
+    utilResultString = util.formAttrValueStr(attributesDict, "customQuantity_line", docNum, string(customQuantity));//CSYS-96366 SN. 07-2019   
+    utilResultString = util.formAttrValueStr(attributesDict, "_price_quantity", docNum, string(quantity));//CSYS-96366 SN. 07-2019
+    //add on related
+    isFirstIteration = util.getStringAttribute(stringsDict, docNum, DELIMITER, "isFirstIteration_line");
+    //end add on related
+    
+    //##################Approval ####################//
+    // Line level approval triggers
+    //CSYS-92938 (LN. 8-28-2018) New approval triggers logic for Partner Discount;
+    //CSYS-77985; (Previous logic removed)
+    if(pi <> ""){//Exclude Models
+        //Exclude Pre-Prods/Setups from Partner Discount Approvals
+        if(NOT isnull(acctPartnerDiscount) AND acctPartnerDiscount <> 0 AND currentAction == CREATE_ACTION AND piItemType <> SETUP_FEE AND piItemType <> PRE_PRODUCTION){
+            if(acctPartnerDiscount <> disc){//If the current line discount <> partner discount, trigger approvals
+                put(triggerDict, docNum + "~" + "partnerDiscountChange", docNum + "~" + "partnerDiscountChange" + TRIG_KEY_VALUE_DELIM + "true");
+            }
+            else {//If the user has returned the current line discount to == the partner discount, don't trigger approvals
+                put(triggerDict, docNum + "~" + "partnerDiscountChange", docNum + "~" + "partnerDiscountChange" + TRIG_KEY_VALUE_DELIM + "false");
+            }
+        }
+        else {
+            //Trigger line level discount approvals as normal when there is no Partner Discount 
+            put(triggerDict, docNum + "~" + "lineDiscountPercent", docNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(discountPercent));
+            put(triggerDict, docNum + "~" + "partnerDiscountChange", docNum + "~" + "partnerDiscountChange" + TRIG_KEY_VALUE_DELIM + "false");
+        }
+    }
+
+    //CSYS-81229 Discount Approvals Update LN. 5/8/2017
+    //discPercent = discountPercent/100;
+    acctPartnerDisc = acctPartnerDiscount/100;
+    partnerDiscAmount = extListPrice * acctPartnerDisc;
+
+    if (currentAction == CREATE_ACTION AND acctPartnerDiscount <> 0 AND NOT isnull(acctPartnerDiscount) AND piItemType == BASE_FEE){ //Condition for when a Partner Discount is applied, continue to accrue the partnerDiscAmount through the grid
+        basePartnerDiscTotal = basePartnerDiscTotal + partnerDiscAmount;
+    }
+    
+    //Modifiy Extended List Price output, if this is a Dynamically Grouped line item
+    isGrouped = util.getStringAttribute(stringsDict, docNum, DELIMITER, IS_GROUPED);
+    /* Match Ungrouped Ext Net Price to the Normal Ext net price before it is zeroed */
+    ungroupedExtNet = extendedNetPrice;
+    ungroupedNet = netPriceEach;
+    /* End Ungrouped Ext Net */
+    //Build line item result string
+    //CSYS-83106 LN. 7/20/2017 -- Not being used, commented out to make more room in Pricing
+    //lineResultArray = string[];
+    //print "final trans";
+    //print trxns;
+    utilResultString = util.formAttrValueStr(attributesDict, CUSTOM_SEQ_NUM, docNum, string(lineSequenceNumber));
+    
+    desc = replace(desc,"Concur Premier ","");
+    desc = replace(desc,"Concurforce ","");
+    utilResultString = util.formAttrValueStr(attributesDict, DESCRIPTION, docNum, desc);
+    utilResultString = util.formAttrValueStr(attributesDict, "_model_name", docNum, "-");
+    //print "Transactions Latest: "+string(trxns);
+    utilResultString = util.formAttrValueStr(attributesDict, TRANSACTIONS, docNum, string(trxns));
+    utilResultString = util.formAttrValueStr(attributesDict, PREV_TRANSACTIONS, docNum, string(trxns));
+    utilResultString = util.formAttrValueStr(attributesDict, PREV_TRANSACTIONS_AUTO, docNum, string(trxns));
+    
+    if(pi == "36999" OR pi == "437668"){ //force Invoice Check Payments and Invoice Check Payments Canada Base products to 1 transaction per CSYS-51118. KA. 9-22-15.
+        utilResultString = util.formAttrValueStr(attributesDict, TRANSACTIONS, docNum, string(0));
+        utilResultString = util.formAttrValueStr(attributesDict, PREV_TRANSACTIONS, docNum, string(0));
+        utilResultString = util.formAttrValueStr(attributesDict, PREV_TRANSACTIONS_AUTO, docNum, string(0));
+    }
+    
+    //add on related - start
+    submittedForcustomPricing = customPricingFlag_quote;
+    
+    if( submittedForcustomPricing AND ( util.getStringAttribute(stringsDict, pi, DELIMITER, SPECIAL_WORKFLOW_FLAG) == "" OR upper(util.getStringAttribute(stringsDict, pi, DELIMITER, SPECIAL_WORKFLOW_FLAG)) == "NONE" ) ){
+        utilResultString = util.formAttrValueStr(attributesDict, PREV_DISCOUNT, docNum, string(util.getFloatAttribute(floatsDict, docNum, DELIMITER, "latestDisc")));
+    }
+    //add on related - end
+    utilResultString = util.formAttrValueStr(attributesDict, DISCOUNT_TYPE, docNum, discountType);
+    utilResultString = util.formAttrValueStr(attributesDict, ASSET_ACTION, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION));
+    
+    existingARR_val = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "existingARRCurrency_line");
+    adjArr = util.getFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ADJUSTED_ARR);
+    
+    //Added Condition for newNewARR - Ronald Mendoza
+    //CSYS-80779 (KA. 5-1-2017): add durationOfCustomer to the condition:
+    if ( durationOfCustomer >= 12 AND (tierChange == TRUE_STR OR currentAction == TERMINATE_ACTION) ){
+
+        netNewARR_val = arrNet - existingARR_val - adjArr;
+
+    }else{
+        netNewARR_val = arrNet - existingARR_val;
+    }
+
+    if(currentAction == NONE_ACTION OR piItemType <> BASE_FEE){
+        netNewARR_val = 0.0;
+    }
+
+    //Old SalesARR calculation logic (gets overwritten later):
+    if(lower(isFirstIteration) == TRUE_STR OR util.getFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line") == util.getFloatAttribute(floatsDict, docNum, DELIMITER, "netNewARRCurrency_line")){   
+        //Added condition to Check if newNewARR is negative
+        if ( poCategory == CORE_SERVICE AND currentAction == MODIFY_ACTION AND netNewARR_val < 0 ){
+            utilResultString = util.formAttrValueStr(attributesDict, "salesARRCurrency_line", docNum, "0");
+        }elif( poCategory == EXT_SERVICE AND netNewARR_val < 0 ){
+            utilResultString = util.formAttrValueStr(attributesDict, "salesARRCurrency_line", docNum, "0");
+        }else{
+            utilResultString = util.formAttrValueStr(attributesDict, "salesARRCurrency_line", docNum, string(round(netNewARR_val, 2)));
+        }
+        
+        utilResultFlag = util.putFloatAttribute( floatsDict, docNum, DELIMITER, "salesARRCurrency_line", round(netNewARR_val, 2));
+    }
+
+    
+    QUOTE_TOTAL_SALES_ARR = QUOTE_TOTAL_SALES_ARR + util.getFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line");
+    //Put the netNewArr_val in the line's attribute dictionary location, so it can be used later by add-on ARR logic
+    utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "netNewARRCurrency_line", netNewARR_val);
+    //End - ATG
+    utilResultString = util.formAttrValueStr(attributesDict, "netNewARRCurrency_line", docNum, string(round(netNewARR_val, 2)));
+    utilResultString = util.formAttrValueStr(attributesDict, ASSET_STRING, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_STRING));
+    utilResultString = util.formAttrValueStr(attributesDict, "transactionValidationTrigger_line", docNum, string(monthlyTransictionValidationRequired));
+    utilResultString = util.formAttrValueStr(attributesDict, TIER_PRICE, docNum, string(tierPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_TIER_PRICE, docNum, string(extTierPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, PROD_BASED_PRICE, docNum, string(productBasedPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_PROD_BASED_PRICE, docNum, string(extProductBasedPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, LIST_PRICE, docNum, string(listPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, CUSTOM_LIST_PRICE, docNum, string(customListPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_LIST_PRICE, docNum, string(extListPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, LIST_PRICE_USD, docNum, string(listPriceUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_LIST_PRICE_USD, docNum, string(extListPriceUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, DISCOUNT, docNum, string(disc));
+    utilResultString = util.formAttrValueStr(attributesDict, LONG_DISCOUNT, docNum, string(disc));
+    utilResultString = util.formAttrValueStr(attributesDict, "prevDiscountStatic_line", docNum, string(disc)); //for regular Sales ARR consistency
+    
+    if(actionName == "updateCustomPrice"){//DISCOUNTHIDDEN is to be updated with discount for the action updateCustomPrice
+        utilResultString = util.formAttrValueStr(attributesDict, DISCOUNTHIDDEN, docNum, string(disc));
+    }
+
+    //add on related - start
+    utilResultString = util.formAttrValueStr(attributesDict, "isFirstIteration_line", docNum, FALSE_STR);
+    //add on related - end
+    utilResultString = util.formAttrValueStr(attributesDict, DISCOUNT_AMOUNT, docNum, string(discountAmount));
+    utilResultString = util.formAttrValueStr(attributesDict, DISCOUNT_PERCENT, docNum, string(discountPercent));
+    utilResultString = util.formAttrValueStr(attributesDict, NET_PRICE, docNum, string(netPriceEach));
+    utilResultString = util.formAttrValueStr(attributesDict, NET_PRICE_USD, docNum, string(netPriceEachUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, ORIG_NET_PRICE, docNum, string(netPriceEach));
+    utilResultString = util.formAttrValueStr(attributesDict, NET_PRICE_NON_UNIFIED, docNum, string(netPriceEaNonUnified));
+    utilResultString = util.formAttrValueStr(attributesDict, NET_PRICE_NON_UNIFIED_USD, docNum, string(netPriceEaNonUnifiedUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, NET_PRICE_UNIFIED, docNum, string(netPriceEaUnified));
+    utilResultString = util.formAttrValueStr(attributesDict, NET_PRICE_UNIFIED_USD, docNum, string(netPriceEaUnifiedUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_NET_UNGROUPED, docNum, string(ungroupedExtNet));
+    utilResultString = util.formAttrValueStr(attributesDict, NET_UNGROUPED, docNum, string(ungroupedNet));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_NET_PRICE, docNum, string(extendedNetPrice));
+    //Rev discount attribute population (ATG)
+    utilResultString = util.formAttrValueStr(attributesDict, "prevNetPrice_line", docNum, string(netPriceEach));
+    utilResultString = util.formAttrValueStr(attributesDict, "prevExtendedNetPrice_line", docNum, string(extendedNetPrice));
+    //end rev discount attribute population (ATG)
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_NET_PRICE_USD, docNum, string(extendedNetPriceUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_NET_PRICE_NON_UNIFIED, docNum, string(extNetPriceNonUnified));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_NET_PRICE_UNIFIED, docNum, string(extNetPriceUnified));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_NET_PRICE_UNIFIED_USD, docNum, string(extNetPriceUnifiedUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_NET_PRICE_NON_UNIFIED_USD, docNum, string(extNetPriceNonUnifiedUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, ARR_LINE, docNum, string(arrVal));
+    utilResultString = util.formAttrValueStr(attributesDict, ARR_NET, docNum, string(arrNet));
+    utilResultString = util.formAttrValueStr(attributesDict, PROMO_DISC_PERCENT, docNum, string(util.getFloatAttribute(floatsDict, docNum, DELIMITER, PROMO_DISC_PERCENT)));
+    utilResultString = util.formAttrValueStr(attributesDict, PROMO_CODE, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, PROMO_CODE));
+    utilResultString = util.formAttrValueStr(attributesDict, PROMO_DETAILS, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, PROMO_DETAILS));
+    utilResultString = util.formAttrValueStr(attributesDict, PROMO_DETAILS_STR, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, PROMO_DETAILS_STR));
+    utilResultString = util.formAttrValueStr(attributesDict, ADDL_DISC_DISALLOWED, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, ADDL_DISC_DISALLOWED));
+    utilResultString = util.formAttrValueStr(attributesDict, TERM_BASED_DISC, docNum, string(util.getFloatAttribute(floatsDict, docNum, DELIMITER, TERM_BASED_DISC)));
+    utilResultString = util.formAttrValueStr(attributesDict, "currencySymbol_line", docNum, CURRENCY_SYMBOL);
+    
+    if(util.getStringAttribute(stringsDict, pi, DELIMITER, PI_ITEM_TYPE) == BASE_FEE){
+        utilResultString = util.formAttrValueStr(attributesDict, RAMP_PLAN_DETAIL, docNum, lineItemRampPlan);
+    }
+    
+    if(pi == "36999" OR pi == "437668"){ //Invoice Check Payments force one ramp at 0 transactions. CSYS-51118. KA 10-9-2015
+        utilResultString = util.formAttrValueStr(attributesDict, RAMP_PLAN_DETAIL, docNum, LINE_RAMP_CONSTANT);
+    }
+
+    utilResultString = util.formAttrValueStr(attributesDict, RAMP_PLAN_OVERRIDE, docNum, rampPlanOverride);
+    utilResultString = util.formAttrValueStr(attributesDict, PROMO_PRICE, docNum, string(promoPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, TERM_BASED_PRICE, docNum, string(termBasedPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_TERM_BASED_PRICE, docNum, string(extTermBasedPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, BILLING_EXT_NET_PRICE, docNum, string(billingExtNetPrice));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_NET_PER_BILLING_PERIOD, docNum, string(extNetPerBillingPeriod));
+    utilResultString = util.formAttrValueStr(attributesDict, NUM_TRANSACTIONS_PER_BILLING_PERIOD, docNum, string(numTransactionsPerBillingPeriod));
+    //Line item result string - part custom field attributes
+    utilResultString = util.formAttrValueStr(attributesDict, PO_ID, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, PO_ID));
+    //CSYS-83106 LN. 7/20/2017
+    utilResultString = util.formAttrValueStr(attributesDict, ONE_DAY_SUB, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, ONE_DAY_SUB));
+    utilResultString = util.formAttrValueStr(attributesDict, PO_NAME, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, PO_NAME));
+    utilResultString = util.formAttrValueStr(attributesDict, PO_START_DATE, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, PO_START_DATE));
+    utilResultString = util.formAttrValueStr(attributesDict, PO_END_DATE, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, PO_END_DATE));
+    utilResultString = util.formAttrValueStr(attributesDict, PI_ITEM_TYPE, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, PI_ITEM_TYPE));
+    utilResultString = util.formAttrValueStr(attributesDict, USAGE_QUALIFCATION_GROUP, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, USAGE_QUALIFCATION_GROUP));
+    utilResultString = util.formAttrValueStr(attributesDict, TERM_OF_COMMITMENT, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, TERM_OF_COMMITMENT));
+    utilResultString = util.formAttrValueStr(attributesDict, EDITION, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, EDITION));
+    utilResultString = util.formAttrValueStr(attributesDict, PARAMETER_ID, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, PARAMETER_ID));
+    utilResultString = util.formAttrValueStr(attributesDict, RAMP_FLAG, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, RAMP_FLAG));
+    utilResultString = util.formAttrValueStr(attributesDict, SPECIAL_WORKFLOW_FLAG, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, SPECIAL_WORKFLOW_FLAG));
+    utilResultString = util.formAttrValueStr(attributesDict, UOM_TYPE, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, UOM_TYPE));
+    utilResultString = util.formAttrValueStr(attributesDict, ROLL_UP, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, ROLL_UP));
+    utilResultString = util.formAttrValueStr(attributesDict, UOM_BLOCK, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, UOM_BLOCK));
+    utilResultString = util.formAttrValueStr(attributesDict, BUNDLE_FLAG, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, BUNDLE_FLAG));
+    utilResultString = util.formAttrValueStr(attributesDict, PO_CATEGORY, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, PO_CATEGORY));
+    utilResultString = util.formAttrValueStr(attributesDict, MODEL_HAS_GROUPING, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, MODEL_HAS_GROUPING));
+    utilResultString = util.formAttrValueStr(attributesDict, SUBSCRIP_ID, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, SUBSCRIP_ID)); //CASE 121961
+    utilResultString = util.formAttrValueStr(attributesDict, PACKAGE_ID, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, PACKAGE_ID));
+    utilResultString = util.formAttrValueStr(attributesDict, BUNDLE_ID, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, BUNDLE_ID));
+    utilResultString = util.formAttrValueStr(attributesDict, IS_GROUPED, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, IS_GROUPED));
+    utilResultString = util.formAttrValueStr(attributesDict, UNIT_OR_FIXED, docNum, util.getStringAttribute(stringsDict, pi, DELIMITER, UNIT_OR_FIXED));
+    utilResultString = util.formAttrValueStr(attributesDict, CORE_OFFERING, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, CORE_OFFERING));
+    utilResultString = util.formAttrValueStr(attributesDict, IMPLEMENTATION_METHOD, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, IMPLEMENTATION_METHOD));
+    utilResultString = util.formAttrValueStr(attributesDict, IS_TRANS_OVERRIDDEN, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, IS_TRANS_OVERRIDDEN));
+    utilResultString = util.formAttrValueStr(attributesDict, TIER_CHANGE, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, TIER_CHANGE));
+    utilResultString = util.formAttrValueStr(attributesDict, USE_CUSTOM_PRICE, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, USE_CUSTOM_PRICE));
+    utilResultString = util.formAttrValueStr(attributesDict, RAMP_PLAN_MESSAGE, docNum, rampPlanMessage);
+    utilResultString = util.formAttrValueStr(attributesDict, "promotionSFDCCode_line", docNum, promoCodeNewTranslateStr);
+    utilResultString = util.formAttrValueStr(attributesDict, LIST_PRICE_NON_UNIFIED, docNum, string(listPriceNonUnified));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_LIST_PRICE_NON_UNIFIED, docNum, string(extListPriceNonUnified));
+    utilResultString = util.formAttrValueStr(attributesDict, LIST_PRICE_NON_UNIFIED_USD, docNum, string(listPriceNonUnifiedUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, EXT_LIST_PRICE_NON_UNIFIED_USD, docNum, string(extListPriceNonUnifiedUSD));
+    utilResultString = util.formAttrValueStr(attributesDict, CORE_HAS_SETUP, docNum, util.getStringAttribute(stringsDict, parentDocNum, DELIMITER, CORE_HAS_SETUP));
+    utilResultString = util.formAttrValueStr(attributesDict, CIP_SETUP_FEE, docNum, string(cIPSetupFee));//CSYS-96801 (LN. 8-23-2019)
+    utilResultString = util.formAttrValueStr(attributesDict, CIP_PRODUCT, docNum, cIPProduct);//CSYS-96801 (LN. 8-23-2019)
+    
+    //CSYS-80655 LN. 4/26/17 Retrieving attributes to set the NON_CORE_HAS_SETUP flag accordingly
+    poID2 = util.getStringAttribute(stringsDict, docNum, DELIMITER, PO_ID);
+    nonCoreHasSetup = util.getStringAttribute(stringsDict, poID2, DELIMITER, NON_CORE_HAS_SETUP);
+    //CSYS-80655 LN.4/26/17 Error handling if NON_CORE_HAS_SETUP is blank set to false
+    if(nonCoreHasSetup == TRUE_STR){
+        utilResultString = util.formAttrValueStr(attributesDict, NON_CORE_HAS_SETUP, docNum, nonCoreHasSetup);
+    } else {
+        utilResultString = util.formAttrValueStr(attributesDict, NON_CORE_HAS_SETUP, docNum, FALSE_STR);
+    }
+
+
+    utilResultString = util.formAttrValueStr(attributesDict, IS_UNITBASED, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, IS_UNITBASED));
+    utilResultString = util.formAttrValueStr(attributesDict, IS_PRODUCTBASED, docNum, util.getStringAttribute(stringsDict, docNum, DELIMITER, IS_PRODUCTBASED));//CSYS-94381
+    
+    
+    /* Maximum discounted line item, gruoped by Item Type 31-MAY-12 Addition */
+    //itemType = util.getStringAttribute(stringsDict, pi, DELIMITER, PI_ITEM_TYPE);
+    
+    /*if (itemType <>"") {
+        currItem = string[] {string(discountPercent),desc};
+        if (containskey(maxItemType,itemType)) {
+            tmpItem = get(maxItemType,itemType);
+            if (isnumber(tmpItem[0]) and isnumber(currItem[0])) {
+                if (atof(currItem[0]) > atof(tmpItem[0])) {
+                    put(maxItemType,itemType,currItem);
+                }
+            }
+        }else {
+            put(maxItemType,itemType,currItem);
+        }
+    }*/
+    /* End Maximum discounted line item block */
+    //add on related - start
+    //build add on related values:
+    //CSYS-83106 LN. 7/20/2017 -- Not being used, commented out to make more room in Pricing
+    // lineResult = "";
+
+    // if (sizeofarray(lineResultArray) > 0) {
+    //  lineResult = join(lineResultArray, "");
+    // }
+
+    //Append to global result string array
+    //CSYS-83106 LN. 7/20/2017 -- Not being used, commented out to make more room in Pricing
+    //append(finalResultArray, lineResult);
+    /*if (debug) {
+        printTempVal = util.printDebug("description", desc, 1);
+        printTempVal = util.printDebug("transactions", string(trxns), 1);
+        printTempVal = util.printDebug("previous transactions", string(trxns), 1);
+        printTempVal = util.printDebug("isTransOverridden", isTransOverridden, 1);
+        printTempVal = util.printDebug("isGrouped", isGrouped, 1);
+        printTempVal = util.printDebug("tierPrice", string(tierPrice), 1);
+        printTempVal = util.printDebug("extTierPrice", string(extTierPrice), 1);
+        printTempVal = util.printDebug("productBasedPrice", string(productBasedPrice), 1);
+        printTempVal = util.printDebug("extProductBasedPrice", string(extProductBasedPrice), 1);
+        printTempVal = util.printDebug("listPrice", string(listPrice), 1);
+        printTempVal = util.printDebug("extListPrice", string(extListPrice), 1);
+        printTempVal = util.printDebug("discount", string(disc), 1);
+        printTempVal = util.printDebug("discountType", discountType, 1);
+        printTempVal = util.printDebug("discountAmount", string(discountAmount), 1);
+        printTempVal = util.printDebug("discountPercent", string(discountPercent), 1);
+        printTempVal = util.printDebug("netPriceEach", string(netPriceEach), 1);
+        printTempVal = util.printDebug("extendedNetPrice", string(extendedNetPrice), 1);
+        printTempVal = util.printDebug("lineResult", lineResult, 1);
+    }*/
+}
+//CSYS-94244 (LN. 11-29-2018) Populate the triggerDict to indicate if there is a Partner Discount on the Account
+if(NOT isnull(acctPartnerDiscount) AND acctPartnerDiscount == 0){
+    put(triggerDict, "partnerDiscount", FALSE_STR);
+}
+else {
+    put(triggerDict, "partnerDiscount", TRUE_STR);
+}
+
+//CSYS-81229 LN. 5/8/2017 Retrieving the total Base Fee Discount Amount to deduce any amount from a Partner Discount
+ttlBaseDiscountAmount = get(totalsDict, "totalBaseDiscountAmount");
+totalBaseDiscountAmnt = ttlBaseDiscountAmount - basePartnerDiscTotal;
+//Taking the total Base Fee Discount Amount and adding as an approval criteria for GM/EVP
+put(triggerDict, "totalBaseDiscountAmount", string(totalBaseDiscountAmnt));
+
+//CSYS-93250
+totalBaseDiscountPercent = 0.0;
+totalSetupDiscountPercent = 0.0;
+totalIncDiscountPercent = 0.0;
+totalPreProdDiscountPercent = 0.0;
+
+if (totalBaseFeeList <> 0.0){
+    totalBaseDiscountPercent = ((totalBaseFeeList - totalBaseFeeNet)/totalBaseFeeList)*100;
+}
+
+if (totalSetupFeeList <> 0.0){
+    totalSetupDiscountPercent = ((totalSetupFeeList - totalSetupFeeNet)/totalSetupFeeList)*100;
+}
+
+if (totalPreProductionFeeList <> 0.0){
+    totalPreProdDiscountPercent = ((totalPreProductionFeeList - totalPreProductionFeeNet)/totalPreProductionFeeList)*100;
+}
+
+if (totalIncrFeeList <> 0.0){
+    totalIncDiscountPercent = ((totalIncrFeeList - totalIncrFeeNet)/totalIncrFeeList)*100;
+}
+
+if(multiRampFlag and quoteType_quote == ADD_ON){ //for CSYS-53776 to conditionally show a ramp accuracy warning message
+    utilResultString = util.formAttrValueStr(attributesDict, "multiRampFlag_quote", QUOTE_DOC_NUM, TRUE_STR); 
+}
+else{
+    utilResultString = util.formAttrValueStr(attributesDict, "multiRampFlag_quote", QUOTE_DOC_NUM, FALSE_STR); 
+}
+
+if(greaterThanFourPromos){ //for CSYS-53658 to strict more than 4 promos on a single line item
+    utilResultString = util.formAttrValueStr(attributesDict, PROMO_VALIDATION_TRIGGER, QUOTE_DOC_NUM, TRUE_STR);
+}
+else{
+    utilResultString = util.formAttrValueStr(attributesDict, PROMO_VALIDATION_TRIGGER, QUOTE_DOC_NUM, FALSE_STR);
+}
+
+//CSYS-93097 (LN. 9-6-2018) Adding this logic to Pricing Misc, instead of Revert to Default - attribute needed two saves to update correctly with the Revert to Default.
+rez = bmql("SELECT currencyCode, conversionRate FROM currencyData WHERE currencyCode = $quoteCurrency_quote");
+    
+for entry in rez {
+    rate = get(entry, "conversionRate");
+    convertedArrNet = totalArrNet/atof(rate);
+    convertedArrNetStr = formatascurrency(convertedArrNet, "USD");
+}
+
+//Return quote attributes
+utilResultFloat = util.getSelectAccessLevelFee(floatsDict, DELIMITER);
+
+selectAccessLevel1Fee = util.getFloatAttribute(floatsDict, QUOTE_DOC_NUM, DELIMITER, LEVEL1FEE);
+selectAccessLevel2Fee = util.getFloatAttribute(floatsDict, QUOTE_DOC_NUM, DELIMITER, LEVEL2FEE);
+selectAccessLevel3Fee = util.getFloatAttribute(floatsDict, QUOTE_DOC_NUM, DELIMITER, LEVEL3FEE);
+selectAccessLevel4Fee = util.getFloatAttribute(floatsDict, QUOTE_DOC_NUM, DELIMITER, LEVEL4FEE);
+rampValidationMessage = util.getStringAttribute(stringsDict, QUOTE_DOC_NUM, DELIMITER, RAMP_MESSAGE);
+
+utilResultString = util.formAttrValueStr(attributesDict, "totalArrNetUSD_quote", QUOTE_DOC_NUM, convertedArrNetStr);
+utilResultString = util.formAttrValueStr(attributesDict, "totalArrNet_quote", QUOTE_DOC_NUM, string(totalArrNet));
+put(triggerDict, "totalArrNet", string(totalArrNet)); //CSYS-51758. KA. 12-3-2015.
+put(triggerDict, "totalArrList", string(totalArrList)); //CSYS-84787 LN. 09-01-2017. Updating CFO approval trigger to look at totalARRList instead of totalARRNet
+utilResultString = util.formAttrValueStr(attributesDict, "totalArrList_quote", QUOTE_DOC_NUM, string(totalArrList));
+utilResultString = util.formAttrValueStr(attributesDict, "totalListPrice_quote", QUOTE_DOC_NUM, string(totalExtendedListPrice));
+utilResultString = util.formAttrValueStr(attributesDict, "totalPromoDiscounts_quote", QUOTE_DOC_NUM, string(totalPromoDiscounts));
+utilResultString = util.formAttrValueStr(attributesDict, "totalLineItemDiscounts_quote", QUOTE_DOC_NUM, string(totalLineItemDiscounts));
+utilResultString = util.formAttrValueStr(attributesDict, "totalNetPrice_quote", QUOTE_DOC_NUM, string(totalExtendedNetPrice));
+utilResultString = util.formAttrValueStr(attributesDict, "total_quote", QUOTE_DOC_NUM, string(totalExtendedNetPrice));
+utilResultString = util.formAttrValueStr(attributesDict, "invalidPromotionMessage_quote", QUOTE_DOC_NUM, invalidPromoMessage);
+utilResultString = util.formAttrValueStr(attributesDict, "applicablePromotions_quote", QUOTE_DOC_NUM, applicablePromotions);
+utilResultString = util.formAttrValueStr(attributesDict, "autoAppliedPromotions_quote", QUOTE_DOC_NUM, autoAppliedPromotions);
+utilResultString = util.formAttrValueStr(attributesDict, "appliedPromotion_quote", QUOTE_DOC_NUM, ultimateAppliedPromos);
+utilResultString = util.formAttrValueStr(attributesDict, "promoCodeDetails_quote", QUOTE_DOC_NUM, promoCodeDetails);
+utilResultString = util.formAttrValueStr(attributesDict, "rampPlanDetails_quote", QUOTE_DOC_NUM, QUOTE_LEVEL_RAMP_PLAN);
+utilResultString = util.formAttrValueStr(attributesDict, "oRGTermNumMonths_quote", QUOTE_DOC_NUM, termNumMonths_quote);
+utilResultString = util.formAttrValueStr(attributesDict, "totalSetupList_quote", QUOTE_DOC_NUM, string(totalSetupFeeList));
+utilResultString = util.formAttrValueStr(attributesDict, "totalSetupNet_quote", QUOTE_DOC_NUM, string(totalSetupFeeNet));
+utilResultString = util.formAttrValueStr(attributesDict, "totalBaseFeeList_quote", QUOTE_DOC_NUM, string(totalBaseFeeList));
+utilResultString = util.formAttrValueStr(attributesDict, "totalBaseFeeNet_quote", QUOTE_DOC_NUM, string(totalBaseFeeNet));
+utilResultString = util.formAttrValueStr(attributesDict, "totalPreprodList_quote", QUOTE_DOC_NUM, string(totalPreProductionFeeList));
+utilResultString = util.formAttrValueStr(attributesDict, "totalPreprodNet_quote", QUOTE_DOC_NUM, string(totalPreProductionFeeNet));
+utilResultString = util.formAttrValueStr(attributesDict, "totalIncrementalList_quote", QUOTE_DOC_NUM, string(totalIncrFeeList));
+utilResultString = util.formAttrValueStr(attributesDict, "totalIncrementalNet_quote", QUOTE_DOC_NUM, string(totalIncrFeeNet));
+//CSYS-93250
+utilResultString = util.formAttrValueStr(attributesDict, "totalBaseDiscountPercent_quote", QUOTE_DOC_NUM, string(totalBaseDiscountPercent));
+utilResultString = util.formAttrValueStr(attributesDict, "totalSetupDiscountPercent_quote", QUOTE_DOC_NUM, string(totalSetupDiscountPercent));
+utilResultString = util.formAttrValueStr(attributesDict, "totalIncDiscountPercent_quote", QUOTE_DOC_NUM, string(totalIncDiscountPercent));
+utilResultString = util.formAttrValueStr(attributesDict, "totalPreProdDiscountPercent_quote", QUOTE_DOC_NUM, string(totalPreProdDiscountPercent));
+
+utilResultString = util.formAttrValueStr(attributesDict, "billingCycleNumber_quote", QUOTE_DOC_NUM, billingCycleNumber);
+utilResultString = util.formAttrValueStr(attributesDict, "priceList_quote", QUOTE_DOC_NUM, PRICELIST);
+utilResultString = util.formAttrValueStr(attributesDict, QUOTE_CURRENCY, QUOTE_DOC_NUM, currencyCode);
+utilResultString = util.formAttrValueStr(attributesDict, COUNTRY_ISO_CODE, QUOTE_DOC_NUM, countryIsoCode);
+utilResultString = util.formAttrValueStr(attributesDict, CONVERSION_RATE, QUOTE_DOC_NUM, string(conversionRate));
+utilResultString = util.formAttrValueStr(attributesDict, "outputDisplayRamp_quote", QUOTE_DOC_NUM, outputDisplayRamp);
+utilResultString = util.formAttrValueStr(attributesDict, LEVEL1FEE, QUOTE_DOC_NUM, string(selectAccessLevel1Fee));
+utilResultString = util.formAttrValueStr(attributesDict, LEVEL2FEE, QUOTE_DOC_NUM, string(selectAccessLevel2Fee));
+utilResultString = util.formAttrValueStr(attributesDict, LEVEL3FEE, QUOTE_DOC_NUM, string(selectAccessLevel3Fee));
+utilResultString = util.formAttrValueStr(attributesDict, LEVEL4FEE, QUOTE_DOC_NUM, string(selectAccessLevel4Fee));
+utilResultString = util.formAttrValueStr(attributesDict, RAMP_MESSAGE, QUOTE_DOC_NUM, rampValidationMessage);
+utilResultString = util.formAttrValueStr(attributesDict, "bSAConcurforceTemplateRequired", QUOTE_DOC_NUM, concurforceExistInQuote); 
+utilResultString = util.formAttrValueStr(attributesDict, "premierTravelTemplateRequired", QUOTE_DOC_NUM, premierTravelExistInQuote);
+utilResultString = util.formAttrValueStr(attributesDict, "clientWebServicesRequired", QUOTE_DOC_NUM, clientWebServiceInQuote); 
+utilResultString = util.formAttrValueStr(attributesDict, "intelligenceRptInQuote", QUOTE_DOC_NUM, intelligenceReportInQuote); 
+utilResultString = util.formAttrValueStr(attributesDict, "meetingMgtInQuote", QUOTE_DOC_NUM, meetMgtInQuote);
+utilResultString = util.formAttrValueStr(attributesDict, "singleCountryExpRequired", QUOTE_DOC_NUM, singleCountryExpExistInQuote);
+utilResultString = util.formAttrValueStr(attributesDict, "multiCountryExpRequired", QUOTE_DOC_NUM, multiCountryExpExistInQuote);
+utilResultString = util.formAttrValueStr(attributesDict, "consultingSessionRequired", QUOTE_DOC_NUM, consultingSessionExistInQuote);
+utilResultString = util.formAttrValueStr(attributesDict, "siteReviewRequired", QUOTE_DOC_NUM, siteReviewExistInQuote);
+utilResultString = util.formAttrValueStr(attributesDict, "siteReviewEliteRequired", QUOTE_DOC_NUM, siteReviewEliteExistInQuote);
+utilResultString = util.formAttrValueStr(attributesDict, "implementationMethods_quote", QUOTE_DOC_NUM, strImpMethod);
+
+put(stringsDict, "actionName", actionName );
+
+utilResultString = util.formAttrValueStr(attributesDict, "totalExistingARR_quote", QUOTE_DOC_NUM, string(QUOTE_TOTAL_EXISTING_ARR));
+utilResultString = util.formAttrValueStr(attributesDict, "quoteTotalSalesARR_quote", QUOTE_DOC_NUM, string(QUOTE_TOTAL_SALES_ARR));
+
+// #############################################################################
+// Set approval sequence
+// #############################################################################
+// Incremental Base Approval Flag Logic - added by ATG 10/25/13
+
+utilResultString = commerce.incrementalBaseApprovalFlag(stringsDict, floatsDict, attributesDict, triggerDict);
+utilResultString = util.formAttrValueStr(attributesDict, "previousOfMonthlyTransactions_quote", QUOTE_DOC_NUM, string(QUOTE_TRANSACTIONS));
+
+if(NOT(isempty(listOfCore))){
+    utilResultString = util.formAttrValueStr(attributesDict, "listOfCoreOffering_quote", QUOTE_DOC_NUM, join(listOfCore,"$$"));
+}else{
+    utilResultString = util.formAttrValueStr(attributesDict, "listOfCoreOffering_quote", QUOTE_DOC_NUM, "");
+}
+
+if(NOT(isempty(listOfIM))) {
+    utilResultString = util.formAttrValueStr(attributesDict, "listOfImplementationMethods_quote", QUOTE_DOC_NUM, join(listOfIM,"$$"));
+}else{
+    utilResultString = util.formAttrValueStr(attributesDict, "listOfImplementationMethods_quote", QUOTE_DOC_NUM, "");
+}
+
+//CALCULATE SALESARR AND NEW APPROVALS BASED ON REVENUE DECREASES//
+aRRandApprovals = commerce.aRRAndApprovals(actionName, triggerDict, attributesDict, stringsDict, floatsDict, docNumList);
+
+//GENERATE SERVICE ACCT IDS// 
+generateServiceAccountIds = commerce.generateServiceAccountIds(stringsDict, attributesDict, isCoreChangedDict, isEditionChangedDict);
+
+
+//CSYS-87441 Part 1 - END (LN. 1/9/2018) 
+
+//Ramp delete upgrade. Quote Ramp Check. KA. CSYS-46488. 7-16-15. Conditionally activate the ramp delete integration.
+deleteSalesforceRamps = false;
+lineRampDeletionFlag = false;
+
+quoteRampFromMonths = util.getXMLNodeValues(QUOTE_LEVEL_RAMP_PLAN, FROM); //This will be a string array, e.g. ["1", "2", "3"]
+
+//CSYS-85376 (LN. If any previous TRXN values is greater than the final ramp number of TRXN, require CFO Approval)
+quoteRampToMonths = util.getXMLNodeValues(QUOTE_LEVEL_RAMP_PLAN, TO); //This will be a string array, e.g. ["1", "2", "and beyond"]
+quoteRampToMonthsTrxn = util.getXMLNodeValues(QUOTE_LEVEL_RAMP_PLAN, RAMP_TRANSACTIONS); //This will be a string array, e.g. ["100", "250", "350"]
+
+if(NOT(isempty(quoteRampToMonths)) AND NOT(isempty(quoteRampToMonthsTrxn)) ){//Safety checks here
+
+    finalRampToMonths = sizeofarray(quoteRampToMonths);
+    finalRampToMonthsIndex = finalRampToMonths - 1;
+
+    finalRampTrxnCnt = 0;
+
+    // Locate the final ramp index and store the value of the final ramp transaction
+    if(quoteRampToMonths[finalRampToMonthsIndex] == "and beyond"){
+        finalRampTrxn = quoteRampToMonthsTrxn[finalRampToMonthsIndex];
+
+        if(isnumber(finalRampTrxn)){
+            finalRampTrxnCnt = util.customAtoi(finalRampTrxn, 0);
+        }
+    }
+
+    // Loop through the rest of the transaction array at the quote level and assess their transaction value
+    for eachQuoteRampToMonthsTrxn in quoteRampToMonthsTrxn{
+
+        trxnCount = 0;
+
+        if(isnumber(eachQuoteRampToMonthsTrxn)){
+            trxnCount = util.customAtoi(eachQuoteRampToMonthsTrxn, 0);
+        }
+
+        // If any previous transactions are greater than the final ramp, trigger approvals
+        if(trxnCount > finalRampTrxnCnt){
+            put(triggerDict, "previousRampGreaterThanFinalRampQuote", TRUE_STR);
+        }
+    }
+}
+
+//CSYS-85376 END
+
+utilResultString = util.formAttrValueStr(attributesDict, QUOTE_RAMP_FROM_MONTHS, QUOTE_DOC_NUM, join( quoteRampFromMonths, DELIMITER )); //ramp delete integration upgrade. KA 10-5-15
+prevNumOfQuoteRamps = sizeofarray( split(quoteRampFromMonths_quote, DELIMITER ));
+
+if(prevNumOfQuoteRamps > 1 AND quoteRampFromMonths_quote <> "" AND NOT isempty(quoteRampFromMonths)){
+    if(quoteRampFromMonths_quote <> join(quoteRampFromMonths, DELIMITER)){
+        deleteSalesforceRamps = true;
+    }
+}
+    
+//Billing Exception Global variables:
+annualBundleBillingExceptionStr = "";
+
+timeAndMaterialsRes = BMQL("SELECT POID FROM timeMaterialExcep");// CSYS-95855  
+
+ // CSYS-95855 - Looping through the record set returned from our Query 
+for timeAndMaterialPO in timeAndMaterialsRes { // For each table entry in the entire table  
+    timeAndMaterialsPO = get(timeAndMaterialPO, "POID");// Retrieve each POID from the table    
+
+     append(timeAndMaterialsPoArr, timeAndMaterialsPO);// Add each POID to our array (to be leveraged later in our logic)   
+}
+
+//CSYS-83676 Moved from pricing
+// Set the Submitted Date and Approved Date depending on what action is running the pricing function
+submittedDate = submittedDate_quote;
+approvedDate = approvalDate_quote;
+expirationDate = expirationDate_quote;
+
+if (containskey(stringsDict, "actionName")){
+    if ( lower(get(stringsDict, "actionName")) == "request approval" OR lower(get(stringsDict, "actionName")) == "submit" ){
+        // If we aren't approving or have submitted for approval with a reason, set the submitted and expiration dates.
+        if( _system_current_step_var == "start_step" or _system_current_step_var == "pending_process" ){
+            submittedDate = currentDateTextFull;
+            expirationDate = datetostr(adddays(getdate(), EXPIRATION_ADDITIONAL_DAYS ) );
+        }
+        if ( lower(get(stringsDict, "actionName")) == "submit" ){
+            approvedDate = currentDateTextFull;
+        }
+    }
+}
+
+utilResultString = util.formAttrValueStr(attributesDict, "submittedDate_quote", QUOTE_DOC_NUM, submittedDate);
+utilResultString = util.formAttrValueStr(attributesDict, "approvalDate_quote", QUOTE_DOC_NUM, approvedDate);
+utilResultString = util.formAttrValueStr(attributesDict, "expirationDate_quote", QUOTE_DOC_NUM, expirationDate);
+utilResultString = util.formAttrValueStr(attributesDict, "selectedPromotions_quote", QUOTE_DOC_NUM, replace(externalPromotion_quote, "~", "@@")); 
+//utilResultString = util.formAttrValueStr(attributesDict, "crossModelIntelligenceConstraintTrigger_quote", QUOTE_DOC_NUM, string(intelligenceConstaintArrtibute));
+//utilResultString = util.formAttrValueStr(attributesDict, "crossModelIntelligenceConstraintConfigTrig_quote", QUOTE_DOC_NUM, string(configTrigger));
+utilResultString = util.formAttrValueStr(attributesDict, "firstIterationExecuted_quote", QUOTE_DOC_NUM, TRUE_STR);
+
+//get val for numberOfTransactionMultiplesByMQY 
+if (billingCycle_quote == "Monthly"){
+    defaultForNumberOfTransactionsMultiples = numCommittedTransaction_quote * 1;
+}elif(billingCycle_quote == "Quarterly"){
+    defaultForNumberOfTransactionsMultiples = numCommittedTransaction_quote * 3;
+//CSYS-90719, Phil S. 02/06/2020 (09/30/2019), Semi-Annually 
+}elif(billingCycle_quote == "Semi-Annually"){
+    defaultForNumberOfTransactionsMultiples = numCommittedTransaction_quote * 6;
+//  
+}elif(billingCycle_quote == "Annually"){
+    defaultForNumberOfTransactionsMultiples = numCommittedTransaction_quote * 12;
+}
+
+utilResultString = util.formAttrValueStr(attributesDict, "numberOfTransMultipleBy13Or12MQY_quote", QUOTE_DOC_NUM, string(defaultForNumberOfTransactionsMultiples));
+
+if(systematizedContract_quote <> true OR (systematizedContract_quote == true AND (bsaType_quote <> "Standard" OR contractType_quote <> "Standard"))){
+    utilResultString = util.formAttrValueStr(attributesDict, "systematizedContract_quote", QUOTE_DOC_NUM, FALSE_STR);
+}
+
+if(referralDateText_quote <> "") {
+    if(find(referralDateText_quote, "/") <> -1) {
+        utilResultString = util.formAttrValueStr(attributesDict, "referralDate_quote", QUOTE_DOC_NUM, datetostr(strtojavadate(referralDateText_quote,  DATE_FORMAT_PREFERENCE_SLASH)));
+    } else {
+        utilResultString = util.formAttrValueStr(attributesDict, "referralDate_quote", QUOTE_DOC_NUM, datetostr(strtojavadate(referralDateText_quote, DATE_FORMAT_PREFERENCE_HYPHEN)));
+    }
+}
+//CSYS-83676 - End
+
+//CSYS-82718 (KA. 8-17-2017): dict and array to address the sorting issue with adding the same pi multiple times:
+sort_PB_PartsDict = dict("integer");
+sortPartArray = integer[];
+//CSYS-95436
+assetCoreNBDDict = dict("string");
+//uniqueCoreBaseDict = dict("string");
+coreNBDDict = dict("string");//CSYS-87864 (LN. 12/4/2017)
+//CSYS-91306 (LN. 5-29-2018) Leveraged for the State and Local (stateAndLocal_quote) attribute population for mult-core quotes
+preDefinedPackageArr = string[];
+
+
+//CSYS-87864 (LN. 12/4/2017) Store the Next Bill Date for the Core Service to be used on our CREATE/MODIFY's
+for item in line_process{
+    docNum = item._document_number;
+    parentDocNum = item._parent_doc_number;
+    assetString = item.assetString_line;
+    assetAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+    poCat = item.poCategory_line;
+    pid = item._part_number;
+    poID = item._part_custom_field1;
+    itemType = item._part_custom_field8;
+    listPriceNonUnified = util.getFloatAttribute(floatsDict, docNum, DELIMITER, LIST_PRICE_NON_UNIFIED );//CSYS-97771
+    isPartOfPackage = item.isPartOfPackage_line;//CSYS-97771
+    rollUpFlag = item.rollUp_line;//CSYS-97771
+
+    //CSYS-97771 (O.M. & L.N. 1-10-2020)
+    if(poID == "6382"){//Is Additionl Premium Support present?
+        utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum, DELIMITER, "additionalPremiumSupportPresent", docNum );
+    }
+    //Next track if there's a Core w/ a Setup Line
+    if(poCat == CORE_SERVICE AND itemType == SETUP_FEE){
+
+        if(rollUpFlag == "Y"){
+            if(listPriceNonUnified == 0.0){
+                utilResultFlag = util.putStringAttribute( stringsDict, parentDocNum, DELIMITER, "coreHasZeroAmountSetupFee", docNum );  
+            }
+        }
+        else {
+            utilResultFlag = util.putStringAttribute( stringsDict, pid, DELIMITER, "coreHasMultipleSetupFees", docNum );
+        } 
+    }
+    //Next track any bundled Ext. Services
+    if(poCat == EXT_SERVICE AND itemType == SETUP_FEE AND isPartOfPackage){
+        utilResultFlag = util.putStringAttribute( stringsDict, pid, DELIMITER, "extendedServiceHasSetup", parentDocNum );
+        utilResultFlag = util.putStringAttribute( stringsDict, pid, DELIMITER, "extendedServiceHasSetupDocNum", docNum );
+    }
+
+    if(assetString <> ""){ 
+        if ( containskey( assetBillingDict, pid ) AND poCat == CORE_SERVICE ){
+            nextBillingDate = get( assetBillingDict, pid );
+            if(assetAction == TERMINATE_ACTION){
+                put(coreNBDDict, parentDocNum, nextBillingDate);
+            }//CSYS-95436
+            else{
+                put(assetCoreNBDDict, parentDocNum, nextBillingDate);
+            }
+        }
+    }
+
+    //CSYS-87914 (KA. 12-5-2017): map Incremental Doc Num to the poID:
+    if(itemType == INCREMENTAL_FEE){
+        utilResultFlag = util.putStringAttribute( stringsDict, poID, DELIMITER, "IncDocNumPOMapping", docNum );
+    }
+
+    //CSYS-91306 (LN. 5-29-2018) Append all Pre-Defined packageds to the preDefinedPackageArr to be leveraged in the next loop
+    preDefinedPackage = util.getConfigValue(item._config_attr_info, "preDefinedPackages_concur");//Reach over into configuration and determine which Pre-Defined packages have been applied to the quote
+
+    if(preDefinedPackage <> "") {//If a Pre-Defined package exists, append it to the preDefinedPackageArr to be used in the next loop
+        append(preDefinedPackageArr, preDefinedPackage);
+    }
+
+    //CSYS-95855 If a Time & Materials Product is CREATE, write to the line-level flag and populate timeMaterialsBillingException_quote 
+        if(findinarray(timeAndMaterialsPoArr, poID) <> -1 AND assetAction == CREATE_ACTION){//If the POID on the BMI Quote is found in our 'timeAndMaterialsPoArr', indicating this is a T&M Product, continue  
+            //Write to each product line TRUE_STR (the 'timeMaterialsFlag_line' attribute should now reflect 'true' in BMI) 
+            utilResultString = util.formAttrValueStr(attributesDict, TIME_AND_MATERIALS_FLAG, docNum, TRUE_STR);    
+            timeAndMaterialsBillingException = "Time & Materials products on the quote.";   
+        }      
+}
+
+//CSYS-95855    
+utilResultString = util.formAttrValueStr(attributesDict, TIME_AND_MATERIALS_BILLING_EXCEPTION, QUOTE_DOC_NUM, timeAndMaterialsBillingException);
+
+//CSYS-96721 (SN. 08/2019)
+if(appliedPromotion_quote <> "" AND NOT(isnull(appliedPromotion_quote))){
+    promosSelected = split(appliedPromotion_quote, "#^#");
+    for promo in promosSelected {
+    //CSYS-90719, Phil S. 02/06/2020 (09/30/2019), Semi-Annually
+        //if( promo == "SMNINV120NEW" AND (lower(billingCycle_quote) == "annually" OR lower(billingCycle_quote) == "quarterly")){
+        if( promo == "SMNINV120NEW" AND (lower(billingCycle_quote) == "annually" OR lower(billingCycle_quote) == "quarterly" OR lower(billingCycle_quote) == "Semi-Annually")){
+    //
+            promotionBillingException = "A 120 Day Promotion has been applied to the Quote.";
+        }
+    }
+}  
+//CSYS-96721 (SN. 08/2019)
+utilResultString = util.formAttrValueStr(attributesDict, PROMOTION_BILLING_EXCEPTION, QUOTE_DOC_NUM, promotionBillingException);
+
+//NEXT BILLING DATE TEST LOGIC ADAPTED FROM SUBMIT ORDER//
+//CSYS-88473
+hasQuoteProd = FALSE_STR;
+HAS_PRODUCTS = "hasProducts_quote";
+
+//CSYS-91306 (LN. 5-29-2018) Declaring this outside of the loop to account for when there are no line items attached to the grid, it was only ever being ran when products were present; the attribute did not update back to false if the Core was deleted from the grid entirely.
+stateAndLocalPackage = false;
+preDefinedPackages = "";
+//CSYS-95501
+waivePeriodArray = integer[];
+maxWaivePeriod = 0;
+for item in line_process {
+    docNum = item._document_number;
+    parentDocNum = item._parent_doc_number;
+    pid = item._part_number;
+    poID = item._part_custom_field1;
+    assetString = item.assetString_line;
+    itemType = item.piItemType_line;
+    assetAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+    nextBillingDate = item.nextBillingDate_line;
+    poCat = item.poCategory_line;
+    lineItemRampPlan = util.getStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_DETAIL);
+    lineDesc = item.lineDescription_line;
+    isPartOfPackage = item.isPartOfPackage_line;
+    lineRampFromMonthsGrid = item.lineRampFromMonths_line;
+    seqNum = item._sequence_number;
+    partItemType = item._part_custom_field8;
+    overrideRampPrice = item.overrideRampPrice_line;
+    assetOriginalDiscount = util.getFloatAttribute(floatsDict, docNum, DELIMITER, ASSETS_ORIGINAL_DISCOUNT);//CSYS-89775
+    disc = util.getFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT);// CSYS-96150, SN. 06-2019
+
+    //CSYS-97771 (O.M. & L.N. 1-10-2020)
+    if(containskey(stringsDict, parentDocNum + DELIMITER + "additionalPremiumSupportPresent")){
+        //We know that AP T&M flag needs to be TRUE;
+        tempAdditionalPremiumDocNum = util.getStringAttribute(stringsDict, parentDocNum, DELIMITER, "additionalPremiumSupportPresent");
+        utilResultFlag = util.putStringAttribute(stringsDict, tempAdditionalPremiumDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);
+
+        if(containskey(stringsDict, parentDocNum + DELIMITER + "coreHasZeroAmountSetupFee")){
+            //We know here that the CORE Setup T&M flag needs to be TRUE;
+            tempCoreDocNum = util.getStringAttribute(stringsDict, parentDocNum, DELIMITER, "coreHasZeroAmountSetupFee");
+            utilResultFlag = util.putStringAttribute(stringsDict, tempCoreDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);
+
+            if(containskey(stringsDict, pid + DELIMITER + "coreHasMultipleSetupFees")){
+                //We know that the Core has multiple Setup Lines & T&M needs to be TRUE for all lines;
+                tempManySetupCoreDocNum = util.getStringAttribute(stringsDict, pid, DELIMITER, "coreHasMultipleSetupFees");
+                utilResultFlag = util.putStringAttribute(stringsDict, tempManySetupCoreDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);
+            }
+
+            if(containskey(stringsDict, pid + DELIMITER + "extendedServiceHasSetup")){
+                parentDocNum = util.getStringAttribute(stringsDict, pid, DELIMITER, "extendedServiceHasSetup");
+
+                if(containskey(stringsDict, parentDocNum + DELIMITER + "coreHasZeroAmountSetupFee") AND
+                    containskey(stringsDict, pid + DELIMITER + "extendedServiceHasSetupDocNum")){
+                    //We know that the Ext. Serv has Bundled Setup Lines and the T&M flag needs to be TRUE;
+                    tempExtServiceDocNum = util.getStringAttribute(stringsDict, pid, DELIMITER, "extendedServiceHasSetupDocNum");
+                    utilResultFlag = util.putStringAttribute(stringsDict, tempExtServiceDocNum, DELIMITER, TIME_AND_MATERIALS_FLAG, TRUE_STR);
+                }
+            }
+        }
+    }
+
+    if(NOT(containskey(stringsDict, docNum + DELIMITER + TIME_AND_MATERIALS_FLAG))) {
+        utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, TIME_AND_MATERIALS_FLAG, FALSE_STR);
+    }
+
+    timeAndMaterialsFlag = util.getStringAttribute(stringsDict, docNum, DELIMITER, TIME_AND_MATERIALS_FLAG);
+    utilResultString = util.formAttrValueStr(attributesDict, TIME_AND_MATERIALS_FLAG, docNum, timeAndMaterialsFlag);
+
+
+
+
+    //CSYS-96150, SN. 06-2019 ; Part 1, If on an Add-on quote the existing Core Service, asset Action = MODIFY with a discount greater than the existing asset discount on the Base line only, trigger approval to CFO
+    if (assetAction == MODIFY_ACTION AND itemType == BASE_FEE AND poCat == CORE_SERVICE AND disc > assetOriginalDiscount){
+        put(triggerDict, docNum + "~" + "increasedDiscModifyExistingCoreBase", docNum + "~" + "increasedDiscModifyExistingCoreBase" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+    }
+
+    // print "Lauren here second Pricing Misc";
+    // print lineItemRampPlan;
+    //CSYS-97522 SN. 11-2019
+    /*
+    if( quoteType_quote <> ADD_ON AND NOT(isnull(ultimateAppliedPromos)) AND ultimateAppliedPromos <> ""  AND ownerBU_quote == "SMB BU" AND disc < -50 ){
+        put(triggerDict, "promoWithNegativeDiscSMN", TRUE_STR);
+    }*/
+    //CSYS-97627 and CSYS-97626 SN. 11-2019
+    if (quoteType_quote == "New Business" AND ownerBU_quote == "SMB BU" AND ownerDivision_quote == "US Ent Public Sector"){
+        //CSYS-97627 SN. 11-2019
+        if(find(listOfCoreOffering_quote, "Invoice") <> -1 AND find(listOfCoreOffering_quote, "Expense") <> -1 ){
+            put(triggerDict, "publicSectorMultipleCore", TRUE_STR);
+        }
+        //CSYS-97626 SN. 11-2019
+        termNoMonths = util.customAtoi(termNumMonths_quote, 0);
+        if(termNoMonths < 12){
+            put(triggerDict, "publicSectorContractTermLess12", TRUE_STR);
+        }
+    }
+
+
+    //CSYS-88473
+    if(parentDocNum <> "" AND assetAction <> NONE_ACTION AND hasQuoteProd == FALSE_STR){
+        hasQuoteProd = TRUE_STR;
+    }
+    
+    if(assetString <> ""){ 
+        if ( containskey( assetBillingDict, pid )){
+            nextBillingDate = get( assetBillingDict, pid );
+        }
+    }
+
+    //CSYS-87864 (LN. 12/4/2017)
+    //CSYS-95436
+    if (itemType <> SETUP_FEE){
+        if ( containskey(coreNBDDict, parentDocNum) AND assetAction <> TERMINATE_ACTION){
+            nextBillingDate = get(coreNBDDict, parentDocNum);
+        }
+        elif (containskey(assetCoreNBDDict, parentDocNum) AND assetAction == TERMINATE_ACTION){
+            nextBillingDate = get(assetCoreNBDDict, parentDocNum);
+        }
+    }
+    else{
+        nextBillingDate = "";
+    }
+
+
+    utilResultString = util.formAttrValueStr(attributesDict, "nextBillingDate_line", docNum, nextBillingDate);
+    
+    if (assetAction == TERMINATE_ACTION AND itemType == BASE_FEE AND nextBillingDate <> ""){
+        terminatedDate = nextBillingDate;
+    }
+
+    
+    //Ramp delete upgrade. Line ramp check. CSYS-46488. KA. 10-5-15:
+    lineRampFromMonths = util.getXMLNodeValues(lineItemRampPlan, FROM); //This will be a string array, e.g. ["1", "2", "3"]
+    prevNumOfLineRamps = sizeofarray( split(lineRampFromMonthsGrid, DELIMITER ));
+    rampPlanOverride = util.getStringAttribute(stringsDict, docNum, DELIMITER, RAMP_PLAN_OVERRIDE);
+    
+    if(prevNumOfLineRamps > 1 AND lineRampFromMonthsGrid <> "" AND NOT isempty(lineRampFromMonths)){
+        if(lineRampFromMonthsGrid <> join(lineRampFromMonths, DELIMITER)){
+            lineRampDeletionFlag = true;
+        }
+    }
+    if(rampPlanOverride == TRUE_STR AND sizeofarray(lineRampFromMonths) > 0){ // OC 7.8.2020 - CSYS-99303
+        lineRampDeletionFlag = true;
+    }
+
+    //CSYS-85376 (LN. If any previous TRXN values is greater than the final ramp number of TRXN, require CFO Approval)
+    lineRampToMonths = util.getXMLNodeValues(lineItemRampPlan, TO); //This will be a string array, e.g. ["1", "2", "and beyond"]
+    lineRampToMonthsTrxn = util.getXMLNodeValues(lineItemRampPlan, RAMP_TRANSACTIONS); //This will be a string array, e.g. ["100", "250", "350"]
+
+    if(NOT(isempty(lineRampToMonths)) AND NOT(isempty(lineRampToMonthsTrxn)) AND itemType == BASE_FEE AND rampPlanOverride == TRUE_STR){//Safety checks here, utilizing the rampPlanOverride checkbox so that Quote & Line level doesn't trigger when there is only a Quote Level ramp with higher transactions than the final ramp (as this will inherit the Quote level trigger at the line level)
+        
+        finalLineRampToMonths = sizeofarray(lineRampToMonths);
+        finalLineRampToMonthsIndex = finalLineRampToMonths - 1;
+
+        finalLineRampTrxnCnt = 0;
+
+        // Locate the final ramp index and store the value of the final ramp transaction
+        if(lineRampToMonths[finalLineRampToMonthsIndex] == "and beyond"){
+            finalLineRampTrxn = lineRampToMonthsTrxn[finalLineRampToMonthsIndex];
+            print finalLineRampTrxn;
+
+            if(isnumber(finalLineRampTrxn)){
+                finalLineRampTrxnCnt = util.customAtoi(finalLineRampTrxn, 0);
+            }
+        }
+
+        // Loop through the rest of the transaction array at the line level and assess their transaction value
+        for eachLineRampToMonthsTrxn in lineRampToMonthsTrxn{
+
+            trxnCount = 0;
+
+            if(isnumber(eachLineRampToMonthsTrxn)){
+                trxnCount = util.customAtoi(eachLineRampToMonthsTrxn, 0);
+            }
+
+            // If any previous transactions are greater than the final ramp, trigger approvals
+            if(trxnCount > finalLineRampTrxnCnt){
+                put(triggerDict, docNum + "~" + "previousRampGreaterThanFinalRampLine", docNum + "~" + "previousRampGreaterThanFinalRampLine" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+            }
+        }
+    }
+    //CSYS-85376 END
+
+
+    //CSYS-89775 (LN. 3/12/2018) Take in each line level assetOriginalDiscount to be used in the evaluation in the approvalTriggersTable (all CREATE's will inherently have 0.0)
+    //CSYS-93941 (LN. 12-20-2018) Do not factor in the Model into this logic
+    if(parentDocNum <> "" AND assetAction <> NONE_ACTION AND assetAction <> TERMINATE_ACTION){
+        put(triggerDict, docNum + "~" + "assetDiscount", docNum + "~" + "assetDiscount" + TRIG_KEY_VALUE_DELIM + string(assetOriginalDiscount));
+    }
+        
+
+    //CSYS-56574 provide a unique identifier for multiple base cores. KA. 2-3-2015:
+    if(poCat == CORE_SERVICE AND itemType == BASE_FEE AND assetAction <> TERMINATE_ACTION AND NOT containskey(stringsDict, parentDocNum + "uniqueCoreBaseKey")){
+        utilResultString = util.formAttrValueStr(attributesDict, "uniqueCoreBase_line", docNum, TRUE_STR);
+        put(stringsDict, parentDocNum + "uniqueCoreBaseKey", TRUE_STR);
+    }
+
+    //##########################################################//
+    //#####      Line Level Billing Exception section      #####//
+    //##########################################################//
+
+    //build Annual Bundle Billing Exception Notes. CSYS-65761. KA. 8-17-2016
+    if(billingCycle_quote == "Annually" AND quoteType_quote == ADD_ON AND assetAction == CREATE_ACTION AND poCat <> CORE_SERVICE AND isPartOfPackage){
+        if(find(annualBundleBillingExceptionStr, lineDesc) == -1){ //prevent duplicates
+            annualBundleBillingExceptionStr = annualBundleBillingExceptionStr + lineDesc + ", ";
+        }
+    }
+
+    //CSYS-82718 continued:
+    if(pid <> "" AND partItemType == SETUP_FEE){
+        append(sortPartArray, atoi(pid));
+    }
+
+    //CSYS-91306 (LN. 5-29-2018) If line items are present, and the 'State and Local Government Package' has been applied, update the variable to true
+    if(pid == ""){//Look to the Models only, skip all other line items
+        
+        if(findinarray(preDefinedPackageArr, "State and Local Government") <> -1 ) {//If the 'State and Local Government' Package is being used, set the stateAndLocal_quote attribute to true
+            stateAndLocalPackage = true;
+        }
+    }
+
+     
+    //CSYS-87125 continued:
+    if(util.getStringAttribute( stringsDict, docNum, DELIMITER, PACKAGE_ID ) <> ""){
+        packageId = util.getStringAttribute( stringsDict, docNum, DELIMITER, PACKAGE_ID );
+        put(stringsDict, parentDocNum + DELIMITER + "packageSelectedForModel", packageId);
+    }
+
+    //CSYS-87914 continued:
+    if(partItemType == BASE_FEE AND rampPlanOverride == TRUE_STR AND overrideRampPrice == TRUE_STR){
+        incrementalDocNum = util.getStringAttribute(stringsDict, poID, DELIMITER, "IncDocNumPOMapping");
+        rampDiscountInfo = util.getRampDiscounts(lineItemRampPlan);
+        //get any ramp discounts for the base line item:
+        baseFeeRampDiscountArray = get(rampDiscountInfo, "baseFeeRampDiscountArray");
+        incFeeRampDiscountArray = get(rampDiscountInfo, "incFeeRampDiscountArray");
+        
+        print "rampDiscountInfo here";
+        print rampDiscountInfo;
+        baseFeeRampDiscountFloatArray = float[];
+        incFeeRampDiscountFloatArray = float[];
+        //Convert to float arrays:
+        for val in baseFeeRampDiscountArray{
+        
+            if(isnumber(val)){
+                append(baseFeeRampDiscountFloatArray, atof(val));
+                //CSYS-94311 SN. 10-2019
+                //CSYS-97991
+                /*
+                if(NOT isnull(acctPartnerDiscount) AND acctPartnerDiscount <> 0 AND assetAction == CREATE_ACTION AND acctPartnerDiscount <> atof(val)){
+                    //If the current line discount <> partner discount, trigger soft validation
+                    put(triggerDict, docNum + "~" + "partnerDiscountChange", docNum + "~" + "partnerDiscountChange" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+                }*/
+            }
+        }
+        for val in incFeeRampDiscountArray{
+            if(isnumber(val)){
+                append(incFeeRampDiscountFloatArray, atof(val));
+                //CSYS-94311 SN. 10-2019
+                //CSYS-97991
+                /*
+                if(NOT isnull(acctPartnerDiscount) AND acctPartnerDiscount <> 0 AND assetAction == CREATE_ACTION AND acctPartnerDiscount <> atof(val)){
+                    //If the current line discount <> partner discount, trigger soft validation
+                    put(triggerDict, docNum + "~" + "partnerDiscountChange", docNum + "~" + "partnerDiscountChange" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+                }*/
+            }
+        }
+
+        //Get the highest value (discount) from each array:
+        highestBaseFeeRampDiscount = 0.0;
+        //lowestBaseFeeRampDiscount = 0.0;//CSYS-97522 SN. 11-2019
+        highestIncFeeRampDiscount = 0.0;
+        //lowestIncFeeRampDiscount = 0.0;//CSYS-97522 SN. 11-2019
+        if(NOT isempty(baseFeeRampDiscountFloatArray)){
+            highestBaseFeeRampDiscount = max(baseFeeRampDiscountFloatArray);
+            //lowestBaseFeeRampDiscount = min(baseFeeRampDiscountFloatArray);//CSYS-97522 SN. 11-2019
+        }
+        if(NOT isempty(incFeeRampDiscountFloatArray)){
+            highestIncFeeRampDiscount = max(incFeeRampDiscountFloatArray);
+            //lowestIncFeeRampDiscount = min(incFeeRampDiscountFloatArray);//CSYS-97522 SN. 11-2019
+        }
+
+        //Overwrite the lineDiscountPercent values in the triggerDict:
+        if(NOT(isnull(highestBaseFeeRampDiscount)) AND highestBaseFeeRampDiscount > 0){
+            //CSYS-96150, SN. 06-2019 ; Part 1, If on an Add-on quote the existing Core Service, asset Action = MODIFY with a discount greater than the existing asset discount on the Base line only, trigger approval to CFO
+            if (assetAction == MODIFY_ACTION AND poCat == CORE_SERVICE AND highestBaseFeeRampDiscount > assetOriginalDiscount){
+                put(triggerDict, docNum + "~" + "increasedDiscModifyExistingCoreBase", docNum + "~" + "increasedDiscModifyExistingCoreBase" + TRIG_KEY_VALUE_DELIM + TRUE_STR);
+            }
+
+            //check if core and modify and > than asset discount
+            put(triggerDict, docNum + "~" + "lineDiscountPercent", docNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(highestBaseFeeRampDiscount));
+        }
+        if(NOT(isnull(highestIncFeeRampDiscount)) AND highestIncFeeRampDiscount > 0){
+            put(triggerDict, incrementalDocNum + "~" + "lineDiscountPercent", incrementalDocNum + "~" + "lineDiscountPercent" + TRIG_KEY_VALUE_DELIM + string(highestIncFeeRampDiscount));
+        }
+        //CSYS-97522 SN. 11-2019
+        /*
+        if(quoteType_quote <> ADD_ON AND NOT(isnull(lowestBaseFeeRampDiscount)) AND NOT(isnull(ultimateAppliedPromos)) AND ultimateAppliedPromos <> ""  AND ownerBU_quote == "SMB BU" AND lowestBaseFeeRampDiscount < -50 ){
+                put(triggerDict, "promoWithNegativeDiscSMN", TRUE_STR);
+        }
+        //CSYS-97522 SN. 11-2019
+        if(quoteType_quote <> ADD_ON AND NOT(isnull(lowestIncFeeRampDiscount)) AND NOT(isnull(ultimateAppliedPromos)) AND ultimateAppliedPromos <> ""  AND ownerBU_quote == "SMB BU" AND lowestIncFeeRampDiscount < -50 ){
+                put(triggerDict, "promoWithNegativeDiscSMN", TRUE_STR);
+        }*/
+        //CSYS-95501
+        index = 0;
+        howManyRamps = util.getIntegerAttribute( integersDict, docNum, DELIMITER, NUMBER_RAMP_ENTRIES );
+        rollup = util.getStringAttribute(stringsDict, docNum, DELIMITER, ROLL_UP );
+        isGrouped = util.getStringAttribute( stringsDict, docNum, DELIMITER, IS_GROUPED );
+        rampPrice = util.getXMLNodeValues(lineItemRampPlan, "baseFeeNonUnifiedNet");
+        monthsWaived = 0;
+        if ( howManyRamps > 1 AND ( (poCat == CORE_SERVICE AND rollup == "Y") OR isGrouped <> TRUE_STR ) AND assetAction <> TERMINATE_ACTION AND assetAction <> NONE_ACTION){
+            if ( NOT(isempty(lineRampToMonths)) ){
+                for ramp in lineRampToMonths{
+                    rampCyclePrice = getcurrencyvalue(rampPrice[index]);
+                    if ( isnumber(ramp) ){
+                        if ( atoi(ramp) <= 12 AND rampCyclePrice == 0.0){
+                            if (index == 0){
+                                monthsWaived = atoi(ramp);
+                            }else{
+                                monthsWaived = monthsWaived + ( atoi(ramp) - atoi(lineRampToMonths[index - 1]) );
+                            }
+                        }
+                    }
+                    index = index + 1;
+                }
+                if (monthsWaived <> 0){
+                    append(waivePeriodArray, monthsWaived);
+                }
+            }
+        }
+    }
+}
+monthlyRampWaivePeriod = 0;
+if(NOT isempty(waivePeriodArray)){
+    maxWaivePeriod = max(waivePeriodArray);
+    if (maxWaivePeriod <> 0 /*AND maxWaivePeriod > waivePeriod*/){
+        monthlyRampWaivePeriod = maxWaivePeriod;//CSYS-97404
+    }
+}
+put(triggerDict, "monthlyRampWaivePeriod", string(monthlyRampWaivePeriod));//CSYS-97404
+
+//CSYS-93618 (LN. 10-8-2018) For all New Business, SMN - United States quotes with a Professional Edition requires approvals up and through SVP
+impMethods = split(listOfImplementationMethods_quote, "$$");
+
+if(quoteType_quote == NEW_BIZ AND ownerBU_quote == "SMB BU" AND ownerMarket_quote == "United States" AND findinarray(impMethods, "Professional") <> -1){
+    put(triggerDict, "smbUnitedStatesProfessionalEdition", TRUE_STR);
+}
+//CSYS-98419 SN. 02/2020
+/*
+if(quoteType_quote == NEW_BIZ AND ownerDivision_quote == "US Ent New Business" AND ownerTeam_quote == "US ENT Digital NB" AND findinarray(impMethods, "Professional") <> -1 ){
+    put(triggerDict, "professionalEditionforNewBusiness", TRUE_STR);
+}*/
+//CSYS-98591 SN. 02/2020 , CSYS-99283 SN. 05/2020 (totalArrNet -> convetedArrNet), CSYS-99335 SN. 05/2020
+if(quoteType_quote == NEW_BIZ AND ownerBU_quote == "Enterprise BU" AND ownerTheater_quote == "Americas" AND ( ownerMarket_quote == "United States" OR ownerMarket_quote == "Canada" OR ownerMarket_quote == "US Government" ) AND convertedArrNet > 350000 AND findinarray(impMethods, "Premium") == -1 AND (implementationPartner_quote == "" OR isnull(implementationPartner_quote))){
+    put(triggerDict, "dealSizeRequiresPremiumEdition", TRUE_STR);
+}
+//CSYS-98466
+if (ownerBU_quote <> "Enterprise BU" AND totalArrList > 100000 ){
+    put(triggerDict, "totalArrListConstraint", TRUE_STR);
+}
+if (ownerBU_quote <> "SMB BU"){
+    put(triggerDict, "ignoretotalArrList", TRUE_STR);
+}   
+
+//CSYS-91306 (LN. 5-29-2018) Write the final value of 'stateAndLocalPackage' to the 'stateAndLocal_quote' attribute - this value is leveraged in Commerce and Config rules for State and Local development
+utilResultString = util.formAttrValueStr(attributesDict, "stateAndLocal_quote", QUOTE_DOC_NUM, string(stateAndLocalPackage));
+
+//CSYS-88473
+if(hasQuoteProd == TRUE_STR){
+    utilResultString = util.formAttrValueStr(attributesDict, HAS_PRODUCTS, QUOTE_DOC_NUM, TRUE_STR);
+}
+else{
+    utilResultString = util.formAttrValueStr(attributesDict, HAS_PRODUCTS, QUOTE_DOC_NUM, FALSE_STR);
+}
+
+//CSYS-87125 continued:
+for line in line_process{
+    docNum = line._document_number;
+    parentDocNum = line._parent_doc_number;
+    
+    
+    if(containskey(stringsDict, parentDocNum + DELIMITER + "packageSelectedForModel")){
+        packageId = get(stringsDict, parentDocNum + DELIMITER + "packageSelectedForModel");
+        //CSYS-92131
+        if (containskey(packageDict, packageId) AND find(preDefinedPackages, get(packageDict, packageId)) == -1 ){
+            preDefinedPackages = preDefinedPackages + get(packageDict, packageId) + ", ";
+        }
+        //The packageSelectedForModel_line attribute is used in the State and Local Government line level constraint rule:
+        utilResultString = util.formAttrValueStr(attributesDict, "packageSelectedForModel_line", docNum, packageId);
+    }
+    else{
+        utilResultString = util.formAttrValueStr(attributesDict, "packageSelectedForModel_line", docNum, "");
+    }
+	//CSYS-99707 (NT. 16-7-2020) Start
+    PO_ID = line.poId_line;   
+    referringPartner = referringPartner_quote;
+    assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, ASSET_ACTION);
+    if((PO_ID == "573" OR PO_ID == "8718" OR PO_ID == "2490985" OR PO_ID == "4810507") AND assetAction == CREATE_ACTION AND partnerSegment_quote == "Card" AND referralStatus_quote == "Accept" AND (find(referringPartner, "Amex") <> -1 OR find(referringPartner, "American Express") <> -1)){
+	put(triggerDict, docNum + "~" + "aIP", docNum + "~" + "aIP" + TRIG_KEY_VALUE_DELIM + "true");
+	put(triggerDict, docNum + "~" + "assetDiscount", docNum + "~" + "assetDiscount" + TRIG_KEY_VALUE_DELIM + string(25));
+    }
+    else{
+	put(triggerDict, docNum + "~" + "aIP", docNum + "~" + "aIP" + TRIG_KEY_VALUE_DELIM + "false");
+    }
+    //CSYS-99707 End
+}
+//CSYS-94755 (LN. 2-4-2019) If the quote qualifies, set the Pre-Defined Package to include "Prime"
+primePackageOnly = "";
+primePackageMany = "";
+
+if(get(stringsDict, PRIME_PACKAGE_PRESENT) == TRUE_STR){
+    primePackageOnly = "Prime";
+    primePackageMany = "Prime, ";
+}
+
+//CSYS-92131
+if(preDefinedPackages <> ""){
+    utilResultString = util.formAttrValueStr(attributesDict, "predefinedPackages_quote", QUOTE_DOC_NUM, primePackageMany + substring(preDefinedPackages, 0, -2));
+}
+else{
+    utilResultString = util.formAttrValueStr(attributesDict, "predefinedPackages_quote", QUOTE_DOC_NUM, primePackageOnly + "");
+}
+
+//CSYS-82718 continued:
+sort(sortPartArray, "asc");
+locCnt = 3;
+for part in sortPartArray{
+    newLineOrderCustom = locCnt;
+    put(sort_PB_PartsDict, string(part), newLineOrderCustom);
+    locCnt = locCnt + 1;
+}
+hasCoreCreate = false;
+if(partnerBillingQuote_quote){//CSYS-95097
+    for line in line_process{
+        docNum = line._document_number;
+        pid = line._part_number;
+        currentAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+        if(pid <> "" AND NOT(isnull(pid))){
+            if(containskey(sort_PB_PartsDict, pid)){
+                newLineOrderCustom = get(sort_PB_PartsDict, pid);
+                //assign the correct integer to lineOrderCustom_line to address the sorting issue:
+                utilResultString = util.formAttrValueStr(attributesDict, CUSTOM_SEQ_NUM, docNum, string(newLineOrderCustom));
+            }
+        }
+        if (quoteType_quote == ADD_ON AND line._part_custom_field8 == BASE_FEE AND currentAction == CREATE_ACTION AND line.poCategory_line == CORE_SERVICE){
+            hasCoreCreate = true;
+        }
+    }
+    //CSYS-97532
+    put(triggerDict, "partnerBilling", TRUE_STR);
+}
+else{
+    put(triggerDict, "partnerBilling", FALSE_STR);
+}
+
+//CSYS-65761 continued:
+if(annualBundleBillingExceptionStr <> ""){
+    utilResultString = util.formAttrValueStr(attributesDict, "annualBundleBillingException_quote", QUOTE_DOC_NUM, "Annual account with new product(s) " +annualBundleBillingExceptionStr + "added to the bundle.");
+}
+else{
+    utilResultString = util.formAttrValueStr(attributesDict, "annualBundleBillingException_quote", QUOTE_DOC_NUM, "");
+}
+//CSYS-95378
+extServOnlyFlag = util.getStringAttribute(stringsDict, QUOTE_DOC_NUM, DELIMITER, "extServOnlyFlag_quote");
+//CSYS-81115 LN. 5/3/17 Billing Exception in Preproduction
+if(accountPreProductionStatic_quote AND quoteType_quote == ADD_ON AND extServOnlyFlag == FALSE_STR){
+  utilResultString = util.formAttrValueStr(attributesDict, "preproductionBillingException_quote", QUOTE_DOC_NUM, "Add-on order for account in Pre-Production");
+} else {
+  utilResultString = util.formAttrValueStr(attributesDict, "preproductionBillingException_quote", QUOTE_DOC_NUM, "");
+}
+
+
+if(comparedates(createdDate, strtojavadate("10/08/2015", "MM/dd/yyyy")) > 0){ //only activate October 2015 and onward. 
+    if(lineRampDeletionFlag){
+        deleteSalesforceRamps = true;
+    }
+    utilResultString = util.formAttrValueStr(attributesDict, "deleteSFDCRamps_quote", QUOTE_DOC_NUM, string(deleteSalesforceRamps));
+}
+
+terminatedDate2 = getDate();
+if (terminatedDate <> ""){
+    if(find(terminatedDate , "/") <> -1) {
+        terminatedDate2 = minusdays((strtojavadate(terminatedDate, "MM/dd/yyyy")), 1);
+    }
+    else {
+        terminatedDate2 = minusdays((strtojavadate(terminatedDate, "yyyy-MM-dd")), 1);
+    }
+    terminatedDate3 = datetostr(terminatedDate2, "yyyy-MM-dd");
+    utilResultString = util.formAttrValueStr(attributesDict, "terminatedDate_quote", QUOTE_DOC_NUM, terminatedDate3);
+}
+
+//CSYS-83893
+utilResultString = util.formAttrValueStr(attributesDict, "quoteTotalSalesARRCurrency_quote", QUOTE_DOC_NUM, string(quoteTotalSalesARR_quote));
+
+//CSYS-82783 LN. 7/24/2017// Set Term (no. of months) to Dec. 31 of the following year
+//CSYS-97532
+
+if( partnerBillingQuote_quote){//CSYS-95097
+    if (quoteType_quote == NEW_BIZ OR (quoteType_quote == ADD_ON AND hasCoreCreate == true)){
+        timezone = util.getUserTimeZone(); //get the timezone the user is in - Parameter needed by util.reconcileCurrentDate
+        currentDateDict = util.reconcileCurrentDate(timezone);//reconcile the current date into string components
+
+        CURRENT_MONTH_TZ = util.getStringAttribute(currentDateDict, "CURRENT_MONTH_TZ", "", "");//get the current month
+        currentMonthInt = util.customAtoi(CURRENT_MONTH_TZ, 0);//Convert string representation of an integer, to an integer data type
+        cipTermNumMonthsStr = "";
+        if (currentMonthInt <> 12){
+            cipTermNumMonthsStr = string((12 - currentMonthInt)); 
+        }else{
+            if (quoteType_quote == NEW_BIZ){
+                cipTermNumMonthsStr = string(12);
+            }else{
+                cipTermNumMonthsStr = "";
+            }
+        }
+        utilResultString = util.formAttrValueStr(attributesDict, TERM_NUM_MONTHS, QUOTE_DOC_NUM, cipTermNumMonthsStr);
+    }
+}
+
+//CSYS-87441 Part 2 Start (LN. 1/3/2018) Need to make more room in Pricing Function
+
+//SYSTEMATIZED TERMINATIONS - MAP CORE SERVICE TERMINATIONS FOR USE BY DOCUMENT ENGINE//
+utilResultString = commerce.systematizedTerminations(isCoreChangedDict, isEditionChangedDict, attributesDict);
+
+//Reset the Tier change preview table to blank
+if(quoteType_quote == ADD_ON){
+    utilResultString = util.formAttrValueStr(attributesDict, "tierChangePreviewText_quote", QUOTE_DOC_NUM, "");
+}
+
+//CSYS-87441 Part 2 End
+
+//CSYS-99508 (OK. 6-25-2020) Triggering approvals when the Credit status is Disapproved
+if(quoteType_quote == ADD_ON AND creditStatus_quote == "Disapproved"){
+    put(triggerDict, "bADCreditStatus", TRUE_STR);
+}
+else {
+    put(triggerDict, "bADCreditStatus", FALSE_STR);
+}
+
+//CSYS-99100 (SV. 04/27/2020)
+//sC in the below lines indicates sAPSellsConur
+contractingEntity = contractingEntity_quote;
+sC = sAPSellsConcur_quote;
+if(contractingEntity == "SAP Other" AND sC == "Shadow Harmony Quote"){
+        put(triggerDict, "sC", TRUE_STR);
+}
+else{
+        put(triggerDict, "sC", FALSE_STR);
+}
+//CSYS-99100 End
+
+return "";

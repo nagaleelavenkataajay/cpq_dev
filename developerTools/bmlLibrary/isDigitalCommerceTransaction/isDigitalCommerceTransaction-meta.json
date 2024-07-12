@@ -1,0 +1,12 @@
+{
+  "name" : "isDigitalCommerceTransaction?",
+  "variableName" : "isDigitalCommerceTransaction",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "userName",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

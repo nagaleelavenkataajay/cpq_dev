@@ -1,0 +1,12 @@
+{
+  "name" : "convertToBMLDate",
+  "variableName" : "convertToBMLDate",
+  "description" : "NOT USED. Convert into BML Script Format",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "inputDate",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

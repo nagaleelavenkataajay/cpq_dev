@@ -1,0 +1,90 @@
+/************************************************
+| Sequencer script
+| finds the next queued reasons and activates them.
+| 
+| The script uses the hierarchy level from the ApprovalHierarchy table.
+| Assumptions:
+|	*	There is no NEED to follow the exact reason flagging, meaning - if there are two level X 
+|		reasons pending, it is sufficient to flag the first reason as Approved. (any discrepancies 
+|		will be cleared on revise).
+|	* 	If after setting the first pending reason to "Approved" there are still pending reasons
+|	  	then they are of the same hierarchy level - therefor no need to set any queued reason to pending.
+|
+\***************************************************/
+if(sequence_quote == ""){return "";}
+ret = "";
+debug = false;
+reason_Key = string[jNAN];
+HR_key = integer[jNAN];//array of reasons hierarchy
+reason_Name = string[jNAN];
+status = string[jNAN];
+currentMsgVarName = string[jNAN];
+historyMsgVarName = string[jNAN];
+approvalMsgDict = dict("string"); 
+put(approvalMsgDict, "mgrApprovalMessage_quote", mgrApprovalMessage_quote);
+put(approvalMsgDict, "vpApprovalMessage_quote", vpApprovalMessage_quote);
+put(approvalMsgDict, "svpApprovalMessage_quote", svpApprovalMessage_quote);
+put(approvalMsgDict, "gmApprovalMessage_quote", gmApprovalMessage_quote);
+put(approvalMsgDict, "evpApprovalMessage_quote", evpApprovalMessage_quote);
+put(approvalMsgDict, "cfoApprovalMessage_quote", cfoApprovalMessage_quote);
+put(approvalMsgDict, "sapApprovalMessage_quote", sapApprovalMessage_quote); //KA. CSYS-48808. 9-4-2015 
+put(approvalMsgDict, "miscApprovalMessage_quote", miscApprovalMessage_quote); //CSYS-78785. KA. 4-4-2017.
+
+//IESCNQRCPQ-1179 (OK. 2-27-2024) Start - If the created date is before deployment then we need use the old approval order. Quotes created after the deployment will use the new order
+validateDate = "false";
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+rez = recordset();
+if (createdDate_quote <> "") {
+	createdDate = util.getDateFromString(createdDate_quote);
+	if (comparedates(createdDate, strtojavadate("02/29/2024", DATE_FORMAT_PREFERENCE_SLASH)) < 1) {
+		validateDate = "true";
+	}
+}
+
+if (validateDate == "true") {
+	rez = bmql("SELECT FlagVarName, ReasonName, HR_level, ApproverGroup, MSG_varName, MSG_HIST_varName FROM ApprovalHierarchy ORDER BY Old_HR_level");
+}
+else{ //IESCNQRCPQ-1179 - End
+	rez = bmql("SELECT FlagVarName, ReasonName, HR_level, ApproverGroup, MSG_varName, MSG_HIST_varName FROM ApprovalHierarchy");
+}
+
+for entry in rez{
+	append(reason_Key,get(entry,"FlagVarName"));
+	append(HR_key,getint(entry,"HR_level"));
+	append(reason_Name,get(entry,"ApproverGroup"));
+	append(status,get(entry,"ReasonName"));
+	append(currentMsgVarName,get(entry,"MSG_varName"));
+	append(historyMsgVarName,get(entry,"MSG_HIST_varName"));
+}
+
+size = range(sizeofarray(HR_key));
+Sequence = split(Sequence_quote,"^_^");
+lastPending = findinarray(Sequence,"P");//locate first pending reason
+nextQueued = findinarray(Sequence,"Q");//locate first queued reason
+
+Sequence[lastPending] = "A"; //set first pending to "approved"
+ret = ret + "1~" + reason_Key[lastPending] + "~approved|";
+if(containskey(approvalMsgDict, currentMsgVarName[lastPending])) {
+	ret = ret + "1~" + historyMsgVarName[lastPending] + "~" + get(approvalMsgDict, currentMsgVarName[lastPending]) + "|";
+}
+
+if(nextQueued<>-1 AND findinarray(Sequence,"P")==-1){//unless there are no more reasons or other pending reasons
+	nextLevel = HR_key[nextQueued];//ID level of next approval hierarchy
+	for HR in size{
+		if(HR_key[HR] == nextLevel AND Sequence[HR] == "Q"){//if this is a queued reason at the next approval level:
+			Sequence[HR] = "P";//set the reason to pending.
+			ret = ret + "1~" + reason_Key[HR] + "~pending|";
+		}
+	}
+}
+
+ret = ret + "1~sequence_quote~" + join(Sequence,"^_^") + "|";
+ret = ret + "1~appReason_quote~" + reason_Name[lastPending]+ "|";
+if(NOT isnull(reason_Name[nextQueued])){
+	ret = ret + "1~pendingReason_quote~" + reason_Name[nextQueued] + "|";
+	ret = ret + "1~status_quote~" + "Pending " + status[nextQueued] + "|";
+}else{
+	ret = ret + "1~pendingReason_quote~" + "None" + "|";		
+}
+
+return ret;

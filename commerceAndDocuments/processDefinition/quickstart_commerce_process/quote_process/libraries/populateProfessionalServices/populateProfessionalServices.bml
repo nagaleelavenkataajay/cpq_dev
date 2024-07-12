@@ -1,0 +1,102 @@
+//CSYS-99877, BS 08/17/2020, Used to bring in Professional service assets with the configure API and updateTransaction API.
+
+if (quoteType_quote == "Add-On Business"){ //only run if add-on business
+	
+	INTERNAL_DELIMITER = "$$";
+	ASSET_DELIMITER = "@@";
+	ASSET_PI = 0;
+	SERVICE_ID = 16;
+
+	result = "";
+
+	bmiSessionId = _system_user_session_id;
+	siteName = lower(_system_company_name);
+	commerceProcess = "quickstart_commerce_process";
+	quoteProcess = "quote_process";
+	buyerCompanyName = siteName; 
+
+	// SET CURRENCY //
+	configureCurrencyURL = "https://" + lower(siteName) +".bigmachines.com/bmfsweb/"+ lower(siteName) + "/image/WebServices/set_currency.xml";
+
+	soapCurrencyString = urldatabyget(configureCurrencyURL,"","error");
+	soapCurrencyString = replace(soapCurrencyString, "SESSION_ID", bmiSessionId);
+	soapCurrencyString = replace(soapCurrencyString, "SESSION_CURRENCY", quoteCurrency_quote);
+
+	currency_result = urldatabypost("https://"+siteName +".bigmachines.com/v1_0/receiver", soapCurrencyString, "");
+	//END CURRENCY//
+
+	//CONFIG API for Professional Services//
+	configureURL = "https://" + lower(siteName) +".bigmachines.com/bmfsweb/"+ lower(siteName) + "/image/WebServices/configure_SOAP_profService.xml";
+
+	soapString = urldatabyget(configureURL,"","error");
+	soapString = replace(soapString, "SESSION_ID", bmiSessionId);
+	soapString = replace(soapString, "SITE_NAME", lower(siteName));
+	soapString = replace(soapString, "TRANSACTION_ID", transactionID_quote);
+	soapString = replace(soapString, "OWNER_BU", ownerBU_quote);
+	soapString = replace(soapString, "OWNER_THEATER", ownerTheater_quote);
+
+
+	serviceIdArray = string[];
+	
+	//CSYS-102082, BS, 02/17/21, Modified below code to Capture correct quote transactions
+	//Start
+	assetImportArray = split(assetsString_quote, ASSET_DELIMITER);
+	quoteTransactions = "";
+	count = 0;
+	firstCoreBaseAssetTrans = 0;
+	
+	//Build array of Core PI's
+	corePis = string[];
+	corePIset = bmql("SELECT PI FROM PiToCoreOfferingMap");
+	for entry in corePIset {
+		tablePi = get(entry, "PI");
+		append(corePis, tablePi);
+	}
+
+	for index in assetImportArray {
+		assetArray = split(assetImportArray[count],INTERNAL_DELIMITER);
+		if(NOT isnull(assetArray[7]) AND assetArray[4] == "Base" AND findinarray(corePis, assetArray[0]) <> -1){  //Make sure the asset is a core
+			firstCoreBaseAssetTrans = util.customAtof(assetArray[7], 0.0);
+			quoteTransactions = string(integer(firstCoreBaseAssetTrans));
+			break;
+		}
+		count = count + 1;
+	}
+	//End CSYS-102082
+	
+	//fire config API but only if there are no line items on the quote
+	runAPI = true;
+	for line in line_process {
+		lineDescription = line.lineDescription_line;
+		if (lineDescription <> ""){ //check if we see any line items on the quote
+			runAPI = false;
+		}
+	}
+
+	if (runAPI){
+		result = urldatabypost("https://"+siteName +".bigmachines.com/v1_0/receiver", soapString, ""); //ping the config API			
+	}
+
+	//updateTransaction:
+	updateTransactionURL = "https://" + lower(buyerCompanyName) +".bigmachines.com/bmfsweb/"+ lower(buyerCompanyName) + "/image/WebServices/update_transaction.xml";
+	SoapUpdate = urldatabyget(updateTransactionURL,"","error");
+
+	SoapUpdate = replace(SoapUpdate, "SESSION_ID", bmiSessionId);
+	SoapUpdate = replace(SoapUpdate, "SITE_NAME", lower(siteName));
+	SoapUpdate = replace(SoapUpdate, "PROCESS_VAR_NAME", commerceProcess);
+	SoapUpdate = replace(SoapUpdate, "TRANSACTION_ID", transactionID_quote);
+	SoapUpdate = replace(SoapUpdate, "BUYER_COMPANY_NAME", buyerCompanyName);
+	SoapUpdate = replace(SoapUpdate, "SUPPLIER_COMPANY_NAME", _system_supplier_company_name);
+	SoapUpdate = replace(SoapUpdate, "DOCUMENT_VAR_NAME_MAIN", quoteProcess);
+	SoapUpdate = replace(SoapUpdate, "ACTION_VAR_NAME", "_update_line_items");
+	SoapUpdate = replace(SoapUpdate, "LOGIN_NAME", _system_user_login);
+	SoapUpdate = replace(SoapUpdate, "NUM_TRANS", quoteTransactions);
+	SoapUpdate = replace(SoapUpdate, "FALSE_STR", "false"); //KA test. 9-16-2015. rollback if necessary
+
+	if (runAPI){
+		update_result = urldatabypost("https://"+ siteName +".bigmachines.com/v1_0/receiver", SoapUpdate, "");
+	}
+
+}//end add-on business check
+
+return "";

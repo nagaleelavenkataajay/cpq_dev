@@ -1,0 +1,13 @@
+roundingDecimals = 0;
+
+currencyDataRecords = bmql("select numDecimals from currencyData where currencyCode = $currencyCode");
+
+for currencyDataRecord in currencyDataRecords {
+	decimals = get(currencyDataRecord, "numDecimals");
+	if (isnumber(decimals)) {
+		roundingDecimals = atoi(decimals);
+		break;
+	}
+}
+
+return roundingDecimals;

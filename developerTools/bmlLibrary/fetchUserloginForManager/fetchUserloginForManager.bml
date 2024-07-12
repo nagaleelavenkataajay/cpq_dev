@@ -1,0 +1,10 @@
+managerList = string[];
+resultSet = bmql("SELECT userLogin FROM approverNames WHERE mgrEmail = $loginName");
+
+for rec in resultSet{
+	if (get(rec,"userLogin")<>""){
+		append(managerList ,get(rec,"userLogin"));
+	} 
+}
+
+return managerList;

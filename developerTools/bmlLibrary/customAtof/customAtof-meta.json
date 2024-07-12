@@ -1,0 +1,15 @@
+{
+  "name" : "customAtof",
+  "variableName" : "customAtof",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Float",
+  "parameters" : [ {
+    "name" : "inputValue",
+    "type" : "String"
+  }, {
+    "name" : "defaultValue",
+    "type" : "Float"
+  } ],
+  "attributes" : [ ]
+}

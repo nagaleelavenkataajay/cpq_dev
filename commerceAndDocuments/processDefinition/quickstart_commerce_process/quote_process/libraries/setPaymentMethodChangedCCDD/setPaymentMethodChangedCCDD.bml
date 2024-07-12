@@ -1,0 +1,34 @@
+//CSYS-97516: Bhavna S, 11/05/2020, this flag tracks the updates of Payment Method for Add-On Business to CC/DD
+
+result = "";
+paymentMethodChange = false;
+ADD_ON_BUSINESS = "Add-On Business";
+ELECTRONIC_FUNDS_TRANSFER = "Electronic Funds Transfer";
+DIRECT_DEBIT = "Direct Debit";
+CREDIT_CARD = "Credit Card";
+CHECK = "Check";
+
+//Only for Add-On Business quotes
+if(quoteType_quote == ADD_ON_BUSINESS){	
+	if(currentPaymentMethod_quote <> ""){
+	
+		//check if Payment Method is changed from EFT/Check to Credit Card/Direct Debit
+		if((currentPaymentMethod_quote == ELECTRONIC_FUNDS_TRANSFER OR currentPaymentMethod_quote == CHECK )AND (paymentMethod_quote == DIRECT_DEBIT OR paymentMethod_quote == CREDIT_CARD)){
+			paymentMethodChange = true;
+		}
+		
+		//check if Payment Method is changed from Credit Card to Direct Debit
+		if(currentPaymentMethod_quote == CREDIT_CARD AND paymentMethod_quote == DIRECT_DEBIT){
+			paymentMethodChange = true;
+		}
+		
+		//check if Payment Method is changed from Direct Debit to Credit Card
+		if(currentPaymentMethod_quote == DIRECT_DEBIT AND paymentMethod_quote == CREDIT_CARD){
+			paymentMethodChange = true;
+		}
+	}
+}
+
+result = "1~paymentMethodChangedCCDD_quote~" + string(paymentMethodChange) + "|";
+
+return result;

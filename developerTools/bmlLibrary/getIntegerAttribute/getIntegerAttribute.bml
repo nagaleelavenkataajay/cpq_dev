@@ -1,0 +1,9 @@
+result = 0;
+
+lookupKey = docNum + delimiter + commerceField;
+
+if (containskey(integersDict, lookupKey)) {
+	result = get(integersDict, lookupKey);
+}
+
+return result;

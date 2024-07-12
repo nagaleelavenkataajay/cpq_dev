@@ -1,0 +1,14 @@
+{
+  "name" : "Set Attributes",
+  "variableName" : "setAttributes",
+  "description" : "Parses the attributes dictionary and sets quote and line level attributes based on that parsing.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ ],
+  "systemAttributes" : [ ]
+}

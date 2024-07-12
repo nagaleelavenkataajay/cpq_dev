@@ -1,0 +1,11 @@
+{
+  "name" : "Professional Services Termination Billing Exception",
+  "variableName" : "professionalServicesTerminationBillingException",
+  "description" : "CSYS-99880\n, AP. 10/16/2020, When Professional Service Import Quote\" equals TRUE, populate the Professional Services Termination Billing Exception with, \"Credit Required for Professional Service Termination\" along with product name and credit's applied",
+  "libraryFunctions" : [ "commerce.setAttributes", "util.formAttrValueStr" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_part_number", "terminateSetupFee_line", "creditAmount_line", "lineDescription_line" ],
+  "mainDocAttributes" : [ "isProfessionalServicesImport_quote" ],
+  "systemAttributes" : [ ]
+}

@@ -1,0 +1,30 @@
+/*
+Get Line Items Info From Commerce to Config - UTIL LIBRARY FUNCTION 
+Retreives Reconfigured line item information from commerce(with certain fields information)
+Used in Configuration Rules.
+*/
+
+//Dictionary to pull commerce attribute values in config
+lineItemsInfo = dict("string");
+
+//Query To Retreive Desired Fields from Commerce
+lineItems = BMQL("SELECT _document_number,coreOffering_line,_parent_doc_number,_part_number,implementationMethod_line from commerce.line_process");
+
+//By Default ,result is set to failure.
+put(lineItemsInfo ,"result","false");
+
+//Loop through Each Line item to get reconfigured line items values
+for eachLine in lineItems{
+	if( selectedDocNum == get(eachLine,"_document_number")){
+		put(lineItemsInfo ,"_document_number",get(eachLine,"_document_number"));	
+		put(lineItemsInfo ,"coreOffering_line",get(eachLine,"coreOffering_line"));	
+		put(lineItemsInfo ,"_parent_doc_number",get(eachLine,"_parent_doc_number"));		
+		put(lineItemsInfo ,"_part_number",get(eachLine,"_part_number"));		
+		put(lineItemsInfo ,"implementationMethod_line",get(eachLine,"implementationMethod_line"));
+		put(lineItemsInfo ,"result","true");
+		break;	
+		}									
+}
+//return Line Items Information (Dictionary Type)
+
+return lineItemsInfo;

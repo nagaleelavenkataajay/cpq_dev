@@ -1,0 +1,46 @@
+/* util -> Get Select Access Level Fee 
+
+floatsDict - Float Dictionary, key = docNum + DELIMITER + variable name
+DELIMITER - Delimiter to use for the floats dict.
+
+*/
+selectAccessLevel1 = "Select Access Level 1";
+selectAccessLevel2 = "Select Access Level 2";
+selectAccessLevel3 = "Select Access Level 3";
+selectAccessLevel4 = "Select Access Level 4";
+
+LEVEL1FEE = "selectAccessLevel1FeesPerTransaction_quote";
+LEVEL2FEE = "selectAccessLevel2FeesPerTransaction_quote";
+LEVEL3FEE = "selectAccessLevel3FeesPerTransaction_quote";
+LEVEL4FEE = "selectAccessLevel4FeesPerTransaction_quote";
+
+
+result = 0.0;
+miscDataValue = "";
+miscDataKey = "";
+accessFeeResSet = bmql("SELECT miscDataVal, miscDataKey FROM miscCommerceData WHERE miscDataKey = $selectAccessLevel1 OR miscDataKey = $selectAccessLevel2 OR miscDataKey = $selectAccessLevel3 OR miscDataKey = $selectAccessLevel4");
+for accessFee in accessFeeResSet {
+	accessLevelKey = "";
+	miscDataValue = get(accessFee, "miscDataVal");
+	miscDataKey = get(accessFee, "miscDataKey");
+	
+	if(miscDataValue <> "" AND miscDataKey == "Select Access Level 1"){
+		accessLevelKey = "1" + DELIMITER + LEVEL1FEE;
+		put(floatsDict, accessLevelKey, atof(miscDataValue));
+	}
+	if(miscDataValue <> "" AND miscDataKey == "Select Access Level 2"){
+		accessLevelKey = "1" + DELIMITER + LEVEL2FEE;
+		put(floatsDict, accessLevelKey, atof(miscDataValue));
+	}
+	if(miscDataValue <> "" AND miscDataKey == "Select Access Level 3"){
+		accessLevelKey = "1" + DELIMITER + LEVEL3FEE;
+		put(floatsDict, accessLevelKey, atof(miscDataValue));
+	}
+	if(miscDataValue <> "" AND miscDataKey == "Select Access Level 4"){
+		accessLevelKey = "1" + DELIMITER + LEVEL4FEE;
+		put(floatsDict, accessLevelKey, atof(miscDataValue));
+	}
+}
+
+
+return result;

@@ -1,0 +1,18 @@
+{
+  "name" : "getIntDict",
+  "variableName" : "getIntDict",
+  "description" : "NOT USED. Imported in Pricing script, but not used in the code.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Integer",
+  "parameters" : [ {
+    "name" : "dictionary",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "key",
+    "type" : "String"
+  }, {
+    "name" : "defaultValue",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

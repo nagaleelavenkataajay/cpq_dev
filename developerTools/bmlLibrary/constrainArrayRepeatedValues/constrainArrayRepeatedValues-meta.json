@@ -1,0 +1,18 @@
+{
+  "name" : "Constrain Array Repeated Values",
+  "variableName" : "constrainArrayRepeatedValues",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "sizeArray",
+    "type" : "String[]"
+  }, {
+    "name" : "dataArray",
+    "type" : "String[]"
+  }, {
+    "name" : "availableOptionsArr",
+    "type" : "String[]"
+  } ],
+  "attributes" : [ ]
+}

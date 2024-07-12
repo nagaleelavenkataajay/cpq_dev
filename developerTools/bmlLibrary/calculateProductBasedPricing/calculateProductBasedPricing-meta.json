@@ -1,0 +1,39 @@
+{
+  "name" : "calculateProductBasedPricing (NOT USED)",
+  "variableName" : "calculateProductBasedPricing",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "piBasedProductPricingDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "piBasedRowCount",
+    "type" : "Integer"
+  }, {
+    "name" : "qtyBasedProductPricingDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "qtyBasedRowCount",
+    "type" : "Integer"
+  }, {
+    "name" : "modelToLineDocNumsDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "currentDocNum",
+    "type" : "String"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "piDelimiter",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

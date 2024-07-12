@@ -1,0 +1,17 @@
+{
+  "name" : "Override TFSD Date in LIG",
+  "variableName" : "overrideTFSDDateInLIG",
+  "description" : "CSYS-107671 (OK. 12-16-2022) Override TFSD Date in line item grid for future dated scenarios",
+  "libraryFunctions" : [ "util.formAttrValueStr", "util.formatDate" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "anyTypeDict",
+    "type" : "Anytype Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "assetAction_line", "poId_line", "piItemType_line", "_document_number", "_parent_doc_number", "nextBillingDate_line" ],
+  "mainDocAttributes" : [ "contractTFSDOverride_quote", "orderEffectiveDateHDS_quote", "isAccountPreProdTerminate_quote", "standardToProfessionalMigrationFlag", "detectMigrateToIntelligentAuditAdvanced_quote", "detectByAppzenTerminate_quote", "detectMigrateToIntelligentAuditEssential_quote", "detectMigrateToVerify_quote", "billingCycle_quote" ],
+  "systemAttributes" : [ ]
+}

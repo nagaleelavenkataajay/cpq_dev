@@ -1,0 +1,87 @@
+//CSYS-107671 (OK. 12-16-2022) Update the TFSD Date in line item grid with overridden TFSD value for future dated scenarios
+
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";
+CREATE_ACTION = "CREATE";
+TERMINATE_ACTION = "TERMINATE";
+MODIFY_ACTION = "MODIFY";
+contractTFSDOverride = substring(contractTFSDOverride_quote, 0, 10);
+billingCycle  = billingCycle_quote;
+orderEffectiveDateHDS = orderEffectiveDateHDS_quote;
+isAccountPreProdTerminate = isAccountPreProdTerminate_quote;
+detectMigrateToIntelligentAuditAdvanced = detectMigrateToIntelligentAuditAdvanced_quote;
+detectMigrateToIntelligentAuditEssential = detectMigrateToIntelligentAuditEssential_quote;
+detectMigrateToVerify = detectMigrateToVerify_quote;
+detectByAppzenTerminate = detectByAppzenTerminate_quote;
+termDate = "";
+QUOTE_DOC_NUM = "1";
+stdToProfMigrationFutureDated = "";
+TRUE_STR = "true";
+detectMigration = "";
+
+if (standardToProfessionalMigrationFlag == true AND (billingCycle == "Monthly" OR billingCycle == "Quarterly")) {
+	stdToProfMigrationFutureDated = TRUE_STR;
+}
+
+if ((detectMigrateToIntelligentAuditAdvanced == "true" OR detectMigrateToIntelligentAuditEssential == "true" OR detectMigrateToVerify  == "true" OR detectByAppzenTerminate) AND (billingCycle == "Monthly" OR billingCycle == "Quarterly")) {
+	detectMigration = TRUE_STR;
+}
+
+for line in line_process{
+	assetAction = line.assetAction_line;
+	poID = line.poId_line;
+	itemType = line.piItemType_line;
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	nextBillingDate = line.nextBillingDate_line;
+	
+	if (contractTFSDOverride_quote <> "") {
+		contractTFSDOverride = substring(contractTFSDOverride_quote, 0, 10);
+		contractTFSD = strtojavadate(contractTFSDOverride, "yyyy-MM-dd");
+		termDate = datetostr(minusdays(contractTFSD, 1), "yyyy-MM-dd");
+		
+		if (assetAction == CREATE_ACTION AND (itemType == BASE_FEE OR itemType == INCREMENTAL_FEE)) {
+			if (orderEffectiveDateHDS <> "" OR isAccountPreProdTerminate OR stdToProfMigrationFutureDated == TRUE_STR OR detectMigration == TRUE_STR) {
+				utilResultString = util.formAttrValueStr(attributesDict, "newProductStartDate_line", docNum, contractTFSDOverride);
+				
+				if (nextBillingDate <> "") {
+					utilResultString = util.formAttrValueStr(attributesDict, "nextBillingDate_line", docNum, contractTFSDOverride);
+				}
+			}
+		}
+		if (assetAction == MODIFY_ACTION AND (itemType == BASE_FEE OR itemType == INCREMENTAL_FEE) AND standardToProfessionalMigrationFlag AND (billingCycle == "Monthly" OR billingCycle == "Quarterly")) {
+			utilResultString = util.formAttrValueStr(attributesDict, "nextBillingDate_line", docNum, contractTFSDOverride);
+		}
+		if (assetAction == TERMINATE_ACTION) {
+			utilResultString = util.formAttrValueStr(attributesDict, "termDate_line", docNum, termDate);
+		}
+	}
+}
+
+if (termDate <> "") { 
+	terminatedDateDD = util.formatDate(termDate,"long");
+	
+	if (orderEffectiveDateHDS <> "") {
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateForDocumentDesignerOfHDS_quote", QUOTE_DOC_NUM, terminatedDateDD);
+	}
+	
+	if (detectMigration == TRUE_STR) {
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateForDDDetect_quote", QUOTE_DOC_NUM, terminatedDateDD);
+	}
+	
+	if (isAccountPreProdTerminate) {
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateForDocumentDesignerOfAccountPreProd_quote", QUOTE_DOC_NUM, terminatedDateDD);
+	}
+	
+	if (stdToProfMigrationFutureDated == TRUE_STR) {
+		termDateSTPMFrench = util.formatDate(termDate, "frenchLong");
+		termDateSTPMSpanish = util.formatDate(termDate, "spanishLong"); 
+		termDateSTPMGerman = util.formatDate(termDate, "germanLong");
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPM", QUOTE_DOC_NUM, terminatedDateDD);
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMFrench_quote", QUOTE_DOC_NUM, termDateSTPMFrench); 
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMSpanish_quote", QUOTE_DOC_NUM, termDateSTPMSpanish); 
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMGerman_quote", QUOTE_DOC_NUM, termDateSTPMGerman);
+	}	
+}
+
+return "";

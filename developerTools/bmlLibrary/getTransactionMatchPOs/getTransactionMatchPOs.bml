@@ -1,0 +1,16 @@
+/* util -> getTransactionMatchPOs
+stringsDict - dict("string")
+*/
+DELIMITER = "@.@";
+TRUE_STR = "true";
+TRANS_VALIDATION_APPLIES = "transValidationApplies";
+
+//make list of PIs that qualify for num of trans constraint
+rez = BMQL("SELECT PO FROM trnsValidation WHERE PO in $poArray");
+listOfNumOfTransPOs = string[];
+for entry in rez{
+    poID = get(entry,"PO");
+    append(listOfNumOfTransPOs,poID);
+    put(stringsDict, poID + DELIMITER + TRANS_VALIDATION_APPLIES, TRUE_STR); //CSYS-70683
+}
+return listOfNumOfTransPOs;

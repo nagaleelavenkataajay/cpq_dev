@@ -1,0 +1,39 @@
+{
+  "name" : "Set Ramp Plan Data",
+  "variableName" : "setRampPlanData",
+  "description" : "Moved from pricing script.\nPuts all of the ramp information in dictionaries.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "docNumList",
+    "type" : "String[]"
+  }, {
+    "name" : "overWriteTransactionArr",
+    "type" : "String[]"
+  }, {
+    "name" : "piDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "modelToLineDocNumsDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "modelToLinePartNumsDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "implementationMethodArr",
+    "type" : "String[]"
+  }, {
+    "name" : "travelAndExpenseWithTriplinkProductArr",
+    "type" : "String[]"
+  } ],
+  "attributes" : [ ]
+}

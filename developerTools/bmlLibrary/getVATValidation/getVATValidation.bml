@@ -1,0 +1,205 @@
+//****** VAT Validation UTIL library ******//
+/*
+Takes parameters:
+vatNumber (vatNumber_quote)
+overrideVat (overrideVat_quote)
+serviceCountry (_quote_process_serviceAddress_country)
+
+Returns string result of isvat.eu API call
+*/
+countryCode = "";
+validate = "";
+
+dateCheck = (comparedates(strtojavadate(createdDate, "MM/dd/yyyy"), strtojavadate("07/05/2015", "MM/dd/yyyy")) > 0);  // added to only run validation on quotes created after the deployment date
+if(dateCheck AND vatNumber <> "" AND NOT overrideVat){ //the other VAT # rule checks to make sure VAT # is not blank for the proper service countries. Only run subsequent logic if the override is false
+	//serviceCountry = _quote_process_serviceAddress_country;
+	
+	rez = bmql("SELECT countryCode FROM VATNumber WHERE serviceCountry = $serviceCountry");
+	for entry in rez{
+		countryCode = get(entry, "countryCode"); //pull the correct country code from the table, given the service country
+	}
+	
+	//character stripping for existing quotes:
+	stripCharArray = string[]{" ", ".", "#", ":", "-", "/", ";"}; //characters to strip
+	vatCharArray = split(vatNumber, "");
+	count = 0;
+	for character in vatCharArray {
+		if(findinarray(stripCharArray, character) <> -1){
+			vatCharArray[count] = "";
+		}
+		count = count + 1;
+	}
+	vatNum = upper(trim(join(vatCharArray, "")));
+
+	if (startswith(vatNum, countryCode) == false){
+		return "false"; //false means the VAT # didn't pass the initial format test
+	}
+	
+	vatCountryCode = substring(vatNum, 0, 2);
+	latterPortion = substring(vatNum, 2); //vat number minus the country code
+	
+	//CSYS-101903, BS, 02/05/2020, added below code to validate UK VAT number using hmrc.gov.uk API
+	if(vatCountryCode == "GB")
+	{
+		prod = "prod%";
+		//test = "test%";	//Use this URL to test for Sandbox API 
+		clientID = "";
+		clientSecret = "";
+		//IESCNQRCPQ-1189 - Commenting the token authorisation code as now the HRMC has made it open source and no authorisation is required. - Start
+		token = "";
+		/*
+		tokenURL = "https://api.service.hmrc.gov.uk/oauth/token";
+		//tokenURL = "https://test-api.service.hmrc.gov.uk/oauth/token;	//Use this URL to get token for Sandbox API 
+		
+		//Fetching clientID & clientSecret for prod API
+		recSet = bmql("SELECT BMIInstance, notes FROM siteInfo WHERE notes LIKE $prod");
+		for entry in recSet{
+			
+			if(find(get(entry, "notes"), "client_id") <> -1){
+				clientID = get(entry, "BMIInstance");
+			}
+			if(find(get(entry, "notes"), "client_secret") <> -1){
+				clientSecret = get(entry, "BMIInstance");
+			}
+		}
+		
+		params = makeurlparam({'client_id':clientID, 'client_secret':clientSecret, 'grant_type':"client_credentials"});
+		
+		//Getting OAuth token to be used to call VAT API later in the code
+		response = urldatabypost(tokenURL, params, "Error while validating");
+		token = "";
+		
+		if(isnull(response) == false){
+			if(find(response, "access_token") <> -1){
+				tokenSplit = split(response, ",");
+				tokenSplit2 = split(tokenSplit[0], "{\"access_token\":\"");				
+				token = substring(tokenSplit2[1],0,-1);
+			}
+		}
+		//IESCNQRCPQ-1189 - End
+		*/
+		//IESCNQRCPQ-1189 - Updated the condition to do null check
+		if(token == ""){
+			validate = "";
+
+			//New UK VAT validation API URL
+			urlUK = "https://api.service.hmrc.gov.uk/organisations/vat/check-vat-number/lookup/" + latterPortion;
+			
+			//Uncomment the below URL to get token for Sandbox API 
+			//urlUK = "https://test-api.service.hmrc.gov.uk/organisations/vat/check-vat-number/lookup/" + latterPortion;
+			
+			myHeaders = dict("string");
+			put(myheaders, "Accept", "application/vnd.hmrc.1.0+json");
+			put(myheaders, "Authorization", "Bearer "+token);
+			//responseUK = urldatabyget(urlUK, "", "Error while validating", 5000, myHeaders);
+			responseUK = urldata(urlUK, "GET", myHeaders);
+			
+			if(isnull(responseUK) == false){
+				if(containskey(responseUK, "Status-Code")){
+					statusCode = get(responseUK, "Status-Code");
+
+					if(statusCode == "404" or statusCode == "400"){	//Error while validating VAT
+						errorMessage = get(responseUK, "Error-Message");	
+						errorCode = get(responseUK, "code");
+						if(find(errorMessage, "targetVrn does not match a registered company") <> -1){ //invalid Vat #
+							validate = "{\"valid\":false}";
+						}
+						if(find(errorMessage, "Invalid targetVrn - Vrn parameters should be 9 or 12 digits") <> -1){ //invalid Vat# format
+							validate = "{\"valid\":false}";
+						}
+						
+					}
+					if(statusCode == "200"){	//VAT validation successfull
+						messageBody = get(responseUK, "Message-Body");
+						UKcompanyNameSplit = split(messageBody, ",");
+						UKcompanyNameSplit2 = split(UKcompanyNameSplit[0], "{\"name\":\"");	
+						UKcompanyName = substring(UKcompanyNameSplit2[1],0,-1);
+						validate = "{\"valid\":true,\"cache:{0\":PLACEHOLDER\":\"" + UKcompanyName + "\"},\"address";
+					}
+				}
+			}
+
+			if(find(validate, ":false") <> -1){
+				return "false";
+			}
+			if(find(validate, ":true") == -1 AND find(validate, ":false") == -1){ //If API service is down
+				return "error"; //return error string since the API is down
+			}		
+		}
+		else{
+			return "tokenError"; //return error string since the token was not generated
+		}
+	}
+	//End CSYS-101903
+	else{
+
+		//url = "http://isvat.eu/" + countryCode + "/" + latterPortion +"/"; //commenting this line out and using next line for CSYS-79072 (KA. 3-15-2017)
+		//CSYS-99233 (BS. 05-05-2020) Replaced "http" with "https" in the below URL
+		//url = "https://ec.europa.eu/taxation_customs/vies/viesquer.do?ms=" + countryCode + "&iso=" + countryCode + "&vat=" + latterPortion;
+		//CSYS-107100 - Reading new WSDL and updating the URL - Start
+		//siteName = lower(_system_company_name);
+		buyerCompanyName = "concur";
+		myHeaders = dict("string");
+		put(myheaders, "Accept", "text/xml");
+		put(myheaders, "Content-Type", "text/xml; charset=UTF-8");
+		put(myheaders, "Connection", "Keep-Alive");
+		//IESCNQRCPQ-1145 - Updated the URL as per the third party website
+		//url = "https://ec.europa.eu/taxation_customs/vies/services/checkVatTestService";
+		url = "https://ec.europa.eu/taxation_customs/vies/services/checkVatService";
+		vatValidationXMLURL = "https://" + lower(buyerCompanyName) +".bigmachines.com/bmfsweb/"+ lower(buyerCompanyName) + "/image/WebServices/VATValidation_NONUK_Request.xml";
+		SoapUpdate = urldatabyget(vatValidationXMLURL,"","error");
+		SoapUpdate = replace(SoapUpdate, "COUNTRYCODE", countryCode);
+		SoapUpdate = replace(SoapUpdate, "VATNUMBER", latterPortion);
+		//validate = urldata(urlUK, "", myHeaders);
+		validate= urldatabypost(url, SoapUpdate, "", myHeaders, true);
+		//validate = urldatabypost(url, SoapUpdate, "Error while validating");
+		companyAddress = "";
+		
+		validateSplit = split(validate, "<ns2:valid>");
+		//print validateSplit;
+		validateSplit2 = split(validateSplit[1], "</ns2:valid>");
+		print validateSplit2;
+		if(validateSplit2[1] <> ""){
+			companyNameSplit = split(validateSplit2[1], "<ns2:name>");
+			companyNameSplit2 = split(companyNameSplit[1], "</ns2:name>");
+			companyAddress = companyNameSplit2[0];
+		}
+		if(validateSplit2[0] == "true"){
+			validate = "{\"valid\":true,\"cache:{0\":PLACEHOLDER\":\"" + companyAddress + "\"},\"address";
+		}
+		elif(validateSplit2[0] == "false"){
+			validate = "{\"valid\":false}";
+		}
+		//CSYS-107100 - End
+		//Commenting - the below code
+		/*
+		//validate = urldatabypost(url, "", "Error while validating");
+
+		//CSYS-79072 (until a better solution is found):
+		if(find(validate, "No, invalid VAT number") <> -1){ //invalid Vat #
+			validate = "{\"valid\":false}";
+		}
+		elif(find(validate, "Yes, valid VAT number") <> -1){ //valid Vat #
+			//Commented the below tag code as it was not found as per latest response
+			//companyNameSplit = split(validate, ">Name</td>"); //locate the beginning of where we need to parse company name
+			//companyNameSplit2 = split(companyNameSplit[1], "</td>"); //split at the </td> delimiter 
+			//companyNameSplit3 = split(companyNameSplit2[0], "<td>"); //get rid of the <td> on the front
+		//CSYS-104672 : BMI - Issues with VAT Validation : LIN: 11-04-2021 - Updated the tags
+			companyNameSplit = split(validate, "Name</label>"); //locate the beginning of where we need to parse company name
+			companyNameSplit2 = split(companyNameSplit[1], "</div>"); //split at the </div> delimiter 
+			companyNameSplit3 = split(companyNameSplit2[0], "<div >"); //get rid of the <div > on the front
+			validate = "{\"valid\":true,\"cache:{0\":PLACEHOLDER\":\"" + companyNameSplit3[1] + "\"},\"address";
+		}
+		//END CSYS-79072
+		*/
+		
+		if(find(validate, ":false") <> -1){
+			return "false";
+		}
+		if(find(validate, ":true") == -1 AND find(validate, ":false") == -1){ //If API service is down
+			return "error"; //return error string since the API is down
+		}
+	}
+}
+
+return validate;

@@ -1,0 +1,708 @@
+DELIMITER = "@.@";
+TRIG_KEY_VALUE_DELIM = "$,$";
+QUOTE_DOC_NUM = "1";
+RAMP_DELIMITER = "-_**_-";
+PO_RAMP_OVERRIDE = "poRampOverride";
+expensePayClassicTerminated = false; //CSYS-103849 SV. 10-08-2021 
+remainingContractDays = 0;//IESCNQRCPQ-1852 LIK 06-06-204
+
+//Determine dates for approval triggers: start
+currentDateText = substring(datetostr(getdate()), 0, 10);
+currentDate = getdate();
+if (currentDateText <> ""){
+	if(find(currentDateText, "/") <> -1) {
+		currentDate = strtojavadate(currentDateText, "MM/dd/yyyy"); 
+	} else {
+		currentDate = strtojavadate(currentDateText, "yyyy-MM-dd"); 
+	}
+}
+
+//IESCNQRCPQ-1852 LIK 06-06-204- Start
+orderEffectiveDateText = substring(orderEffectiveDate_quote, 0, 10);
+orderEffectiveDate = getdate();
+if (orderEffectiveDateText <> ""){
+	if(find(orderEffectiveDateText, "/") <> -1) {
+		orderEffectiveDate = strtojavadate(orderEffectiveDateText, "MM/dd/yyyy"); 
+	} else {
+		orderEffectiveDate = strtojavadate(orderEffectiveDateText, "yyyy-MM-dd"); 
+	}
+}
+//IESCNQRCPQ-1852 - End
+
+renewalDateText = ""; 
+if(contractRenewalDateAcc_quote == "" AND contractRenewalDateText_quote <> "") {
+	renewalDateText = contractRenewalDateText_quote;
+} else {
+	renewalDateText = (contractRenewalDateAcc_quote); //use contract renewal date from account
+}
+
+renewalDate = getdate();
+if (renewalDateText <> ""){
+	if(find(renewalDateText , "/") <> -1) {
+		renewalDate = strtojavadate(renewalDateText , "MM/dd/yyyy"); 
+	} else {
+		renewalDate = strtojavadate(renewalDateText , "yyyy-MM-dd"); 
+	}
+}
+//Determine dates for approval triggers: end
+
+//Start: Add-on ARR and new Approval logic
+if (quoteType_quote == "Add-On Business"){
+
+familyDict = dict("string"); //Dictionary for product families
+familyTerminateDict = dict("string"); //Dictionary to store TERMINATE asset actions specific to their product families
+familyCreateDict = dict("string"); //Dictionary to store CREATE asset actions specific to their product families
+firstCreateBaseDict = dict("string"); //Dictionary to store the first CREATE Base of each product family
+//firstModifyDict = dict("string"); //Dictionary to store the first MODIFY 
+firstModify = "";
+
+familyRevenueDecreaseDict = dict("string"); //for new approval requirements
+
+familyNameWithArrArray = string[]; //array to store each line's family name and net new Arr in line item grid order
+familyNameArray = string []; //array to store each line's family name only in order
+assetActionArray = string[]; //array to store each line's asset action in line item grid order 
+piItemTypeArray = string[]; //array to store each line's pi item type in line item grid order 
+docNumArray = string[]; //array to store each line's document number in line item grid order  
+unsortedFamilyNameArray = string[]; //never sort this array, we'll need it to gather TERMINATE line items
+netNewArrArray = float[]; //store unsorted net new arr
+
+delimitedSortedArrString = ""; //used to strip the sorted new net arr values out and put them in their own array
+tripLinkCoreRevTotal = 0.0;
+
+terminateInsideTerm = false;
+terminateOutsideTerm = false;
+modifyInsideTerm = false;
+modifyOutsideTerm = false;
+detectByAppzenTerminateVar=false;//CSYS-103873 NP 08/30/2021
+auditWCreate = false;//CSYS-103873 NP 08/30/2021
+auditWTerminate = false;//CSYS-103873 NP 08/30/2021
+auditCreateNetARR = 0.0;//CSYS-103873 NP 08/30/2021
+detectTermNetARR = 0.0;//CSYS-103873 NP 08/30/2021
+modifyInsideTermManagerEVP = false; //IESCNQRCPQ-1852
+modifyInsideTermManagerGM = false; //IESCNQRCPQ-1852
+modifyInsideTermManagerVP = false;//IESCNQRCPQ-1852
+
+/*
+seqNumToDocNumDict = dict("string");
+seqNumArray = integer[];
+
+for line in line_process {
+	docNum = line._document_number;
+	seqNum = line._sequence_number;
+	seqNumStr = string(seqNum);
+	put(seqNumToDocNumDict, seqNumStr, docNum);
+	append(seqNumArray, seqNum);
+}
+
+sort(seqNumArray, "asc");
+
+*/
+//for key in seqNumArray {
+for line in line_process { 
+	//docNum = get(seqNumToDocNumDict, string(key));
+	docNum = line._document_number;
+	piItemType = util.getStringAttribute(stringsDict, docNum, DELIMITER, "piItemType_line"); 
+	familyName = util.getStringAttribute(stringsDict, docNum, DELIMITER, "_part_custom_field23"); 
+	netNewArr = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "netNewARRCurrency_line"); 
+	arrNetPrice = util.getFloatAttribute( floatsDict, docNum, DELIMITER, "arrNet_line"); //CSYS-43854
+	existingArr = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "existingARRCurrency_line"); //CSYS-43854
+	assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, "assetAction_line"); 
+	poId = util.getStringAttribute( stringsDict, docNum, DELIMITER, "poId_line"); 
+	
+	
+	if (piItemType <> ""){
+		append(docNumArray, docNum); //put the docnum for each line in an array
+		append(familyNameWithArrArray, familyName + "*" + string(netNewArr) + "*" + assetAction + "*"); //put each line's product family name AND Net New Arr (tied together) in an array
+		append(familyNameArray, familyName); //just store the name of the line's product family name here
+		append(unsortedFamilyNameArray, familyName); //store the family names in order how we see them on the quote
+		append(assetActionArray, assetAction); //put the asset action for each line in an array
+		append(piItemTypeArray, piItemType); //put the pi item type for each line in an array
+		append(netNewArrArray, netNewArr);
+	} 
+	
+	if (assetAction == "CREATE" AND (poId == "784063" OR poId == "784067" OR poId == "784071" OR poId == "784047" OR poId == "784051" OR poId == "784055")){ //if CREATE and Expense with Trip Link or Travel & Expense with TripLink
+		tripLinkCoreRevTotal = tripLinkCoreRevTotal + netNewArr; //for new approval requirements
+	}
+	
+	if (renewalDateText <> "" AND currentDate < minusdays(renewalDate, 90)){ //inside term
+		if (assetAction == "MODIFY"){
+			//if (netNewArr < 0){
+			if ((arrNetPrice - existingArr) < 0){
+				modifyInsideTerm = true;
+			}
+		}
+	}
+	
+	//IESCNQRCPQ-1852 LIK 06-06-204- Start
+	remainingContractDays = getdiffindays (renewalDate, orderEffectiveDate);
+	print "@138";
+	print arrNetPrice;
+	print existingArr;
+	if (renewalDateText <> "" AND remainingContractDays <= 90){ //inside term
+		if (assetAction == "MODIFY"){
+			//if (netNewArr < 0){
+			if ((arrNetPrice - existingArr) < 0){
+				modifyInsideTermManagerVP = true;
+				//remainingContractDays = getdiffindays (renewalDate, orderEffectiveDate);
+			}
+		}
+	}
+	
+	if (renewalDateText <> "" AND (remainingContractDays > 90 AND remainingContractDays <= 180)){ //inside term
+		if (assetAction == "MODIFY"){
+			//if (netNewArr < 0){
+			if ((arrNetPrice - existingArr) < 0){
+				modifyInsideTermManagerGM = true;
+				//remainingContractDays = getdiffindays (renewalDate, orderEffectiveDate);
+			}
+		}
+	}
+	
+	if (renewalDateText <> "" AND remainingContractDays > 180){ //inside term
+		if (assetAction == "MODIFY"){
+			//if (netNewArr < 0){
+			if ((arrNetPrice - existingArr) < 0){
+				modifyInsideTermManagerEVP = true;
+				//remainingContractDays = getdiffindays (renewalDate, orderEffectiveDate);
+			}
+		}
+	}
+	//IESCNQRCPQ-1852 - End
+	
+	if (renewalDateText <> "" AND currentDate > minusdays(renewalDate, 90)){ //outside term
+		if (assetAction == "MODIFY"){
+			//if (netNewArr < 0){
+			if ((arrNetPrice - existingArr) < 0){
+				modifyOutsideTerm = true;
+			}
+		}
+	}
+	//CSYS-103873 NP 08/30/2021 Starts
+	if(find("*3780125*7507717*", "*"+poID+"*") <> -1 AND assetAction == "TERMINATE")
+	{
+		detectByAppZenTerminateVar=true;
+		detectTermNetARR = detectTermNetARR + existingArr;
+		
+	}
+	elif(familyName=="Audit Services" AND assetAction == "TERMINATE"){//Anything other than Detect is termianted from the Audit family
+		auditWTerminate = true;
+	}
+	if(familyName=="Audit Services" AND assetAction == "CREATE" ){
+		auditCreateNetARR = auditCreateNetARR + netNewArr;
+		auditWCreate=true;
+	}
+	//CSYS-103873 Ends
+	//CSYS-103849 SV. 10-08-2021 Start
+	expensePayPoidMasterString = "*461*1035*1268803*471*";
+	if(find(expensePayPoidMasterString , "*"+poId+"*") <> -1 AND assetAction == "TERMINATE"){
+		expensePayClassicTerminated = true;
+	}
+	//CSYS-103849 End
+	
+}
+
+sortedFamilyArray = sort(familyNameArray, "asc"); //we need to sort the product families into their own stacks in an array for consistency
+sortedFamilyArrArray = sort(familyNameWithArrArray, "asc"); //we need to sort the net new arr values in respect to their sorted product families 
+
+count = 0; 
+for familyName in sortedFamilyArrArray {
+	delimitedSortedArrString = delimitedSortedArrString + sortedFamilyArrArray[count];
+	
+	count = count + 1;
+}
+
+count = 0; //determine what iteration we're on
+newArray = split(delimitedSortedArrString, "*"); //separate out the net new arr values from the family names
+sortedNetNewArrArray = string[]; //array we will append only the net new arr values to
+sortedAssetActionArray = string[];
+
+for myIndex in newArray {
+	determineValues = newArray[count];
+	if (isnumber(newArray[count])){ //check for net new arr number values
+		append(sortedNetNewArrArray, determineValues); //append only the net new arr number values to this array
+	}
+	if (find(newArray[count], "CREATE") <> -1 OR find(newArray[count], "MODIFY") <> -1 OR find(newArray[count], "NONE") <> -1 OR find(newArray[count], "TERMINATE") <> -1){
+		append(sortedAssetActionArray, determineValues); //for new approval requirements. need to sort asset actions relevant to their product family stacks
+	}
+	count = count + 1;
+}
+
+count = 0; 
+runningTotalNetARR = 0; //running total specific product families
+runningTotalRevenueOffset = 0; //for new approval requirements
+eachFamilyArray = string[];
+for familyName in sortedFamilyArray {
+	if (isnumber(sortedNetNewArrArray[count])){
+		myVar = atof(sortedNetNewArrArray[count]);
+	}
+	runningTotalNetARR = runningTotalNetARR + myVar; //running total of specific family's net new Arr
+	put(familyDict, sortedFamilyArray[count], string(runningTotalNetARR)); //update the familyDict familyName keys with the most current running total
+	
+	if (assetActionArray[count] == "TERMINATE"){ //if we run into a TERMINATE line
+		put(familyTerminateDict, unsortedFamilyNameArray[count], assetActionArray[count]); //write the 'TERMINATE' to the corresponding family key to denote that THAT family has a TERMINATE line
+	}
+	
+	if (assetActionArray[count] == "CREATE"){ //if we run into a CREATE line
+		put(familyCreateDict, unsortedFamilyNameArray[count], assetActionArray[count]); //write the 'CREATE' to the corresponding family key to denote that THAT family has a CREATE line
+	}
+	
+	if (sortedAssetActionArray[count] == "TERMINATE" OR sortedAssetActionArray[count] == "CREATE"){ 
+		runningTotalRevenueOffset = runningTotalRevenueOffset + myVar; //for new approval requirements
+		put(familyRevenueDecreaseDict, sortedFamilyArray[count], string(runningTotalRevenueOffset)); //for new approval requirements
+	}
+	
+	if (sortedFamilyArray[count] <> sortedFamilyArray[count - 1]){ //if we've reached the next family
+		append(eachFamilyArray, sortedFamilyArray[count]);
+	}
+	
+	//(LN. 4-24-2020) Commenting out the "piItemTypeArray[count] <> piItemtypeArray[count - 1]" check as this was causing issues calculating ARR
+	if (piItemTypeArray[count] == "Base" AND assetActionArray[count] == "CREATE" AND /*piItemTypeArray[count] <> piItemtypeArray[count - 1] AND*/ NOT(containskey(firstCreateBaseDict, unsortedFamilyNameArray[count]))){ //if we've reached the next first CREATE Base
+		put(firstCreateBaseDict, unsortedFamilyNameArray[count], "No longer blank so don't update the dictionary");
+		put(firstCreateBaseDict, docNumArray[count], "first CREATE Base for " + unsortedFamilyNameArray[count]); //denote which docNum the first CREATE Base for the family lies in
+	}
+	
+	count = count + 1;
+	if (sortedFamilyArray[count] <> sortedFamilyArray[count - 1]){ //if we've reached the next family
+		runningTotalNetARR = 0; //set the running total to 0 so that the next family can sum correctly
+		runningTotalRevenueOffset = 0; //for new approval requirements
+	}
+}
+modifyAdjustment = 0.0;
+for familyNetArr in eachFamilyArray{
+	sumOfTripLinkFamilyLinesFloat = 0.0;
+	myResult = get(familyDict, familyNetArr);
+	familyNetArrSum = 0.0;
+	floatValue = 0.0;
+	if (isnumber(myResult)){
+		familyNetArrSum = atof(myResult);
+	}
+	if (familyNetArrSum < 0 AND get(familyTerminateDict, familyNetArr) == "TERMINATE" AND get(familyCreateDict, familyNetArr) == "CREATE"){ //fix for CSYS-35414 (CREATE portion of the line) 
+		modifyAdjustment = modifyAdjustment + familyNetArrSum;
+	}
+	if (get(familyTerminateDict, familyNetArr) == "TERMINATE" AND get(familyCreateDict, familyNetArr) == "CREATE"){ //family contains both creates and terminates
+		revValue = get(familyRevenueDecreaseDict, familyNetArr);
+		if (isnumber(revValue)){
+		floatValue = atof(revValue);
+		}
+		 
+		if (floatValue < 0){ //if there's a revenue decrease, non TripLink related
+			//if inside term, trigger approval up through EVP
+			if (renewalDateText <> "" AND currentDate < minusdays(renewalDate, 90)){
+				terminateInsideTerm = true;
+			}
+			//if outside term, trigger approval up through VP
+			if (renewalDateText <> "" AND currentDate > minusdays(renewalDate, 90)){
+				terminateOutsideTerm = true;
+			}
+		}
+	}
+	if (get(familyTerminateDict, familyNetArr) == "TERMINATE" AND get(familyCreateDict, familyNetArr) <> "CREATE"){ //family contains terminates and no creates
+		if (familyNetArr <> "TripLink and TripIt"){
+			if (renewalDateText <> "" AND currentDate < minusdays(renewalDate, 90)){
+				terminateInsideTerm = true;
+			}
+			//if outside term, trigger approval up through VP
+			if (renewalDateText <> "" AND currentDate > minusdays(renewalDate, 90)){
+				terminateOutsideTerm = true;
+			}
+		}
+	}
+		
+	sumOfTripLinkFamilyLines = get(familyRevenueDecreaseDict, "TripLink and TripIt");
+	if (isnumber(sumOfTripLinkFamilyLines)){
+		sumOfTripLinkFamilyLinesFloat = atof(sumOfTripLinkFamilyLines);
+	}
+	finalTripLinkVal = sumOfTripLinkFamilyLinesFloat + tripLinkCoreRevTotal;
+	if (finalTripLinkVal < 0){ //if there's a TripLink revenue decrease
+		//if inside term, trigger approval up through EVP
+		if (renewalDateText <> "" AND currentDate < minusdays(renewalDate, 90)){
+			terminateInsideTerm = true;
+		}
+		//if outside term, trigger approval up through VP
+		if (renewalDateText <> "" AND currentDate > minusdays(renewalDate, 90)){
+			terminateOutsideTerm = true;
+		}
+	}
+	//CSYS-103849 SV. 10-08-2021 Start
+	if(expensePayClassicTerminated == true){
+		if(terminateInsideTerm == true){ 
+			terminateInsideTerm = false;
+		}
+		if(terminateOutsideTerm == true){
+			terminateOutsideTerm = false;
+		}
+		if(modifyInsideTerm == true){
+			modifyInsideTerm =false;
+		}
+		if(modifyOutsideTerm == true){
+			modifyOutsideTerm = false;
+		}
+	}
+	//CSYS-103849 End
+}
+
+count = -1; 
+for familyName in sortedFamilyArray {
+	count = count + 1;
+	if (piItemTypeArray[count] == "Base" AND assetActionArray[count] == "MODIFY"){ //if we've reach the MODIFY Base
+		//put(firstModifyDict, docNumArray[count], "first MODIFY Base");
+		firstModify = docNumArray[count];
+		
+		break; //we've captured the first modify base. break out of the loop.
+	}
+}
+
+runningTotalModifyNetARR = 0.0; 
+count = 0;
+for familyName in unsortedFamilyNameArray {
+	if (assetActionArray[count] == "MODIFY" AND NOT (containskey(familyTerminateDict, familyName) AND containskey(familyCreateDict, familyName))){ //MODIFY lines not processed by a product family match in Terminate logic
+		runningTotalModifyNetARR = runningTotalModifyNetARR + netNewArrArray[count]; //sum the modify lines		
+	}
+	count = count + 1;
+}
+
+runningTotalModifyNetARR = runningTotalModifyNetARR + modifyAdjustment;
+
+quoteTotalSalesARR = 0.0;
+bmiSalesArr = 0.0;
+totalSalesNetNewARR = 0.0; //IESCNQRCPQ-1708 (OK. 4-9-2024)
+totalNetNewARR = 0.0; //IESCNQRCPQ-1708 (OK. 4-9-2024)
+
+for line in line_process {
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	lineTrans = line.numCommittedTransaction_line;
+	prevLineTrans = line.prevNumCommittedTransaction_line;
+	lineDiscount = line.discount_line;
+	prevLineDiscount = line.prevDiscountStatic_line;
+	poID = "poId_line";
+	poRampOverride = get(stringsDict, parentDocNum + RAMP_DELIMITER + poID+DELIMITER+ PO_RAMP_OVERRIDE );
+	piItemType = util.getStringAttribute(stringsDict, docNum, DELIMITER, "piItemType_line");
+	assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, "assetAction_line");
+	netNewArr = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "netNewARRCurrency_line"); //added
+	familyName = line._part_custom_field23;
+	familyArr = get(familyDict, familyName); 
+	familyArrFloat = 0.0;
+	salesNetNewARR = line.salesNetNewARR_line_c; //IESCNQRCPQ-1708 (OK. 4-9-2024)
+	previousSalesNetNewARR = line.previousSalesNetNewARR_line_c; //IESCNQRCPQ-1708 (OK. 4-9-2024)
+	
+	if (isnumber(familyArr)){
+		familyArrFloat = atof(familyArr);
+	}
+	
+	salesArr = line.salesARRCurrency_line;
+	
+	if (containskey(familyTerminateDict, familyName)){ //if the line's family contains TERMINATES 
+		if (assetAction == "CREATE" AND piItemType == "Base" AND containskey(firstCreateBaseDict, docNum)){ //if the line is CREATE and it's a first CREATE Base
+			if(familyArrFloat > 0){ //if positive
+				utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", familyArrFloat);
+			}
+			else {
+			utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", 0.0);
+			}
+			//CSYS-103873 NP 08/30/2021 Starts
+			if(detectByAppZenTerminateVar AND auditWCreate AND familyName=="Audit Services"){
+					if(familyArrFloat > 0){ //Sales ARR is positive
+						utilResultString = util.formAttrValueStr(attributesDict, "additionalSalesCredit_line", docNum, string(detectTermNetARR));
+					}
+					else{
+						if(auditWTerminate){
+							utilResultString = util.formAttrValueStr(attributesDict, "additionalSalesCredit_line", docNum, string(detectTermNetARR));
+						}
+						else{
+							utilResultString = util.formAttrValueStr(attributesDict, "additionalSalesCredit_line", docNum, string(auditCreateNetARR));
+						}
+					}
+				}
+			//CSYS-103873 Ends
+		}
+		else {
+			utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", 0.0);
+			utilResultString = util.formAttrValueStr(attributesDict, "additionalSalesCredit_line", docNum, string(0.0));
+		}
+	}
+	
+	if (NOT (containskey(familyTerminateDict, familyName))){
+		if(netNewArr > 0){ 
+
+			if (assetAction == "CREATE" OR assetAction == "NONE"){
+				utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", netNewArr);
+			}
+
+		}
+		else {
+			utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", 0.0);
+		}
+	}
+	
+	//commenting out the block below for CSYS-59066 because First Modify needs to be family agnostic. KA. 2-19-2016. 
+	/*if (assetAction == "MODIFY" AND NOT (containskey(familyTerminateDict, familyName) AND containskey(familyCreateDict, familyName))){  //MODIFY lines not processed by a product family match in Terminate logic
+		finalSumForModify = netArrOfModifyFloat + modifyAdjustment;
+	}*/
+	
+	if (assetAction == "MODIFY" AND piItemType == "Base"){
+		if(docNum == firstModify){ //if the document number is the first base MODIFY
+			if (runningTotalModifyNetARR > 0){ //if positive
+				utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", runningTotalModifyNetARR);
+			}
+			else {
+				utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", 0.0);
+			}
+		}
+		else {
+			utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", 0.0);
+		}
+	}
+	
+	if (assetAction == "TERMINATE"){ //Terminate lines always have 0 for the salesARR
+		utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", 0.0);
+	}
+	salesArrVal = util.getFloatAttribute( floatsDict, docNum, DELIMITER, "salesARRCurrency_line");
+	utilResultString = util.formAttrValueStr(attributesDict, "prevSalesARR_line", docNum, string(salesArrVal));
+	
+	if (line.salesARRCurrency_line == line.prevSalesARR_line /*Recalculate scenarios*/
+		OR (line.salesARRCurrency_line <> line.prevSalesARR_line AND numCommittedTransaction_quote <> previousOfMonthlyTransactions_quote)OR (line.salesARRCurrency_line <> line.prevSalesARR_line AND lineTrans <> prevLineTrans)
+		OR (line.salesARRCurrency_line <> line.prevSalesARR_line AND round(lineDiscount,2) <> round(prevLineDiscount,2))
+		OR (line.salesARRCurrency_line <> line.prevSalesARR_line AND lineTrans <> prevLineTrans)){
+			utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", salesArrVal);
+			utilResultString = util.formAttrValueStr(attributesDict, "salesARRCurrency_line", docNum, string(salesArrVal));
+			quoteTotalSalesARR = quoteTotalSalesARR + salesArrVal;
+	}
+	else /*Don't recalculate, but keep the user entered value*/ {utilResultFlag = util.putFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line", salesArr);
+	utilResultString = util.formAttrValueStr(attributesDict, "salesARRCurrency_line", docNum, string(line.salesARRCurrency_line));
+	quoteTotalSalesARR = quoteTotalSalesARR + salesArr;
+	}
+	
+	//bmi calculated sales arr, line level, for CSYS-39814
+	utilResultString = util.formAttrValueStr(attributesDict, "bmiSalesArr_line", docNum, string(salesArrVal));
+	bmiSalesArr = bmiSalesArr + salesArrVal;
+	
+	put(triggerDict, docNum + "~" + "terminateRevDecreaseInTerm", docNum + "~" + "terminateRevDecreaseInTerm" + TRIG_KEY_VALUE_DELIM + string(terminateInsideTerm));
+	put(triggerDict, docNum + "~" + "terminateRevDecreaseOutTerm", docNum + "~" + "terminateRevDecreaseOutTerm" + TRIG_KEY_VALUE_DELIM + string(terminateOutsideTerm));
+	put(triggerDict, docNum + "~" + "modifyRevDecreaseInTerm", docNum + "~" + "modifyRevDecreaseInTerm" + TRIG_KEY_VALUE_DELIM + string(modifyInsideTerm));
+	put(triggerDict, docNum + "~" + "modifyRevDecreaseOutTerm", docNum + "~" + "modifyRevDecreaseOutTerm" + TRIG_KEY_VALUE_DELIM + string(modifyOutsideTerm));
+	//IESCNQRCPQ-1852 -Start
+	put(triggerDict, docNum + "~" + "modifyRevDecreaseInTermVP", docNum + "~" + "modifyRevDecreaseInTermVP" + TRIG_KEY_VALUE_DELIM + string(modifyInsideTermManagerVP));
+	put(triggerDict, docNum + "~" + "modifyRevDecreaseInTermGM", docNum + "~" + "modifyRevDecreaseInTermGM" + TRIG_KEY_VALUE_DELIM + string(modifyInsideTermManagerGM));
+	put(triggerDict, docNum + "~" + "modifyRevDecreaseInTermEVP", docNum + "~" + "modifyRevDecreaseInTermEVP" + TRIG_KEY_VALUE_DELIM + string(modifyInsideTermManagerEVP));
+	put(triggerDict, "modifyRevDecreaseInTermDays", string(remainingContractDays));
+	//IESCNQRCPQ-1852 - End
+	
+	//IESCNQRCPQ-1708 (OK. 4-9-2024) Start - Populate the value for salesNetNewARR field 
+	totalNetNewARR = totalNetNewARR + netNewArr;
+	if (salesNetNewARR == previousSalesNetNewARR) {
+		utilResultString = util.formAttrValueStr(attributesDict, "salesNetNewARR_line_c", docNum, string(netNewArr));
+		utilResultString = util.formAttrValueStr(attributesDict, "previousSalesNetNewARR_line_c", docNum, string(netNewArr));
+		totalSalesNetNewARR = totalSalesNetNewARR + netNewArr;
+	}
+	else {
+		utilResultString = util.formAttrValueStr(attributesDict, "salesNetNewARR_line_c", docNum, string(salesNetNewARR));
+		totalSalesNetNewARR = totalSalesNetNewARR + salesNetNewARR;
+	}
+	//IESCNQRCPQ-1708 - End
+	
+} //end loop
+
+//CSYS-101084, (BS, 11/06/2020) Commenting "multipleOrdersFlag_quote OR" to ROLL BACK changes to allow submitting multiple orders for the same customer in the same month
+//CSYS-98767
+//IESCNQRCPQ-1708 (OK. 4-9-2024) Comment out below if condition and add new if condition based on totalSalesNetNewARR_quote_c
+//if (/*multipleOrdersFlag_quote OR */quoteTotalSalesARR <> bmiSalesArr){ ////bmi calculated sales arr, quote level, for CSYS-39814
+if (totalSalesNetNewARR <> totalNetNewARR) {
+	utilResultString = util.formAttrValueStr(attributesDict, "salesArrModified_quote", QUOTE_DOC_NUM, "true");
+}
+else {utilResultString = util.formAttrValueStr(attributesDict, "salesArrModified_quote", QUOTE_DOC_NUM, "false");}
+
+utilResultString = util.formAttrValueStr(attributesDict, "quoteTotalSalesARR_quote", QUOTE_DOC_NUM, string(quoteTotalSalesARR));
+utilResultString = util.formAttrValueStr(attributesDict, "bmiSalesArr_quote", QUOTE_DOC_NUM, string(bmiSalesArr));
+
+utilResultString = util.formAttrValueStr(attributesDict, "totalSalesNetNewARR_quote_c", QUOTE_DOC_NUM, string(totalSalesNetNewARR)); //IESCNQRCPQ-1708 (OK. 4-9-2024)
+utilResultString = util.formAttrValueStr(attributesDict, "totalNetNewARR_quote_c", QUOTE_DOC_NUM, string(totalNetNewARR)); //IESCNQRCPQ-1708 (OK. 4-9-2024)
+
+//################################################################################################
+//#########      CSYS-77098 (KA. 3-14-2017): calculate ARR by Product for Addons      ############
+//################################################################################################
+
+MODIFY_ACTION = "MODIFY";
+CREATE_ACTION = "CREATE";
+TERMINATE_ACTION = "TERMINATE";
+
+totalNegativeModifyToBurn = 0.0;
+
+for docNum in docNumList{
+	netNewArrGrid = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "netNewARRCurrency_line"); 
+	assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, "assetAction_line");
+	familyName = util.getStringAttribute(stringsDict, docNum, DELIMITER, "_part_custom_field23");
+	arrByProduct = 0.0; 
+
+	familyArr = "";
+	familyArrFloat = 0.0;
+	if(containskey(familyDict, familyName)){
+		familyArr = get(familyDict, familyName);
+		if(isnumber(familyArr)){
+			//retreive the ARR for the family:
+			familyArrFloat = atof(familyArr);
+		}
+	}
+
+	//CREATE action code logic:
+	if(assetAction == CREATE_ACTION){
+		
+		//CREATE's that don't have a TERMINATE in the same family:
+		if(NOT containskey(familyTerminateDict, familyName)){
+			arrByProduct = netNewArrGrid; //just carry over from net new arr grid value
+		}
+		//CREATE's that have a TERMINATE in the same family:
+		else{
+			arrByProduct = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line");
+			if(familyArrFloat < 0 AND NOT containskey(familyDict, familyName + "stopAggregating")){ //if family arr is negative
+				totalNegativeModifyToBurn = totalNegativeModifyToBurn + familyArrFloat;
+				//prevent accumulating multiple ARR values for the same family:
+				put(familyDict, familyName + "stopAggregating", "true");
+				
+			}
+		}
+		
+		//make sure arrByProduct is 0 if negative:
+		if(arrByProduct < 0){
+			arrByProduct = 0.0;
+		}
+
+		utilResultString = util.formAttrValueStr(attributesDict, "arrByProduct_line", docNum, string(arrByProduct));
+
+	}
+
+	 //check for negative MODIFY net new ARR:
+	if(assetAction == MODIFY_ACTION AND netNewArrGrid < 0){
+
+		//accumulate the negative MODIFY net new ARR in the global constant:
+		totalNegativeModifyToBurn = totalNegativeModifyToBurn + netNewArrGrid;
+
+	}
+}
+
+for docNum in docNumList{
+	netNewArrGrid = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "netNewARRCurrency_line"); 
+	dynamicArr = netNewArrGrid;
+	assetAction = util.getStringAttribute(stringsDict, docNum, DELIMITER, "assetAction_line"); 
+	familyName = util.getStringAttribute(stringsDict, docNum, DELIMITER, "_part_custom_field23");
+	arrByProduct = 0.0;
+
+	//MODIFY action code logic:
+	if(assetAction == MODIFY_ACTION){ //check for positive MODIFY net new arr
+
+		//check for negative accumulation:
+		if(totalNegativeModifyToBurn < 0){ 
+
+			//check if net new ARR grid value is positive
+			if(netNewArrGrid > 0){ 
+				arrByProduct = netNewArrGrid + totalNegativeModifyToBurn;
+				totalNegativeModifyToBurn = totalNegativeModifyToBurn + netNewArrGrid;
+			}
+			else{ //net new arr grid value in negative
+				arrByProduct = 0.0;
+			}
+
+		}
+		else{
+			//if the family has both CREATE's and TERMINATE's:
+			if(containskey(familyTerminateDict, familyName) AND containskey(familyCreateDict, familyName)) {
+				arrByProduct = util.getFloatAttribute(floatsDict, docNum, DELIMITER, "salesARRCurrency_line");
+			}
+			else{
+				arrByProduct = netNewArrGrid;
+			}
+			
+		}
+
+		if(arrByProduct < 0){
+			arrByProduct = 0.0;
+		}
+
+		utilResultString = util.formAttrValueStr(attributesDict, "arrByProduct_line", docNum, string(arrByProduct));
+	}
+
+	//Terminate's should always have 0 for ARR by Product:
+	if(assetAction == TERMINATE_ACTION){
+		utilResultString = util.formAttrValueStr(attributesDict, "arrByProduct_line", docNum, string(0.0));
+	}
+
+}
+
+//################################################################################################
+//###############################      END CSYS-77098      #######################################
+//################################################################################################
+
+
+}//end Add-on check
+
+if (quoteType_quote == "New Business"){ //for storing BMI Sales ARR on New Business quotes
+bmiSalesArrNew = 0.0;
+quoteTotalSalesARRNew = 0.0;
+totalSalesNetNewARRNew = 0.0; //IESCNQRCPQ-1708 (OK. 4-9-2024)
+totalNetARRNew = 0.0; //IESCNQRCPQ-1708 (OK. 4-9-2024)
+
+for line in line_process {
+	docNum = line._document_number;
+	piItemType = line.piItemType_line;
+	arrNetPrice = util.getFloatAttribute( floatsDict, docNum, DELIMITER, "arrNet_line");
+	salesArrPrice = util.getFloatAttribute( floatsDict, docNum, DELIMITER, "salesARRCurrency_line");
+	lineTrans = line.numCommittedTransaction_line;
+	prevLineTrans = line.prevNumCommittedTransaction_line;
+	lineDiscount = line.discount_line;
+	prevLineDiscount = line.prevDiscountStatic_line;
+	salesNetNewARR = line.salesNetNewARR_line_c; //IESCNQRCPQ-1708 (OK. 4-9-2024)
+	previousSalesNetNewARR = line.previousSalesNetNewARR_line_c; //IESCNQRCPQ-1708 (OK. 4-9-2024)
+	
+	if (piItemType <> ""){
+		utilResultString = util.formAttrValueStr(attributesDict, "arrByProduct_line", docNum, string(salesArrPrice));//CSYS-103957 (NT 30-08-2021)
+		utilResultString = util.formAttrValueStr(attributesDict, "bmiSalesArr_line", docNum, string(arrNetPrice)); //populate BMI Sales ARR at line level for new biz
+		bmiSalesArrNew = bmiSalesArrNew + arrNetPrice;
+		utilResultString = util.formAttrValueStr(attributesDict, "prevSalesARR_line", docNum, string(arrNetPrice)); 
+		
+		if (line.salesARRCurrency_line == line.prevSalesARR_line /*Recalculate scenarios*/
+			OR (line.salesARRCurrency_line <> line.prevSalesARR_line AND numCommittedTransaction_quote <> previousOfMonthlyTransactions_quote) 
+			OR (line.salesARRCurrency_line <> line.prevSalesARR_line AND lineTrans <> prevLineTrans)
+			OR (line.salesARRCurrency_line <> line.prevSalesARR_line AND round(lineDiscount,2) <> round(prevLineDiscount,2))
+			OR (line.salesARRCurrency_line <> line.prevSalesARR_line AND lineTrans <> prevLineTrans)){
+				utilResultString = util.formAttrValueStr(attributesDict, "salesARRCurrency_line", docNum, string(arrNetPrice));
+				//utilResultString = util.formAttrValueStr(attributesDict, "prevSalesARR_line", docNum, string(arrNetPrice)); //keep zeros entered
+				quoteTotalSalesARRNew = quoteTotalSalesARRNew + arrNetPrice;
+		}
+		else /*Don't recalculate, but keep the user entered value*/{
+			utilResultString = util.formAttrValueStr(attributesDict, "salesARRCurrency_line", docNum, string(line.salesARRCurrency_line));
+			//utilResultString = util.formAttrValueStr(attributesDict, "prevSalesARR_line", docNum, string(line.salesARRCurrency_line)); //keep zeros entered
+			quoteTotalSalesARRNew = quoteTotalSalesARRNew + line.salesARRCurrency_line;
+		}
+		
+		//IESCNQRCPQ-1708 (OK. 4-9-2024) Start - Populate the value for salesNetNewARR field 
+		totalNetARRNew = totalNetARRNew + arrNetPrice;
+		if (salesNetNewARR == previousSalesNetNewARR) {
+			utilResultString = util.formAttrValueStr(attributesDict, "salesNetNewARR_line_c", docNum, string(arrNetPrice));
+			utilResultString = util.formAttrValueStr(attributesDict, "previousSalesNetNewARR_line_c", docNum, string(arrNetPrice));
+			totalSalesNetNewARRNew = totalSalesNetNewARRNew + arrNetPrice;
+		}
+		else {
+			utilResultString = util.formAttrValueStr(attributesDict, "salesNetNewARR_line_c", docNum, string(salesNetNewARR));
+			totalSalesNetNewARRNew = totalSalesNetNewARRNew + salesNetNewARR;
+		}
+		//IESCNQRCPQ-1708 - End
+	}
+}
+utilResultString = util.formAttrValueStr(attributesDict, "bmiSalesArr_quote", QUOTE_DOC_NUM, string(bmiSalesArrNew)); //populate BMI Sales ARR at quote level for new biz
+utilResultString = util.formAttrValueStr(attributesDict, "quoteTotalSalesARR_quote", QUOTE_DOC_NUM, string(quoteTotalSalesARRNew));
+
+utilResultString = util.formAttrValueStr(attributesDict, "totalSalesNetNewARR_quote_c", QUOTE_DOC_NUM, string(totalSalesNetNewARRNew)); //IESCNQRCPQ-1708 (OK. 4-9-2024)
+utilResultString = util.formAttrValueStr(attributesDict, "totalNetNewARR_quote_c", QUOTE_DOC_NUM, string(totalNetARRNew)); //IESCNQRCPQ-1708 (OK. 4-9-2024)
+
+//CSYS-101084, (BS, 11/06/2020) Commenting "multipleOrdersFlag_quote OR" to ROLL BACK changes to allow submitting multiple orders for the same customer in the same month
+//CSYS-98767	
+//IESCNQRCPQ-1708 (OK. 4-9-2024) Comment out below if condition and add new if condition based on totalSalesNetNewARR_quote_c
+//if (/*multipleOrdersFlag_quote OR */quoteTotalSalesARRNew <> bmiSalesArrNew){ ////bmi calculated sales arr, quote level, for CSYS-39814
+if (totalSalesNetNewARRNew <> totalNetARRNew) {
+utilResultString = util.formAttrValueStr(attributesDict, "salesArrModified_quote", QUOTE_DOC_NUM, "true");
+}
+else {utilResultString = util.formAttrValueStr(attributesDict, "salesArrModified_quote", QUOTE_DOC_NUM, "false");}
+
+} //end New Biz check
+
+return "";

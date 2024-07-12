@@ -1,0 +1,23 @@
+{
+  "name" : "Calculate Future Date for Quarterly",
+  "variableName" : "calculateFutureDateForQuarterly",
+  "description" : "CSYS-106638 (OK. 7-11-2022) Future Date Calculations for Quarterly Billing Cycle",
+  "libraryFunctions" : [ "commerce.populateAssetBillingDict", "util.addMonthsToDate", "util.formAttrValueStr" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "detectMigrateValue",
+    "type" : "String"
+  }, {
+    "name" : "anyTypeDict",
+    "type" : "Anytype Dictionary"
+  }, {
+    "name" : "newOrderDate",
+    "type" : "String"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "nextBillingDate_line", "originalNextBillDate_line", "assetString_line", "_part_number", "_document_number", "poCategory_line", "assetAction_line", "_parent_doc_number" ],
+  "mainDocAttributes" : [ "billingCycle_quote" ],
+  "systemAttributes" : [ ]
+}

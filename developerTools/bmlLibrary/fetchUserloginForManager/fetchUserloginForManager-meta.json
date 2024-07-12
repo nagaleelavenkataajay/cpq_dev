@@ -1,0 +1,12 @@
+{
+  "name" : "Fetch Userlogin for Manager",
+  "variableName" : "fetchUserloginForManager",
+  "description" : "(CSYS-99935, NP. 15-Jul-2020) This library function fetches the userlogins from ApproverNames datatable where the loginName parameter is manager.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "loginName",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

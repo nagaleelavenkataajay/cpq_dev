@@ -1,0 +1,58 @@
+// UTIL reconcileCurrentDate:
+// Return a string dictionary with following string components: current date, current day, current month, current year.
+// These components will take into account the user timezone.
+
+resultDict = dict("string");
+
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd";
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+CURRENT_DATE = getdate();
+CURRENT_DATESTR = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_SLASH, timezone), 0, 10);
+CURRENT_MONTH_TZ = "";
+CURRENT_DAY_TZ = "";
+CURRENT_YEAR_TZ = "";
+CURRENT_DATESTR_TZ = "";
+
+
+
+//Commenting out timezone check until platform bug is fixed by Oracle. 
+//For Now, current date will be based on server time
+//if(timezone <> ""){	
+	if(find(CURRENT_DATESTR, "/") <> -1) {
+		CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+		CURRENT_MONTH_TZ = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_SLASH, timezone), 0, 2);
+		CURRENT_DAY_TZ = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_SLASH, timezone), 3, 5);
+		CURRENT_YEAR_TZ = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_SLASH, timezone), 6, 10);
+		CURRENT_DATESTR_TZ = datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_SLASH, timezone);
+	} else {
+		CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+		CURRENT_MONTH_TZ = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_HYPHEN, timezone), 5, 7);
+		CURRENT_DAY_TZ = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_HYPHEN, timezone), 8, 10);
+		CURRENT_YEAR_TZ = substring(datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_HYPHEN, timezone), 0, 4);
+		CURRENT_DATESTR_TZ = datetostr(CURRENT_DATE, DATE_FORMAT_PREFERENCE_HYPHEN, timezone);
+	}
+/*}
+else{
+	if(find(CURRENT_DATESTR, "/") <> -1) {
+		CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_SLASH);
+		CURRENT_MONTH_TZ = substring(datetostr(CURRENT_DATE), 0, 2);
+		CURRENT_DAY_TZ = substring(datetostr(CURRENT_DATE), 3, 5);
+		CURRENT_YEAR_TZ = substring(datetostr(CURRENT_DATE), 6, 10);
+		CURRENT_DATESTR_TZ = datetostr(CURRENT_DATE);
+	} else {
+		CURRENT_DATE = strtojavadate(CURRENT_DATESTR, DATE_FORMAT_PREFERENCE_HYPHEN);
+		CURRENT_MONTH_TZ = substring(datetostr(CURRENT_DATE), 5, 7);
+		CURRENT_DAY_TZ = substring(datetostr(CURRENT_DATE), 8, 10);
+		CURRENT_YEAR_TZ = substring(datetostr(CURRENT_DATE), 0, 4);
+		CURRENT_DATESTR_TZ = datetostr(CURRENT_DATE);
+	}
+}*/
+
+put(resultDict, "CURRENT_MONTH_TZ", CURRENT_MONTH_TZ);
+put(resultDict, "CURRENT_DAY_TZ", CURRENT_DAY_TZ);
+put(resultDict, "CURRENT_YEAR_TZ", CURRENT_YEAR_TZ);
+put(resultDict, "CURRENT_DATESTR_TZ", CURRENT_DATESTR_TZ);
+
+
+
+return resultDict;

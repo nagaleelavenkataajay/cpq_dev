@@ -1,0 +1,400 @@
+/* This script writes to all the attributes necessary for the approval process to be integrated back up to the SFDC BMI Approval History Object (Child of the Quote: Master-Detail relationship)
+** This fires on Request Approval, Approve, Reject, and Submit
+** CSYS-88424 (LN. 1-31-2018)
+*/
+
+result = "";
+approvalComment = "";
+originalStatus = "";
+approvalReason = "";
+newStatus = "";
+bmiApprovalHistoryName = "";
+nextApprover = "";
+approvalOutcome = "";
+nextApprovalLevel = "";
+
+MGR_APPROVAL = "mgrApproval_quote";
+VP_APPROVAL = "vpApproval_quote";
+SVP_APPROVAL = "svpApproval_quote";
+GM_APPROVAL = "gmApproval_quote";
+EVP_APPROVAL = "evpApproval_quote";
+CFO_APPROVAL = "cfoApproval_quote";
+SAP_APPROVAL = "sapApproval_quote";
+MISC_APPROVAL = "miscApproval_quote";
+APPROVED = "Approved";
+REJECTED = "Rejected";
+
+//CSYS-95683
+customApprovalHistory = "";
+DELIMITER = "@.@";
+numOfElements = sizeofarray(approval_history_submit_quote);
+
+customApprovalHistory = approvalHistoryCustom_quote;
+approvalAction = "";
+for elements in approval_history_submit_quote{
+
+	approvalLayer = elements[0];
+	approverInfo = elements[1];
+	splitInfo = split(approverInfo,"~");
+
+	approverLogin = splitInfo[0];
+	approverChoice = splitInfo[2];
+	approverComment = splitInfo[3];
+	//CSYS-95683
+	approvalAction = "";
+	if(approverChoice == "Submit" AND nextApprovalLevel_quote == ""){
+		originalStatus = "Pending";
+		bmiApprovalHistoryName = "Submitted for Approval";
+		approvalReason = "Submitted for Approval";
+		approvalOutcome = "N/A";
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+		approvalAction = "Submitted for";
+	} else {
+		originalStatus = newStatus_quote;
+	}
+	//CSYS-95683
+	if(approverChoice == "Revised" AND nextApprovalLevel_quote == ""){
+		bmiApprovalHistoryName = "Revised";
+		approvalReason = "Revised";
+		approvalOutcome = "N/A";
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+		approvalAction = "Revised";
+	}
+	
+	if(approvalLayer == MGR_APPROVAL AND nextApprovalLevel_quote == MGR_APPROVAL){
+		bmiApprovalHistoryName = "Manager/Director";
+		approvalReason = mgrApprovalMessage_quote;
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+
+		if(approverChoice == "Approve"){
+			approvalOutcome = APPROVED;
+		} else {
+			approvalOutcome = REJECTED;
+		}
+		approvalAction = "Manager";
+	}
+	if(approvalLayer == VP_APPROVAL AND nextApprovalLevel_quote == VP_APPROVAL){
+		bmiApprovalHistoryName = "Sr Director/VP";
+		approvalReason = vpApprovalMessage_quote;
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+
+		if(approverChoice == "Approve"){
+			approvalOutcome = APPROVED;
+		} else {
+			approvalOutcome = REJECTED;
+		}
+		approvalAction = "VP";
+	}
+	if(approvalLayer == SVP_APPROVAL AND nextApprovalLevel_quote == SVP_APPROVAL){
+		bmiApprovalHistoryName = "SVP";
+		approvalReason = svpApprovalMessage_quote;
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+
+		if(approverChoice == "Approve"){
+			approvalOutcome = APPROVED;
+		} else {
+			approvalOutcome = REJECTED;
+		}
+		approvalAction = "SVP";
+	}
+	if(approvalLayer == GM_APPROVAL AND nextApprovalLevel_quote == GM_APPROVAL){
+		bmiApprovalHistoryName = "GM";
+		approvalReason = gmApprovalMessage_quote;
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+
+		if(approverChoice == "Approve"){
+			approvalOutcome = APPROVED;
+		} else {
+			approvalOutcome = REJECTED;
+		}
+		approvalAction = "GM";
+	}
+	if(approvalLayer == EVP_APPROVAL AND nextApprovalLevel_quote == EVP_APPROVAL){
+		bmiApprovalHistoryName = "EVP";
+		approvalReason = evpApprovalMessage_quote;
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+
+		if(approverChoice == "Approve"){
+			approvalOutcome = APPROVED;
+		} else {
+			approvalOutcome = REJECTED;
+		}
+		approvalAction = "EVP";
+	}
+	if(approvalLayer == CFO_APPROVAL AND nextApprovalLevel_quote == CFO_APPROVAL){
+		bmiApprovalHistoryName = "CFO/COO";
+		approvalReason = cfoApprovalMessage_quote;
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+
+		if(approverChoice == "Approve"){
+			approvalOutcome = APPROVED;
+		} else {
+			approvalOutcome = REJECTED;
+		}
+		approvalAction = "CFO/COO";
+	}
+	if(approvalLayer == SAP_APPROVAL AND nextApprovalLevel_quote == SAP_APPROVAL){
+		bmiApprovalHistoryName = "SAP Cloud Extention";
+		approvalReason = sapApprovalMessage_quote;
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+
+		if(approverChoice == "Approve"){
+			approvalOutcome = APPROVED;
+		} else {
+			approvalOutcome = REJECTED;
+		}
+		approvalAction = "SAP";
+	}
+	if(approvalLayer == MISC_APPROVAL AND nextApprovalLevel_quote == MISC_APPROVAL){
+		bmiApprovalHistoryName = "Misc";
+		approvalReason = miscApprovalMessage_quote;
+
+		if(approverComment <> "null" AND len(approverComment) > 0){
+			approvalComment = approverComment;
+		}
+
+		if(approverChoice == "Approve"){
+			approvalOutcome = APPROVED;
+		} else {
+			approvalOutcome = REJECTED;
+		}
+		approvalAction = "Misc";
+	}
+	//CSYS-95683
+	if ( approverLogin <> "" AND NOT(isnull(approverLogin)) AND approvalAction <> "" AND ( (numOfElements <> numberOfApprovalHistoryItems_quote AND numOfElements <> 0) OR (approvalAction <> lastApprovalAction_quote) ) ){
+		customApprovalHistory = customApprovalHistory + "User " + approverLogin + " [" + splitInfo[1] + "] ";
+		if (approvalAction == "Revised"){
+			customApprovalHistory = customApprovalHistory + approvalAction + " the quote on the date " + substring(datetostr(getdate()), 0, 10) + DELIMITER;
+		}
+		else{
+			if (approvalOutcome <> "N/A" AND approvalOutcome <> ""){
+				customApprovalHistory = customApprovalHistory + approvalOutcome + " ";
+			}
+			customApprovalHistory = customApprovalHistory + approvalAction + " Approval on the date " + substring(datetostr(getdate()), 0, 10);
+			if (NOT(isnull(approverComment)) AND approverComment <> "null" AND approverComment <> ""){
+				customApprovalHistory = customApprovalHistory + " with comments: " + approverComment;
+			}
+			customApprovalHistory = customApprovalHistory + DELIMITER;
+		}
+	}
+	approvalComment = replace(approvalComment, "|", " ");
+	result = result + "1" + "~originalStatus_quote~" + originalStatus + "|";
+	result = result + "1" + "~approvalComment_quote~" + approvalComment + "|";
+	result = result + "1" + "~bMIApprovalHistoryName_quote~" + bmiApprovalHistoryName + "|";
+	result = result + "1" + "~approvalOutcome_quote~" + approvalOutcome + "|";
+	result = result + "1" + "~approvalReason_quote~" + approvalReason + "|";
+
+}
+
+if (customApprovalHistory <> ""){
+	customApprovalHistory = replace(customApprovalHistory, "|", " ");
+	result = result + "1" + "~approvalHistoryCustom_quote~" + customApprovalHistory + "|";
+}	
+result = result + "1" + "~numberOfApprovalHistoryItems_quote~" + string(numOfElements) + "|";
+result = result + "1" + "~lastApprovalAction_quote~" + approvalAction + "|";
+if(NOT isnull(approval_status_submit_quote)){
+	for elements in approval_status_submit_quote{
+		nextApprovalLevel = elements[0];
+	
+		if(nextApprovalLevel == MGR_APPROVAL){
+			newStatus = "Pending Manager/Director Approval";
+			nextApprover = mgrEmail_quote;
+		}
+	
+		if(nextApprovalLevel == VP_APPROVAL){
+			newStatus = "Pending Sr Director/VP Approval";
+			nextApprover = vPEmail_quote;
+		}
+	
+		if(nextApprovalLevel == SVP_APPROVAL){
+			newStatus = "Pending SVP Approval";
+			nextApprover = sVPEmail_quote;
+		}
+	
+		if(nextApprovalLevel == GM_APPROVAL){
+			newStatus = "Pending GM Approval";
+			nextApprover = gMEmail_quote;
+		}
+	
+		if(nextApprovalLevel == EVP_APPROVAL){
+			newStatus = "Pending EVP Approval";
+			nextApprover = evpEmail_quote;
+		}
+	
+		if(nextApprovalLevel == CFO_APPROVAL){
+			newStatus = "Pending CFO/COO Approval";
+			nextApprover = cFOEmail_quote;
+		}
+	
+		if(nextApprovalLevel == SAP_APPROVAL){
+			newStatus = "Pending SAP Cloud Extention Approval";
+			nextApprover = sAPEmail_quote;
+		}
+	
+		if(nextApprovalLevel == MISC_APPROVAL){
+			newStatus = "Pending Misc Approval";
+			nextApprover = miscEmail_quote;
+		}
+	
+	
+		result = result + "1" + "~nextApprovalLevel_quote~" + nextApprovalLevel + "|";
+		result = result + "1" + "~newStatus_quote~" + newStatus + "|";
+		result = result + "1" + "~nextApprover_quote~" + nextApprover + "|";
+	
+		newStatus = "";
+		approvalReason = "";
+		nextApprover = "";
+	}
+}
+
+
+if(_system_current_step_var == "approved_process"){
+	newStatus = "Approved";
+	nextApprover = "";
+	nextApprovalLevel = "";
+
+	
+
+	result = result + "1" + "~nextApprovalLevel_quote~" + nextApprovalLevel + "|";
+	result = result + "1" + "~newStatus_quote~" + newStatus + "|";
+	result = result + "1" + "~nextApprover_quote~" + nextApprover + "|";
+
+	newStatus = "";
+	approvalReason = "";
+	nextApprover = "";
+}
+
+if(opportunityPrimaryQuote_quote <> "null" AND opportunityPrimaryQuote_quote <> "" AND quoteNumber_quote <> "null" AND quoteNumber_quote <> ""){
+	primaryQuote = split(opportunityPrimaryQuote_quote, "-");
+	currentQuote = split(quoteNumber_quote, "-");
+
+	primaryQuoteNum = join(primaryQuote, "");
+	currentQuoteNum = join(currentQuote, "");
+
+	if(isnumber(primaryQuoteNum) AND isnumber(currentQuoteNum)){
+		primaryNumber = util.customAtoi(primaryQuoteNum, 0);
+		currentNumber = util.customAtoi(currentQuoteNum, 0);
+
+		isPrimary = false;
+
+		if(primaryNumber == currentNumber){
+			isPrimary = true;
+		}
+
+		result = result + "1" + "~isPrimaryQuote_quote~" + string(isPrimary) + "|";
+	}
+}
+
+//CSYS-104836 (OK. 01-11-2022) Start - Add an entry to the BMI Approval History table when the Override Hard Stop flag is set to TRUE
+if (overrideHardStop_quote == true AND updateOverrideHardStopHistory_quote == false AND _system_current_step_var == "pending_process") {
+	result = result + "1" + "~updateOverrideHardStopHistory_quote~" + "true" + "|"; 
+	
+	//attributes used in "SFDC Approval History - Create" integration to send the values to SFDC
+	result = result + "1" + "~bMIApprovalHistoryName_quote~" + "System Admin" + "|";
+	result = result + "1" + "~originalStatus_quote~" + "Pending" + "|";
+	result = result + "1" + "~newStatus_quote~" + "Pending" + "|";
+	result = result + "1" + "~approvalReason_quote~" + "Hard Stop Override Flag set to TRUE" + "|";
+	result = result + "1" + "~approvalOutcome_quote~" + "Submit Quote for Approval" + "|";
+	result = result + "1" + "~approvalComment_quote~" + "Using Hard Stop Override Flag to bypass the Hard Stop Validation Condition" + "|";
+	result = result + "1" + "~nextApprover_quote~" + "N/A" + "|";	
+}
+//CSYS-104836 - End
+
+//CSYS-107254 (OK. 10-7-2022) Start - Add an entry to the BMI Approval History table for Custom Pricing 
+//CSYS-107499 (OK. 11-21-2022) Update below condition with customPriceRejected 
+if ((advantageServicesFlag_quote == "Pending" OR learningServicesFlag_quote == "Pending") AND updateCustomPricingInApprovalHistory_quote == false AND customPriceRejected_quote <> true) {
+	result = result + "1" + "~updateCustomPricingInApprovalHistory_quote~" + "true" + "|"; 
+	
+	//attributes used in "SFDC Approval History - Create" integration to send the values to SFDC
+	result = result + "1" + "~bMIApprovalHistoryName_quote~" + "Learning Services or Advantage Services" + "|";
+	result = result + "1" + "~originalStatus_quote~" + "Pending" + "|";
+	result = result + "1" + "~newStatus_quote~" + "Pending Learning Services/Advantage Services" + "|";
+	result = result + "1" + "~approvalReason_quote~" + "Custom Pricing Required" + "|";
+	result = result + "1" + "~approvalOutcome_quote~" + "N/A" + "|";
+	result = result + "1" + "~approvalComment_quote~" + "N/A" + "|";
+	result = result + "1" + "~nextApprover_quote~" + "N/A" + "|";	
+}
+
+//(advantageServicesFlag_quote == "Approved" OR learningServicesFlag_quote == "Approved") Add an entry to the BMI Approval History table
+if (updateCustomPricingInApprovalHistory_quote == true) {
+	result = result + "1" + "~updateCustomPricingInApprovalHistory_quote~" + "false" + "|"; 
+	
+	//attributes used in "SFDC Approval History - Create" integration to send the values to SFDC
+	result = result + "1" + "~bMIApprovalHistoryName_quote~" + "Learning Services or Advantage Services" + "|";
+	result = result + "1" + "~originalStatus_quote~" + "Pending Learning Services/Advantage Services" + "|";
+	result = result + "1" + "~newStatus_quote~" + "Pending" + "|";
+	result = result + "1" + "~approvalReason_quote~" + "Update Custom Pricing" + "|";
+	result = result + "1" + "~approvalOutcome_quote~" + "N/A" + "|";
+	result = result + "1" + "~approvalComment_quote~" + "N/A" + "|";
+	result = result + "1" + "~nextApprover_quote~" + "N/A" + "|";	
+}
+//CSYS-107254 - End
+
+//CSYS-107499 (OK. 11-21-2022) Start - Add an entry to the BMI Approval History table when the custom price rejected 
+if (customPriceRejected_quote == true) {
+	result = result + "1" + "~updateCustomPricingInApprovalHistory_quote~" + "false" + "|"; 
+	
+	//attributes used in "SFDC Approval History - Create" integration to send the values to SFDC
+	result = result + "1" + "~bMIApprovalHistoryName_quote~" + "Learning Services or Advantage Services" + "|";
+	result = result + "1" + "~originalStatus_quote~" + "Pending Learning Services/Advantage Services" + "|";
+	result = result + "1" + "~newStatus_quote~" + "Pending" + "|";
+	result = result + "1" + "~approvalReason_quote~" + "Custom Pricing Rejected" + "|";
+	result = result + "1" + "~approvalOutcome_quote~" + "N/A" + "|";
+	result = result + "1" + "~approvalComment_quote~" + reasonForCustomPriceRejection_quote + "|";
+	result = result + "1" + "~nextApprover_quote~" + "N/A" + "|";	
+}
+//CSYS-107499 - End
+
+//IESCNQRCPQ-612 (OK. 5-5-2023) Start: Add records in BMI approval history for SAP Concur COE approval
+if (updateSAPCoEInApprovalHistory_quote == false AND status_quote == "Pending SAP Concur CoE Approval") {
+	result = result + "1" + "~updateSAPCoEInApprovalHistory_quote~" + "true" + "|"; 
+	
+	result = result + "1" + "~bMIApprovalHistoryName_quote~" + "Submit for SAP Concur COE Approval" + "|";
+	result = result + "1" + "~originalStatus_quote~" + "Pending" + "|";
+	result = result + "1" + "~newStatus_quote~" + "Pending SAP Concur CoE Approval" + "|";
+	result = result + "1" + "~approvalReason_quote~" + "Submit for SAP On-Prem Conversion" + "|";
+	result = result + "1" + "~approvalOutcome_quote~" + "N/A" + "|";
+	result = result + "1" + "~approvalComment_quote~" + "N/A" + "|";
+	result = result + "1" + "~nextApprover_quote~" + "N/A" + "|";	
+}
+
+if (updateSAPCoEInApprovalHistory_quote == true) {
+	result = result + "1" + "~updateSAPCoEInApprovalHistory_quote~" + "false" + "|"; 
+	
+	result = result + "1" + "~bMIApprovalHistoryName_quote~" + "Update SAP Concur CoE Approval" + "|";
+	result = result + "1" + "~originalStatus_quote~" + "Pending SAP Concur CoE Approval" + "|";
+	result = result + "1" + "~newStatus_quote~" + "Pending" + "|";
+	result = result + "1" + "~approvalReason_quote~" + "Updated SAP Concur CoE Approval " + "|";
+	result = result + "1" + "~approvalOutcome_quote~" + sAPCoEApproval_quote + "|";
+	result = result + "1" + "~approvalComment_quote~" + sAPConcurCoEComments_quote + "|";
+	result = result + "1" + "~nextApprover_quote~" + "N/A" + "|";	
+}
+//IESCNQRCPQ-612 - End
+
+return result;

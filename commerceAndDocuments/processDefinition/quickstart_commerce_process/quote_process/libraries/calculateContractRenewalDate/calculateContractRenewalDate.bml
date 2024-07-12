@@ -1,0 +1,48 @@
+//#################### Moved from Pricing function ####################//
+ 
+//For Addons,If Term no of months <> "" and Contract Renewal Date <> ""
+quoteDocNum = "1";
+contractRenewalDateText = "";
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd";
+ADD_ON = "Add-On Business";
+
+if(contractRenewalDateAcc_quote == "" AND contractRenewalDateText_quote <> "") {
+	contractRenewalDateText = contractRenewalDateText_quote;
+} else {
+	contractRenewalDateText = (contractRenewalDateAcc_quote);
+}
+
+
+if( quoteType_quote == ADD_ON AND (contractRenewalDateAcc_quote <> "" OR contractRenewalDateText_quote <> "") AND termNumMonths_quote <> "" ){
+	//Extending the Contracting Renewal Date by termNumOfMonths
+	newDate = "";
+	
+	if( isnumber(termNumMonths_quote) ){
+		newDate = util.addMonthsToDate(/*contractRenewalDateText*/orderEffectiveDate_quote,termNumMonths_quote); //ATG fix for CSYS-37214 - reverted on 10-23-14. Unreverted on 12-17-14 
+		newDate = util.setDateToLastDayOfMonth(newDate); //for CSYS-37214
+		
+		if( newDate <> ""){
+			utilResultString = util.formAttrValueStr(attributesDict, "contractRenewalDate_quote", quoteDocNum, datetostr(strtojavadate(newDate, DATE_FORMAT_PREFERENCE_HYPHEN)));
+
+		}	
+	}
+}else{
+			
+	if( quoteType_quote <> ADD_ON and orderEffectiveDate_quote <> "" AND termNumMonths_quote <> ""){
+	
+		if( isnumber(termNumMonths_quote) ){
+			orderEffectiveDateText = (orderEffectiveDate_quote);
+			newDate = util.addMonthsToDate(orderEffectiveDateText,termNumMonths_quote);
+			newDate = util.setDateToLastDayOfMonth(newDate); //for CSYS-37214
+			
+			if( newDate <> ""){
+				utilResultString = util.formAttrValueStr(attributesDict, "contractRenewalDateAcc_quote", quoteDocNum, datetostr(strtojavadate(newDate, DATE_FORMAT_PREFERENCE_HYPHEN)));
+				utilResultString = util.formAttrValueStr(attributesDict, "contractRenewalDate_quote", quoteDocNum, datetostr(strtojavadate(newDate, DATE_FORMAT_PREFERENCE_HYPHEN)));
+			}				
+		}
+	}elif( contractRenewalDateText <> "" ){
+		utilResultString = util.formAttrValueStr(attributesDict, "contractRenewalDate_quote", quoteDocNum, contractRenewalDateText);
+	}
+}
+
+return "";

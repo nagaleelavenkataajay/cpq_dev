@@ -1,0 +1,18 @@
+/* util -> printError
+
+utilResultDict - String Dictionary
+tabs - Integer
+
+*/
+tabString = "";
+tabList = range(tabs);
+for t in tabList {
+	tabString = tabString + "> > ";
+}
+
+result = tabString + "error: ";
+if (containskey(utilResultDict, "error")) {
+	result = result + get(utilResultDict, "error");
+}
+
+return result;

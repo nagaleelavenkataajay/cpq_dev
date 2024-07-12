@@ -1,0 +1,65 @@
+/* Util -> Set XML Attribute */
+/* Gives the specified XML element the specified attribute value. 
+Affects all elements with that name */
+/*
+elementArr = String[];
+attributeArr = String[];
+DELIMITER = "@.@";
+attributeValueDict = dict("string"); // Key element + DELIMITER + attribute, value = value of attribute
+numberOfIndices
+*/
+result = "";
+
+//openingTag = "<" + spliceNodeName;
+spliceNodeIndex = -1;
+spliceStartIndex = -1;
+spliceEndIndex = -1;
+
+remaining = originalXmlString;
+
+
+
+newNodeValues = range( numberOfIndices );
+for element in elementArr{
+	for attribute in attributeArr{
+		soFar = "";
+		tempRemaining = remaining;
+		elemAttrKey = element + DELIMITER + attribute;
+		if ( containskey( attributeValueDict, elemAttrKey ) <> true ){
+			continue;
+		}
+		attrValue = get( attributeValueDict, elemAttrKey );
+		openingTag = "<" + element;
+		spliceNodeIndex = -1;
+		spliceStartIndex = -1;
+		spliceEndIndex = -1;
+		if ( find( tempRemaining, openingTag ) <> -1 ){
+			for newValue in newNodeValues {			
+				spliceNodeIndex = find(tempRemaining, openingTag + " ");
+				if ( spliceNodeIndex == -1 ){
+					spliceNodeIndex = find(tempRemaining, openingTag + ">" );
+				}
+				spliceEndIndex = find( tempRemaining, ">", spliceNodeIndex);
+				valueIndex = find( tempRemaining, attribute, spliceNodeIndex, spliceEndIndex );
+				// Case attribute already exists
+				if ( valueIndex <> - 1 ){
+					// Establish the input range for the value
+					writeStartIndex = find( tempRemaining, "'", valueIndex );
+					writeEndIndex = find( tempRemaining, "'", writeStartIndex + 1 );
+					soFar = soFar + substring( tempRemaining, 0,writeStartIndex + 1) + attrValue;
+					tempRemaining = substring( tempRemaining, writeEndIndex );
+				}
+				else{
+					spliceEndIndex = spliceEndIndex;
+					soFar = soFar + substring( tempRemaining, 0, spliceEndIndex ) + " " + attribute + "=" + "'" + attrValue + "'";
+					tempRemaining = subString( tempRemaining, spliceEndIndex );
+				}
+			}
+			remaining = soFar + tempRemaining;
+		}
+	}					
+}
+	
+result = remaining;
+
+return result;

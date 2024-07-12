@@ -1,0 +1,24 @@
+{
+  "name" : "putStringAttribute",
+  "variableName" : "putStringAttribute",
+  "description" : "Puts the value of a string attribute into the stringsDict.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "delimiter",
+    "type" : "String"
+  }, {
+    "name" : "commerceField",
+    "type" : "String"
+  }, {
+    "name" : "value",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

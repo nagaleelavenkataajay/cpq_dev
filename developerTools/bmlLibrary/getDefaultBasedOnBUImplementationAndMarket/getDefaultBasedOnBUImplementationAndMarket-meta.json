@@ -1,0 +1,21 @@
+{
+  "name" : "Get Default Based on BU, Implementation and Market (NOT USED)",
+  "variableName" : "getDefaultBasedOnBUImplementationAndMarket",
+  "description" : "This Library accepts BU, Market, Implementation and Attribute Name as inputs and gives the default value for the attribute name",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "businessUnit",
+    "type" : "String"
+  }, {
+    "name" : "market",
+    "type" : "String"
+  }, {
+    "name" : "attributeName",
+    "type" : "String"
+  }, {
+    "name" : "Implementation",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

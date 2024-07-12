@@ -1,0 +1,10 @@
+/*
+*/
+
+result = defaultValue;
+
+if ( containskey(dictionary, key) ) {
+	result  = get(dictionary, key);
+} 
+
+return result;

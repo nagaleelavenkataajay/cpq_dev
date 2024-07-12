@@ -1,0 +1,15 @@
+{
+  "name" : "initFloatList",
+  "variableName" : "initFloatList",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "Float[]",
+  "parameters" : [ {
+    "name" : "numElement",
+    "type" : "Integer"
+  }, {
+    "name" : "defaultValue",
+    "type" : "Float"
+  } ],
+  "attributes" : [ ]
+}

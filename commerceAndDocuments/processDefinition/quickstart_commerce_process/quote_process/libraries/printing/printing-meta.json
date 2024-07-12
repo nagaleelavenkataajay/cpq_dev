@@ -1,0 +1,14 @@
+{
+  "name" : "Printing",
+  "variableName" : "printing",
+  "description" : "Returns delimited list of group numbers for use in the printed output. Used within Contract and Proposal document actions.",
+  "libraryFunctions" : [ "util.getFloatAttribute", "util.getStringAttribute", "util.putFloatAttribute", "util.putStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "actionName",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ "extendedNetPrice_line", "piItemType_line", "rampFlag_line", "assetAction_line", "_document_number", "_parent_doc_number", "netPriceEach_line", "assetOriginalNetPrice_list", "poId_line", "poCategory_line", "_part_number", "_price_quantity", "overrideDefaultRampPlan_line", "_part_custom_field25", "lineDescription_line" ],
+  "mainDocAttributes" : [ "billingCycle_quote", "add_OnItemsDisplay_quote", "outputDisplayRamp_quote", "partnerBillingQuote_quote", "quoteType_quote", "includeAllProductsOnContract_quote", "editionlessUniversal_quote", "editionlessContract_quote" ],
+  "systemAttributes" : [ ]
+}

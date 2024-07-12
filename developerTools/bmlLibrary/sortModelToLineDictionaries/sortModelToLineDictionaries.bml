@@ -1,0 +1,44 @@
+//This util was added for CSYS-75571 (KA. 1-19-2017):
+//It preps 2 new dictionaries to make sure line items are in order for the modelToLineDocNumsDict and the modelToLinePartNumsDict.
+DELIMITER = "@.@";
+result = "";
+
+if(NOT isempty(seqNumArray)){
+	for key in seqNumArray {
+		seqNumberCustom = string(key);
+
+		docNum = "";
+		parentDocNum = "";
+
+		if(containskey(seqNumAttributeMappingDict, seqNumberCustom + DELIMITER + "DOC_NUM")){
+			docNum = get(seqNumAttributeMappingDict, seqNumberCustom + DELIMITER + "DOC_NUM");
+		}
+		if(containskey(seqNumAttributeMappingDict, seqNumberCustom + DELIMITER + "PARENT_DOC_NUM")){
+			parentDocNum = get(seqNumAttributeMappingDict, seqNumberCustom + DELIMITER + "PARENT_DOC_NUM");
+		}
+		
+		//The following block of logic has been moved from the pricing function:
+		if (parentDocNum <> "" AND docNum <> "") {
+			//Populate the modelToLineDocNumsDictCustom
+			lineDocNumsCustom = string[];
+			if (containskey(modelToLineDocNumsDictCustom, parentDocNum)) {
+				lineDocNumsCustom = get(modelToLineDocNumsDictCustom, parentDocNum);
+			} 
+
+			append(lineDocNumsCustom, docNum);
+			put(modelToLineDocNumsDictCustom, parentDocNum, lineDocNumsCustom);
+			//Populate the modelToLinePartNumsDictCustom
+			linePartNumsCustom = string[];
+			
+			if (containskey(modelToLinePartNumsDictCustom, parentDocNum)) {
+				linePartNumsCustom = get(modelToLinePartNumsDictCustom, parentDocNum);
+			} 
+			append(linePartNumsCustom, docNum);
+			put(modelToLinePartNumsDictCustom, parentDocNum, linePartNumsCustom);
+
+			result = "EXECUTED";
+		}
+	}
+}
+
+return result;

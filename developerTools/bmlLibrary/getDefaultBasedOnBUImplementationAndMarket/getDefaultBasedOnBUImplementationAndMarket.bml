@@ -1,0 +1,23 @@
+/* util -> getDefaultBasedOnBUImplementationAndMarket
+businessUnit- String
+market- String
+attributeName - String
+Implementation - String
+*/
+retStr = "";				//Initialize Return String
+imp = "";
+results =  recordset();
+//Query the table using the filter for BU,Implementation Market and Attr Name
+
+if(Implementation == "Concurforce"){
+	results = bmql("select DefaultValue from DefaultUsgBUAndMKT where Implementation = 'Concurforce'  and BusinessUnit like $businessUnit and Market like $market and AttributeName like $attributeName");
+} elif (Market == ""){
+	results = bmql("select DefaultValue from DefaultUsgBUAndMKT where (Market = '' or Market is null)  and BusinessUnit like $businessUnit and AttributeName like $attributeName");
+} else {
+	results = bmql("select DefaultValue from DefaultUsgBUAndMKT where (Implementation = '' or Implementation is null)  and BusinessUnit like $businessUnit and Market like $market and AttributeName like $attributeName");
+}
+
+for result in results {
+	retStr = get(result, "DefaultValue");	// Get the result
+}
+return retStr;

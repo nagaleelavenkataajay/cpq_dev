@@ -1,0 +1,18 @@
+{
+  "name" : "Get Service Compatible Data",
+  "variableName" : "getServiceCompatibleData",
+  "description" : "Based on the serviceCompatibilityMatrix data table, we will create a list of Constraint Rules to show the appropriate options from configuration attributes (in the Professional and Extended Services tab) dropdown. The Constraint Rules will only return the valid options to those attributes.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "serviceAttr",
+    "type" : "String"
+  }, {
+    "name" : "coreOffer",
+    "type" : "String"
+  }, {
+    "name" : "implementationMethod",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

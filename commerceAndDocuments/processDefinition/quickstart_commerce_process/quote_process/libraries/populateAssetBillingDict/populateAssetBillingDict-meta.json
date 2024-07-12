@@ -1,0 +1,14 @@
+{
+  "name" : "populateAssetBillingDict",
+  "variableName" : "populateAssetBillingDict",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "assetBillingDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "assetsString_quote", "SAPSellsConcurFromAccount_quote", "quoteType_quote", "orderEffectiveDate_quote" ],
+  "systemAttributes" : [ ]
+}

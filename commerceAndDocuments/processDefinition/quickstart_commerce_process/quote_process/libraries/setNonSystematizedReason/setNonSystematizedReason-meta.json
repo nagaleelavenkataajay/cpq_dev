@@ -1,0 +1,11 @@
+{
+  "name" : "set Non-Systematized reason",
+  "variableName" : "setNonSystematizedReason",
+  "description" : "CSYS-99115 \nCSYS-101176",
+  "libraryFunctions" : [ "commerce.assetNBDValidationForQuarterlyCycle", "commerce.manageAssetNBDValidation", "util.getDateFromString" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_part_number", "assetAction_line", "poName_line", "poCategory_line", "_part_custom_field1", "timeMaterialsFlag_line", "monthlyOffSetBeforeSubmit_line", "piItemType_line", "termDate_line" ],
+  "mainDocAttributes" : [ "quoteCurrency_quote", "quoteType_quote", "contractAutomation_quote", "paymentMethod_quote", "customerAgreesToUseDocusign_quote", "specialTerms_quote", "ownerTheater_quote", "contractType_quote", "currentBillingCycle_quote", "billingCycle_quote", "contractingEntity_quote", "bsaRegion_quote", "totalArrNet_quote", "termNumMonths_quote", "contractRenewalDateAcc_quote", "partnerBillingQuote_quote", "moreThanTwoCoresFlag_quote", "accountPreProductionStatic_quote", "governingCountryLawException", "ownerMarket_quote", "contractSource_quote", "currentPaymentMethod_quote", "implementationMethods_quote", "ownerBU_quote", "SAP_MAR_ID_quote", "_quote_process_serviceAddress_country", "accountContractSource_quote", "purchasedFromPartnerCategorySFDC_quote", "billTo_countryISOCode_quote", "service_countryISOCode_quote", "contractEffectiveDate_quote", "orderEffectiveDate_quote", "legalEgregiousTerms_quote", "standardToProfessionalMigrationFlag", "orderEffectiveDateHDS_quote" ],
+  "systemAttributes" : [ ]
+}

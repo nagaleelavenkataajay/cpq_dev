@@ -1,0 +1,42 @@
+{
+  "name" : "Update Transactions After Attribute Gathering",
+  "variableName" : "updateTransactionsAfterAttributeGathering",
+  "description" : "Moved from pricing script.\nChanges transactions based on informtion obtained during the info gathering step.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "transactionArr",
+    "type" : "String[]"
+  }, {
+    "name" : "piDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "incrementalFeeTransactionDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "billingCycleNumber",
+    "type" : "String"
+  }, {
+    "name" : "quoteTransactions",
+    "type" : "Integer"
+  }, {
+    "name" : "quoteType",
+    "type" : "String"
+  }, {
+    "name" : "oRGNumberOfComittedTransactions",
+    "type" : "Integer"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

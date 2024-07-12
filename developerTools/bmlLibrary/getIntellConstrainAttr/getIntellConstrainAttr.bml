@@ -1,0 +1,57 @@
+// CSYS-61858: No longer used
+/************** check if intell constrain is required *************
+** step 1: locate the models containing BI components
+** step 2: check if any model contains a Core With intelligence.
+** step 3: if so, for each model see if it contains both a core without intelligence AND a corresponding intelligence part
+** Adi Smulian, 26/6/12
+******************************************************************/
+
+debugIntel = false;
+intelligenceConstaintArrtibute = false;
+
+listOfMissingModels = string[];
+listOfModelsContainigBI = string[];
+
+//step 1:
+configTrigger = false;
+step3 = false;
+for parentDN in parentDNarray{
+	if(containskey(modelContainsBI,parentDN)){
+		currentPOlist = get(poList,parentDN);
+		for entry in currentPOlist{
+			append(listOfModelsContainigBI,entry);
+			configTrigger = true;
+			step3 = true;
+		}
+	}
+}
+//step 3:
+		found = false;
+if(step3){
+	for parentDN in parentDNarray{
+		currentPOlist = get(poList,parentDN);
+		//rez = BMQL("SELECT RelatedIntelPO FROM AddCoreWithIntell WHERE RelatedIntelPO IN $currentPOlist AND CoreWithoutIntelPO IN $currentPOlist");
+		rez = BMQL("SELECT RelatedIntelPO,CoreWithoutIntelPO FROM AddCoreWithIntell WHERE CoreWithIntelPO IN $listOfModelsContainigBI AND CoreWithoutIntelPO IN $currentPOlist");
+		for entry in rez{
+			temp = get(entry,"RelatedIntelPO");
+			if(temp<>""){//if any result found in the query
+				if(findinarray(currentPOlist,temp)<>-1){//if this result contain the required intelligence part
+					continue;//move on to the next model
+				}else{//if a model did not have the relevant BI part:
+					found = true;
+					append(listOfMissingModels,parentDN);
+				}
+			}
+		}
+	}
+}
+
+if(found){//if former loop ended with a model found in it - mark intell flag as true and exit.
+	intelligenceConstaintArrtibute = true;
+	//break;
+}
+
+put(intellConstrainAttrDict, "configTrigger", configTrigger);
+put(intellConstrainAttrDict, "intelligenceConstaintArrtibute", intelligenceConstaintArrtibute);
+
+return true;

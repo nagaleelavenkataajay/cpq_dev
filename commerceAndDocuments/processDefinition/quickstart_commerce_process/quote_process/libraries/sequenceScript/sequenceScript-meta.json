@@ -1,0 +1,11 @@
+{
+  "name" : "Sequence Script",
+  "variableName" : "sequenceScript",
+  "description" : "Finds the next queued reasons and activates them. The script uses the hierarchy level from the ApprovalHierarchy table.",
+  "libraryFunctions" : [ "util.getDateFromString" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "sequence_quote", "appReason_quote", "pendingReason_quote", "mgrApprovalMessage_quote", "vpApprovalMessage_quote", "svpApprovalMessage_quote", "gmApprovalMessage_quote", "cfoApprovalMessage_quote", "evpApprovalMessage_quote", "sapApprovalMessage_quote", "miscApprovalMessage_quote", "createdDate_quote" ],
+  "systemAttributes" : [ ]
+}

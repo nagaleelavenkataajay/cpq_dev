@@ -1,0 +1,46 @@
+//This function uses Data Table - promoInternalDesc, to populate Promo description on Proposal CSYS-104813
+
+promoCodeLineDict = dict("string");
+promoDescDictFrench = dict("string");
+promoDescDictEng = dict("string");
+promoCode = "";
+desc_Eng = "";
+desc_French = "";
+
+result = "";
+promoCodeDescResSet = bmql("SELECT PromoCode,Desc_Eng,Desc_French,OrderNum FROM promoInternalDesc ORDER BY PromoCode,OrderNum");
+internalDescOrder = 1;
+for rec in promoCodeDescResSet{
+	promoCode = get(rec,"PromoCode");
+	orderNum = get(rec,"OrderNum");
+	if(orderNum == "1"){
+		desc_French = get(rec,"Desc_French");
+		desc_Eng = get(rec,"Desc_Eng");
+	}
+	else{
+		desc_French =desc_French + " " + get(rec,"Desc_French");
+		desc_Eng = desc_Eng + " " + get(rec,"Desc_Eng");
+	}
+	put(promoDescDictEng, PromoCode, desc_Eng);
+	put(promoDescDictFrench, PromoCode, desc_French);
+}
+
+for line in line_process{
+	docNum = line._document_number;
+	promoCodeLine=line.promotionCode_line;
+	lang = "";
+	if(promoCodeLine<>"" and not(containskey(promoCodeLineDict, promoCodeLine))){
+		put(promoCodeLineDict, promoCodeLine, docNum);
+		if(outputLanguage_quote=="French"){
+			
+			lang = get(promoDescDictFrench,promoCodeLine);
+		}
+		else{
+			lang = get(promoDescDictEng,promoCodeLine);
+		}
+		result = result + docNum + "~promoInternalDesc_line~"+ lang +"|";
+		
+	}
+}
+
+return result;

@@ -1,0 +1,12 @@
+{
+  "name" : "Get Line Items Info From Commerce to Config",
+  "variableName" : "getLineItemsInfoFromCommerceToConfig",
+  "description" : "Retrieves Reconfigured Line items Info from Commerce to Config.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "selectedDocNum",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

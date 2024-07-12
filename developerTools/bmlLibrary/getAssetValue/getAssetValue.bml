@@ -1,0 +1,58 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////util.getAssetValue
+//////parameters:
+//////assetStr		string		contain all assets information in the format: att1_asset1$$att2_asset1...@@att1_asset2$$att1_asset2...@@
+//////pi			string		the part number
+//////attIndex		integer		the index of the attribute on the asset string
+//////attType		string		CURRENCY/FLOAT/STRING
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ASSET_DELIMITER = "@@";
+INTERNAL_DELIMITER = "$$";
+assetsArray = string[];
+assetLine = "";
+assetAttValueArr = string[];
+ret = "";
+debugMode = false;
+
+assetsArray = split(assetStr, ASSET_DELIMITER);//split the Asset string into an array. each array cell will contain one asset string delimited with "$$"
+if(debugMode){
+	print "assetsArray: ";
+	print assetsArray;
+}
+
+if(NOT(isempty(assetsArray))){
+	for asset in assetsArray {//loop through all assets to find the requested pi (parameter) string
+		if (find(asset, pi + INTERNAL_DELIMITER) > -1) {
+			assetLine = asset;
+			break;
+		}
+	}
+}
+
+if(debugMode){
+	print "assetLine: " + assetLine;
+}
+
+if(assetLine <> ""){//if the required asset pi was found among the assetsString_Quote
+	assetAttValueArr = split(assetLine, INTERNAL_DELIMITER);
+	if(debugMode){
+		print "sizeofarray(assetAttValueArr): " + string(sizeofarray(assetAttValueArr));
+	}
+	if(NOT(isempty(assetAttValueArr)) AND attIndex < sizeofarray(assetAttValueArr)){	
+		ret = assetAttValueArr[attIndex];
+	}
+}
+if(debugMode){
+	print "ret: " + ret;
+}
+
+if(ret == "" AND (attType == "CURRENCY" OR attType == "FLOAT")){//return string for currency/float attribute should be 0.0
+	ret = "0.0";
+}
+
+if(debugMode){
+	print "ret: " + ret;
+}
+
+return ret;

@@ -1,0 +1,908 @@
+//per CSYS-36627, this function builds out the tier change preview table
+//Takes parameters: action, triggerDict, and attributesDict
+
+//action = "";
+//attributesDict = dict("string");
+//triggerDict = dict("string");
+
+result = "";
+ATTR_DELIMITER = "~";
+DELIMITER = "@.@";
+quoteCurrency = quoteCurrency_quote;
+INC_TYPE = "Incremental";
+BASE_TYPE = "Base";
+SETUP_TYPE = "Setup";
+PRE_PROD = "Pre Prod";
+TIER_CHANGE_PREVIEW_TEXT = "tierChangePreviewText_quote";
+TILDA = "~";
+QUOTE_DOC_NUM = "1";
+CREATE_ACTION = "CREATE";
+TERMINATE_ACTION = "TERMINATE";
+NONE_ACTION = "NONE";
+INTERNAL_DELIMITER = "$$";
+ASSET_DELIMITER = "@@";
+CORE_SERVICE = "Core Service";
+PRO_SERVICE = "Professional Service";
+TRUE_STR = "true";
+FALSE_STR = "false";
+
+INV_PO1 = "8718"; //Invoice Processing Standard
+INV_PO2 = "573"; //Invoice Processing Professional
+ICP_PO1 = "566"; //Invoice Check Payments Incremental CSYS-82599
+ICP_PO2 = "416635"; //Invoice Check Payments Canada Incremental CSYS-82599
+
+quoteTrans = string(numCommittedTransaction_quote);
+origQuoteTrans = string(oRGNumberOfComittedTransactions_quote);
+poMappingDict = dict("string");
+poTransCheckDict = dict("string");
+overrideMappingDict = dict("string");
+
+redTextFormat = "<div align='center' style='color:red; font-weight:bold; font-size:12px;'>";
+
+//Sequence number mapping. This will address line item sorting inconsistencies
+seqNumAttributeMappingDict = dict("string");
+seqNumArray = integer[];
+DOCNUM_DELIM = "$*$"; 
+
+// Dictionaries specific to this function:
+primeBooleansDict = dict("boolean");
+primeStringsDict = dict("string");
+primeIntegersDict = dict("integer");
+primeFloatsDict = dict("float");
+parentDocMappingDict = dict("string");
+ignoreModelDict = dict("string");
+
+// Gather PO's whose transactions must match that of the core:
+transValidationPoArray = string[];
+rez = BMQL("SELECT PO FROM trnsValidation");
+for entry in rez{
+	append(transValidationPoArray, get(entry, "PO"));
+}
+
+// HTML and Styling
+tdOpen = "<td>";
+tdClose = "</td>";
+thClass = "<th class='list-label' style='padding: 10px;'>"; 
+thProductClass = "<th class='list-label' style='padding: 10px; width: 200px'>"; 
+tdClass = "<td class='view-text' align='right'>";
+tdAlignRight = "<td align='right'>";
+tdClassTotal = "<td class='view-text' style='font-weight: bold; border-top: 1px solid black !important'>";
+tdAlignRightTotal = "<td align='right' style='border-top: 1px solid black !important'>";
+trCoreClass = "<tr style='background: #FFE4B8;' class='line-item child-line-item line-item-show'>";
+
+// Master return string:
+priceTables = "";
+
+if(action <> "request approval" AND action <> "submit"){
+	// call the pricing script to populate the attributesDict with the new price values:
+	executePricing = commerce.pricing(action, triggerDict, attributesDict);
+	priceTables = priceTables + "<div align='center' style='color:#008000; font-weight:bold; font-size:12px;'>" + "This is a preview ONLY. Click the SAVE button to commit new tier to quote" + "</div>";
+}
+else {priceTables = priceTables + "<div align='center' style='color:#008000; font-weight:bold; font-size:12px;'>" + "Tier change information" + "</div>"; }
+
+modelDocNumList = string[];
+
+for line in line_process { // loop to address the sorting issue and prime the dictionaries for success.
+	
+	// Start sorting preparation
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	seqNum = line._sequence_number;
+	seqNumStr = string(seqNum);
+	
+	// map docNum to seqNum
+	put(seqNumAttributeMappingDict, seqNumStr, docNum);
+	append(seqNumArray, seqNum);
+	
+	// Attributes to prepare: integers, strings, booleans
+	put(primeIntegersDict, docNum + DOCNUM_DELIM + "numCommittedTransaction_line", line.numCommittedTransaction_line); 
+	put(primeIntegersDict, docNum + DOCNUM_DELIM + "prevNumCommittedTransaction_line", line.prevNumCommittedTransaction_line);
+	put(primeIntegersDict, docNum + DOCNUM_DELIM + "originalNumCommittedTransaction_line", line.originalNumCommittedTransaction_line);
+	put(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field1", line._part_custom_field1);
+	put(primeStringsDict, docNum + DOCNUM_DELIM + "_part_number", line._part_number);
+	put(primeStringsDict, docNum + DOCNUM_DELIM + "piItemType_line", line.piItemType_line);
+	put(primeStringsDict, docNum + DOCNUM_DELIM + "poCategory_line", line.poCategory_line);
+	put(primeStringsDict, docNum + DOCNUM_DELIM + "lineDescription_line", line.lineDescription_line);
+	put(primeStringsDict, docNum + DOCNUM_DELIM + "assetAction_line", line.assetAction_line);
+	put(primeStringsDict, docNum + DOCNUM_DELIM + "_parent_doc_number", line._parent_doc_number);
+	put(primeBooleansDict, docNum + DOCNUM_DELIM + "numTransOverride_line", line.numTransOverride_line);
+	put(primeBooleansDict, docNum + DOCNUM_DELIM + "assetOriginalGroupCheck_line", line.assetOriginalGroupCheck_line);
+	put(primeBooleansDict, docNum + DOCNUM_DELIM + "isPartOfPackage_line", line.isPartOfPackage_line);
+	
+	// Attributes to prepare: floats
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "listPrice_line", line.listPrice_line);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "extendedList_line", line.extendedList_line);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "netPriceEach_line", line.netPriceEach_line);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "extendedNetPrice_line", line.extendedNetPrice_line);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "assetsOriginalDiscount_line", line.assetsOriginalDiscount_line);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalListPrice_list", line.assetOriginalListPrice_list);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalExtendedListPrice_list", line.assetOriginalExtendedListPrice_list);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "discount_line", line.discount_line);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalNetPrice_list", line.assetOriginalNetPrice_list);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalExtendedNetPrice_list", line.assetOriginalExtendedNetPrice_list);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "existingARRCurrency_line", line.existingARRCurrency_line);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "netNewARRCurrency_line", line.netNewARRCurrency_line);
+	put(primeFloatsDict, docNum + DOCNUM_DELIM + "netPriceNonUnified_line", line.netPriceNonUnified_line);
+	// End sorting preparation
+	
+	numTrans = line.numCommittedTransaction_line;
+	prevTrans = line.prevNumCommittedTransaction_line;
+	origTrans = line.originalNumCommittedTransaction_line;
+	poID = line._part_custom_field1;
+	pi = line._part_number;
+	itemType = line.piItemType_line;
+	poCat = line.poCategory_line;
+	assetAction = line.assetAction_line;
+	isTransOverridden = line.numTransOverride_line;
+	lineItemListPrice = line.listPrice_line;
+	
+	if(pi == ""){
+		append(modelDocNumList, docNum);
+	}
+	else{ // ignore models
+		origTrans = line.originalNumCommittedTransaction_line;
+		
+		if((numTrans <> origTrans AND itemType <> INC_TYPE AND assetAction <> CREATE_ACTION) OR (assetAction == CREATE_ACTION AND string(numTrans) <> origQuoteTrans AND itemType <> INC_TYPE)){
+			put(poMappingDict, poID, string(numTrans));
+			put(parentDocMappingDict, parentDocNum, TRUE_STR);
+		}
+		
+		if(assetAction == CREATE_ACTION){
+			put(parentDocMappingDict, parentDocNum, TRUE_STR);
+		}
+		
+		if(NOT isTransOverridden){ // tag the model so that we know it contains a transaction value without the override applied to it
+			put(ignoreModelDict, parentDocNum, FALSE_STR);
+		}
+		
+		if(isTransOverridden){
+			put(overrideMappingDict, poID, TRUE_STR);
+		}
+		
+		if(string(numTrans) <> origQuoteTrans AND itemType <> INC_TYPE){
+			put(poTransCheckDict, poID, TRUE_STR);
+		}
+
+		// CSYS-77170 Part 1 Start:
+		if( itemType == INC_TYPE AND assetAction <> CREATE_ACTION AND 
+			(poCat <> CORE_SERVICE OR (poCat == CORE_SERVICE AND line.assetOriginalNetPrice_list > 0)) ){
+			utilResultFlag = util.putFloatAttribute(primeFloatsDict, poID, TILDA, "poIncFeeNetOriginalKey", line.assetOriginalNetPrice_list);
+
+		}
+
+		if(itemType == INC_TYPE AND assetAction <> TERMINATE_ACTION AND line.netPriceEach_line > 0){
+			newIncNetPrice = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "netPriceEach_line"); 
+			newIncNetPrice = util.getAttributesDictValue(newIncNetPrice); 
+			newIncNetPriceFloat = util.customAtof(newIncNetPrice, 0.0);
+
+			utilResultFlag = util.putFloatAttribute(primeFloatsDict, poID, TILDA, "poIncFeeNetNewKey", newIncNetPriceFloat);
+
+		}
+
+		// Store core transactions at the model level:
+		if(poCat == CORE_SERVICE AND itemType == BASE_TYPE AND assetAction <> CREATE_ACTION){
+			utilResultFlag = util.putIntegerAttribute(primeIntegersDict, parentDocNum, DOCNUM_DELIM, "coreTransactionsOrig", origTrans);
+		}
+		if(poCat == CORE_SERVICE AND itemType == BASE_TYPE AND assetAction <> TERMINATE_ACTION){
+			utilResultFlag = util.putIntegerAttribute(primeIntegersDict, parentDocNum, DOCNUM_DELIM, "coreTransactionsNew", numTrans);
+		}
+
+		// Store core action code state at the model level:
+		if(poCat == CORE_SERVICE AND assetAction == CREATE_ACTION){
+			utilResultFlag = util.putStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "hasCoreCreateLine", TRUE_STR);
+		}
+		if(poCat == CORE_SERVICE AND assetAction == TERMINATE_ACTION){
+			utilResultFlag = util.putStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "hasCoreTerminateLine", TRUE_STR);
+		}
+
+		// detect for non-terminated Invoice Processing cores:
+		if( assetAction <> TERMINATE_ACTION AND (poID == INV_PO1 OR poID == INV_PO2) ){
+			utilResultFlag = util.putStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "isInvoiceProcessingCore", TRUE_STR);
+		}
+
+		// retrieve new assetAction:
+		newAssetAction = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "assetAction_line");
+		newAssetAction = util.getAttributesDictValue(newAssetAction);
+
+		// If any of the new asset actions are not NONE (exluding pro services), then mark the core: 
+		if(poCat <> PRO_SERVICE AND newAssetAction <> NONE_ACTION){
+			utilResultFlag = util.putStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "coreAffected", TRUE_STR);
+		}
+
+		// CSYS-77170 Part 1 End
+
+		//CSYS-80853 #4 part 1: Locate each core's first CREATE Base, if it has one, and store its list price at the model level:
+		if( NOT containskey(primeFloatsDict, parentDocNum + DELIMITER + "firstCoreListPrice") ){
+			if(poCat == "Core Service" AND itemType == "Base" AND assetAction == "CREATE"){
+				utilResultFlag = util.putFloatAttribute(primeFloatsDict, parentDocNum, DELIMITER, "firstCoreListPrice", lineItemListPrice);
+			}
+		}
+	}
+}
+
+sort(seqNumArray, "asc");
+
+// CSYS-77170 Part 2 Start:
+for key in seqNumArray { //loop that dynamically builds the rows of the HTML table
+
+	seqNumber = key;
+	docNum = get(seqNumAttributeMappingDict, string(seqNumber)); //sorting magic
+	parentDocNum = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "_parent_doc_number");	
+
+	priceTableOrigHeader = util.getStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "priceTableOrigHeader");
+	priceTableNewHeader = util.getStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "priceTableNewHeader");
+	
+	priceTableOrigBody = util.getStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "priceTableOrigBody");
+	priceTableNewBody = util.getStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "priceTableNewBody");
+	
+	totalExtNetOrig = util.getFloatAttribute(primeFloatsDict, parentDocNum, DOCNUM_DELIM, "totalExtNetOrig");
+	totalNetOrig = util.getFloatAttribute(primeFloatsDict, parentDocNum, DOCNUM_DELIM, "totalNetOrig");
+	totalIncNetOrig = util.getFloatAttribute(primeFloatsDict, parentDocNum, DOCNUM_DELIM, "totalIncNetOrig");
+	
+	totalExtNetNew = util.getFloatAttribute(primeFloatsDict, parentDocNum, DOCNUM_DELIM, "totalExtNetNew");
+	totalNetNew = util.getFloatAttribute(primeFloatsDict, parentDocNum, DOCNUM_DELIM, "totalNetNew");
+	totalIncNetNew = util.getFloatAttribute(primeFloatsDict, parentDocNum, DOCNUM_DELIM, "totalIncNetNew");
+	
+	assetIsGrouped = get(primeBooleansDict, docNum + DOCNUM_DELIM + "assetOriginalGroupCheck_line"); //line.isPartOfPackage_line;)
+	isGrouped = get(primeBooleansDict, docNum + DOCNUM_DELIM + "isPartOfPackage_line"); //line.isPartOfPackage_line;
+	poID = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "_part_custom_field1"); //line._part_custom_field1;
+	pi = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "_part_number"); //line._part_number;
+	itemType = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "piItemType_line"); //line.piItemType_line;
+	poCat = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "poCategory_line"); //line.poCategory_line;
+	lineDesc = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "lineDescription_line"); 
+	
+	listPrice = util.getFloatAttribute(primeFloatsDict, docNum, DOCNUM_DELIM, "listPrice_line");
+	
+	modelDocNum = "";
+	if(pi == ""){ // model lines
+		modelDocNum = docNum;
+	}
+	else{
+		modelDocNum = parentDocNum;
+	}
+
+	//CSYS-80853 #4 part 2:
+	if( containskey(primeFloatsDict, parentDocNum + DELIMITER + "firstCoreListPrice") ){
+		firstCoreCreateBaseListPrice = get(primeFloatsDict, parentDocNum + DELIMITER + "firstCoreListPrice");
+
+		//if the first core create base line's list price equals 0, tell the user they must Save to populate pricing before previewing 
+		if(firstCoreCreateBaseListPrice == 0){
+			return "<div align='center' 'style='color: red'>" + "BMI has detected that pricing has yet to be populated on 1 or more cores. Please Save the quote and then click 'Preview Tier Change Pricing' again." + "</div>";
+		}
+
+	}
+
+	coreAffected = containskey(primeStringsDict, modelDocNum + DOCNUM_DELIM + "coreAffected");
+
+	if(coreAffected){ //condition added for CSYS-80853
+	
+		isBrandNewCore = false;
+		if( containskey(primeStringsDict, modelDocNum + DOCNUM_DELIM + "hasCoreCreateLine") AND NOT containskey(primeStringsDict, modelDocNum + DOCNUM_DELIM+ "hasCoreTerminateLine") ){
+			isBrandNewCore = true;
+		}
+	
+		assetAction = get(primeStringsDict, docNum + DOCNUM_DELIM + "assetAction_line");
+	
+		origCoreTrans = util.getIntegerAttribute(primeIntegersDict, modelDocNum, DOCNUM_DELIM, "coreTransactionsOrig");
+		newCoreTrans = util.getIntegerAttribute(primeIntegersDict, modelDocNum, DOCNUM_DELIM, "coreTransactionsNew");
+	
+		// Process model lines:
+		if(pi == ""){ 
+	
+			costColumnName = "Per Report Cost";
+			overageCostColumnName = "Overage Cost Per Report";
+	
+			isInvoiceProcessingCore = containskey(primeStringsDict, docNum + DOCNUM_DELIM + "isInvoiceProcessingCore");
+	
+			// Check for Invoice Processing cores (they need to have different column headers):
+			if(isInvoiceProcessingCore){
+				costColumnName = "Per Invoice Cost";
+				overageCostColumnName = "Overage Cost Per Invoice";
+			}
+	
+			// Check for cores that are not brand new:
+			if(NOT isBrandNewCore){
+	
+				// HTML for 'Current Pricing' table header:
+				priceTableOrigHeader = priceTableOrigHeader +
+				"<table frame='box' cellpadding='6' cellspacing='0' align='center'>" + 
+				/*Static Table Head*/
+				"<thead class='line-item-grid-header'>" + 
+					"<tr style='background: #ECECE6;'>" + 
+						tdOpen + "Current Pricing @ " + string(origCoreTrans) + tdClose + 
+						tdOpen + tdClose + 
+						tdOpen + tdClose +
+						tdOpen + tdClose +
+					"</tr>" + 
+					"<tr class='line-item child-line-item line-item-show'>" + 
+						thProductClass + "Product" + "</th>" + 
+						thClass + "Monthly Cost" + "</th>" + 	 		 //Base Extended Net Price 
+						thClass + costColumnName + "</th>" +			 //Base Net Price
+						thClass + overageCostColumnName + "</th>" +  	 //Incremental Net Price
+					"</tr>" + 
+				"</thead>" +
+				"<tbody class='line-item-grid-body'>";
+			}
+	
+			// HTML for 'Current Pricing' table header:
+			priceTableNewHeader = priceTableNewHeader +
+			"<table frame='box' cellpadding='6' cellspacing='0' align='center'>" + 
+			/*Static Table Head*/
+			"<thead class='line-item-grid-header'>" + 
+				"<tr style='background: #4bd786;'>" + 
+					tdOpen + "Proposed Pricing @ " + string(newCoreTrans) + tdClose + 
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+				"</tr>" + 
+				"<tr class='line-item child-line-item line-item-show'>" + 
+					thProductClass + "Product" + "</th>" + 
+					thClass + "Monthly Cost" + "</th>" + 			//Base Extended Net Price 
+					thClass + costColumnName + "</th>" +			//Base Net Price
+					thClass + overageCostColumnName + "</th>" + 	//Incremental Net Price
+				"</tr>" + 
+			"</thead>" +
+			"<tbody class='line-item-grid-body'>";
+		}
+		//Process non-model lines:
+		elif(itemType == BASE_TYPE) { 
+	
+			// Original (asset) Pricing Values:
+			origListPrice = formatascurrency(get(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalListPrice_list"), quoteCurrency);
+			origExtendedList = formatascurrency(get(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalExtendedListPrice_list"), quoteCurrency);
+			origNetPrice = util.getFloatAttribute(primeFloatsDict, docNum, DOCNUM_DELIM, "assetOriginalNetPrice_list");
+			origNetPriceStr = formatascurrency(origNetPrice, quoteCurrency);
+	
+			origIncNetPrice = util.getFloatAttribute(primeFloatsDict, poID, TILDA, "poIncFeeNetOriginalKey");
+			origIncNetPriceStr = formatascurrency(origIncNetPrice, quoteCurrency);
+	
+			origExtendedNet = util.getFloatAttribute(primeFloatsDict, docNum, DOCNUM_DELIM, "assetOriginalExtendedNetPrice_list");
+			origExtendedNetStr = formatascurrency(origExtendedNet, quoteCurrency);
+	
+			assetOriginalListPrice = util.getFloatAttribute(primeFloatsDict, docNum, DOCNUM_DELIM, "assetOriginalListPrice_list");
+			origTransactionsFromAsset = util.getIntegerAttribute(primeIntegersDict, docNum, DOCNUM_DELIM, "originalNumCommittedTransaction_line");
+				
+			// New Pricing values not necessarily committed to the quote yet:
+			newExtendedNet = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "extendedNetPrice_line");
+			newExtendedNet = util.getAttributesDictValue(newExtendedNet);
+			newExtendedNetFloat = util.customAtof(newExtendedNet, 0.0);
+			newExtendedNet = formatascurrency(newExtendedNetFloat, quoteCurrency);
+	
+			newNetPrice = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "netPriceEach_line");
+			newNetPrice = util.getAttributesDictValue(newNetPrice);
+			newNetPriceFloat = util.customAtof(newNetPrice, 0.0);
+			newNetPrice = formatascurrency(newNetPriceFloat, quoteCurrency);
+	
+			newIncNetPriceFloat = util.getFloatAttribute(primeFloatsDict, poID, TILDA, "poIncFeeNetNewKey");
+			newIncNetPrice = formatascurrency(newIncNetPriceFloat, quoteCurrency);
+	
+			numTransactionsGrid = util.getIntegerAttribute(primeIntegersDict, docNum, DOCNUM_DELIM, "numCommittedTransaction_line");
+	
+			// New Asset Action:
+			newAssetAction = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "assetAction_line");
+			newAssetAction = util.getAttributesDictValue(newAssetAction);
+	
+			// Check for non-core service grouping:
+			if(poCat <> CORE_SERVICE){
+				if(assetIsGrouped){ //asset is grouped
+					origExtendedNetStr = "Included";
+					origNetPriceStr = "Included";
+					origIncNetPriceStr = "Included";
+				}
+				if(isGrouped){ //line item is grouped
+					newExtendedNet = "Included";
+					newNetPrice = "Included";
+					newIncNetPrice = "Included";
+				}
+			}
+			
+			// Determine original totals:
+			if( assetAction <> CREATE_ACTION AND newAssetAction <> CREATE_ACTION AND
+			  (poCat <> CORE_SERVICE OR (poCat == CORE_SERVICE AND assetOriginalListPrice > 0)) ){
+				totalExtNetOrig = totalExtNetOrig + origExtendedNet;
+				totalNetOrig = totalNetOrig + origNetPrice;
+				//CSYS-82599 LN 6/14/2017 Excluding Invoice Check Payments/ICP - Canada from being accured in the total
+				if(poID <> ICP_PO1 AND poID <> ICP_PO2){
+					totalIncNetOrig = totalIncNetOrig + origIncNetPrice;
+				}
+				
+			}
+			
+			// Build the product section for 'Current Pricing' tables (minus terminated core services since they need to show up on top):
+			// We'll handle terminated core services later
+			if( assetAction <> CREATE_ACTION AND newAssetAction <> CREATE_ACTION AND 
+			   (poCat <> CORE_SERVICE OR 
+			   	 (poCat == CORE_SERVICE AND assetAction <> TERMINATE_ACTION AND newAssetAction <> TERMINATE_ACTION AND assetOriginalListPrice > 0)) 
+			  ){
+				
+				//Check if core is not brand new:
+				if(NOT isBrandNewCore){ 
+	
+					// Check for non-core services whose transactions do not have to match that of the core, when they don't actually match:
+					if(poCat <> CORE_SERVICE AND findinarray(transValidationPoArray, poID) == -1 AND origTransactionsFromAsset <> origCoreTrans){
+						//Append the transactions to the product description:
+						lineDesc = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "lineDescription_line"); //reinitialize
+						lineDesc = lineDesc + " @ " + string(origTransactionsFromAsset);
+					}
+	
+					priceTableOrigBody = priceTableOrigBody +
+					
+					// HTML for each 'Current Pricing' table row (exluding terminated core services):
+					"<tr class='line-item child-line-item line-item-show'>" + 
+						tdOpen + lineDesc + tdClose + 
+						tdAlignRight + origExtendedNetStr + tdClose + 	//Monthly Cost (Base Extended Net price)
+						tdAlignRight + origNetPriceStr + tdClose + 		//Per Report Cost (Base Net price)
+						tdAlignRight + origIncNetPriceStr + tdClose +	//Overage Cost Per Report (Incremental Net Price)
+					"</tr>";
+					
+				}
+	
+			}
+	
+			// Build the product section of 'Proposed Pricing' tables:
+			if( assetAction <> TERMINATE_ACTION AND newAssetAction <> TERMINATE_ACTION AND 
+			  (poCat <> CORE_SERVICE OR (poCat == CORE_SERVICE AND listPrice > 0)) ){
+	
+				// Determine new totals:
+				totalExtNetNew = totalExtNetNew + newExtendedNetFloat;
+				totalNetNew = totalNetNew + newNetPriceFloat;
+				//CSYS-82599 LN 6/14/2017 Excluding Invoice Check Payments/ICP - Canada from being accured in the total
+				if( poID <> ICP_PO1 AND poID <> ICP_PO2){
+					totalIncNetNew = totalIncNetNew + newIncNetPriceFloat;					
+				}
+
+	
+				// Check for non-core services whose transactions do not have to match that of the core, when they don't actually match:
+				//CSYS-107711 -LIN- 01-04-2023 - Updated the condition to show transaction if the core transaction matches for extended service.
+				if(poCat <> CORE_SERVICE AND findinarray(transValidationPoArray, poID) == -1 AND ((numTransactionsGrid <> newCoreTrans) OR (newCoreTrans == numTransactionsGrid AND newCoreTrans <> origTransactionsFromAsset))){
+					//Append the transactions to the product description:
+					lineDesc = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "lineDescription_line"); //reinitialize
+					lineDesc = lineDesc + " @ " + string(numTransactionsGrid);
+				}
+	
+				// HTML for each 'Proposed Pricing' table row:
+				priceTableNewBody = priceTableNewBody +													
+				"<tr style='background: #E1EEF4;" + "color: #00496B;"+ "'>" + 
+					"<td class='view-text'>" + lineDesc + tdClose + 
+					tdClass + newExtendedNet + tdClose + 	//Monthly Cost (Base Extended Net price)
+					tdClass + newNetPrice + tdClose + 		//Per Report Cost (Base Net price)
+					tdClass + newIncNetPrice + tdClose + 	//Overage Cost Per Report (Incremental Net Price)
+				"</tr>";
+			}
+	
+			utilResultFlag = util.putStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "origExtendedNetStr", origExtendedNetStr);
+			utilResultFlag = util.putStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "origNetPriceStr", origNetPriceStr); 
+			//utilResultFlag = util.putStringAttribute(primeStringsDict, poID, DOCNUM_DELIM, "origIncNetPriceStr", origIncNetPriceStr);
+	
+		}
+	
+		// Populate model dictionary values for table headers:
+		utilResultFlag = util.putStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableOrigHeader", priceTableOrigHeader);
+		utilResultFlag = util.putStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableNewHeader", priceTableNewHeader);
+	
+		// Populate model dictionary values for table bodies:
+		utilResultFlag = util.putStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableOrigBody", priceTableOrigBody);
+		utilResultFlag = util.putStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableNewBody", priceTableNewBody);
+	
+		// Store original totals at the model level:
+		utilResultFlag = util.putFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalExtNetOrig", totalExtNetOrig);
+		utilResultFlag = util.putFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalNetOrig", totalNetOrig);
+		utilResultFlag = util.putFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalIncNetOrig", totalIncNetOrig);
+	
+		// Store new totals at the model level:
+		utilResultFlag = util.putFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalExtNetNew", totalExtNetNew);
+		utilResultFlag = util.putFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalNetNew", totalNetNew);
+		utilResultFlag = util.putFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalIncNetNew", totalIncNetNew);
+	}
+}
+
+// Loop through again to find the terminated core service lines and build the terminated core service section of rows
+// Terminated core service lines need to show up at the top of the 'Current Pricing' tables:
+for key in seqNumArray { 
+
+	seqNumber = key;
+	docNum = get(seqNumAttributeMappingDict, string(seqNumber)); //sorting magic
+	parentDocNum = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "_parent_doc_number");
+
+	poCat = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "poCategory_line"); 
+	assetAction = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "assetAction_line");
+	itemType = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "piItemType_line"); 
+	poID = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "_part_custom_field1"); 
+	assetOriginalListPrice = util.getFloatAttribute(primeFloatsDict, docNum, DOCNUM_DELIM, "assetOriginalListPrice_list");
+
+	// Check if the line we're dealing with is a terminated core base fee and it has a non-zero list price on the asset:
+	if(poCat == CORE_SERVICE AND assetAction == TERMINATE_ACTION AND itemType == BASE_TYPE AND assetOriginalListPrice > 0){
+
+		priceTableOrigTerminatedSection = util.getStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "priceTableOrigTerminatedSection");
+
+		lineDesc = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "lineDescription_line");	
+		origExtendedNetStr = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "origExtendedNetStr");
+		origNetPriceStr = util.getStringAttribute(primeStringsDict, docNum, DOCNUM_DELIM, "origNetPriceStr"); 
+		origIncNetPrice = util.getFloatAttribute(primeFloatsDict, poID, TILDA, "poIncFeeNetOriginalKey");
+		origIncNetPriceStr = formatascurrency(origIncNetPrice, quoteCurrency);
+		
+		// Build the terminated core row section for this model:
+		priceTableOrigTerminatedSection = priceTableOrigTerminatedSection +
+		"<tr class='line-item child-line-item line-item-show'>" + 
+			tdOpen + lineDesc + tdClose + 
+			tdAlignRight + origExtendedNetStr + tdClose + 		//Monthly Cost (Base Extended Net price)
+			tdAlignRight + origNetPriceStr + tdClose + 			//Per Report Cost (Base Net price)
+			tdAlignRight + origIncNetPriceStr + tdClose +		//Overage Cost Per Report (Incremental Net Price)
+		"</tr>";
+
+		utilResultFlag = util.putStringAttribute(primeStringsDict, parentDocNum, DOCNUM_DELIM, "priceTableOrigTerminatedSection", priceTableOrigTerminatedSection);
+	}
+
+}
+
+// Loop through the modelDocNumList to splice together the sections and add the 'Total' row to each table:
+for modelDocNum in modelDocNumList{
+	coreAffected = containskey(primeStringsDict, modelDocNum + DOCNUM_DELIM + "coreAffected");
+
+	if(coreAffected){
+
+		priceTableOrigHeader = util.getStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableOrigHeader");
+		priceTableNewHeader = util.getStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableNewHeader");
+	
+		priceTableOrigTerminatedSection = util.getStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableOrigTerminatedSection");
+	
+		priceTableOrigBody = util.getStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableOrigBody");
+		priceTableNewBody = util.getStringAttribute(primeStringsDict, modelDocNum, DOCNUM_DELIM, "priceTableNewBody");
+	
+		totalExtNetOrigStr = formatascurrency(util.getFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalExtNetOrig"), quoteCurrency);
+		totalNetOrigStr = formatascurrency(util.getFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalNetOrig"), quoteCurrency);
+		totalIncNetOrigStr = formatascurrency(util.getFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalIncNetOrig"), quoteCurrency);
+	
+		totalExtNetNewStr = formatascurrency(util.getFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalExtNetNew"), quoteCurrency);
+		totalNetNewStr = formatascurrency(util.getFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalNetNew"), quoteCurrency);
+		totalIncNetNewStr = formatascurrency(util.getFloatAttribute(primeFloatsDict, modelDocNum, DOCNUM_DELIM, "totalIncNetNew"), quoteCurrency);
+	
+		isBrandNewCore = false;
+	
+		// Determine if model is brand new:
+		if( containskey(primeStringsDict, modelDocNum + DOCNUM_DELIM + "hasCoreCreateLine") AND NOT containskey(primeStringsDict, modelDocNum + DOCNUM_DELIM+ "hasCoreTerminateLine") ){
+			isBrandNewCore = true;
+		}
+	
+		// Piece together the sections for the 'Current Pricing' table of this model:
+		priceTableOrig = "";
+		if(NOT isBrandNewCore){
+			priceTableOrig = priceTableOrigHeader + priceTableOrigTerminatedSection + priceTableOrigBody +
+					"<tr style='border-top: 1px solid #000' class='line-item child-line-item line-item-show'>" +
+						tdClassTotal + "Total" + tdClose +
+						tdAlignRightTotal + totalExtNetOrigStr + tdClose +		//Monthly Cost (Base Extended Net price)
+						tdAlignRightTotal + totalNetOrigStr + tdClose +			//Per Report Cost (Base Net price)
+						tdAlignRightTotal + totalIncNetOrigStr + tdClose +		//Overage Cost Per Report (Incremental Net Price)
+					"</tr>" +
+				"</tbody>" + 
+			"</table>" + "</br>";
+		}
+	
+		// Piece together the sections for the 'Proposed Pricing' table of this model:
+		priceTableNew = priceTableNewHeader + priceTableNewBody +
+				"<tr style='border-top: 1px solid #000' class='line-item child-line-item line-item-show'>" +
+					tdClassTotal + "Total" + tdClose +
+					tdAlignRightTotal + totalExtNetNewStr + tdClose +		//Monthly Cost (Base Extended Net price)
+					tdAlignRightTotal + totalNetNewStr + tdClose +			//Per Report Cost (Base Net price)
+					tdAlignRightTotal + totalIncNetNewStr + tdClose +		//Overage Cost Per Report (Incremental Net Price)
+				"</tr>" +
+			"</tbody>" + 
+		"</table>" + "</br>";
+	
+		priceTables = priceTables + priceTableOrig + priceTableNew;
+	}
+}
+// CSYS-77170 Part 2 End:
+
+
+//#######################################################################################
+//############################  OLD Tier Change Preview Table  ##########################
+//#######################################################################################
+priceTableOld = "";
+priceTableOld = priceTableOld +
+"<table frame='box' cellpadding='6' cellspacing='0' align='center'>" + 
+/*Static Table Head*/
+"<thead class='line-item-grid-header'>" + 
+	"<tr class='line-item child-line-item line-item-show'>" + 
+		thClass + "</th>" + 
+		thClass + "Product" + "</th>" + 
+		thClass + "Item Type" + "</th>" + 
+		thClass + "Tier" + "</th>" + 
+		thClass + "Action" + "</th>" + //CSYS-49649. KA. 12-29-2016.
+		thClass + "List Price" + "</th>" + 
+		thClass + "Ext. List" + "</th>" + 
+		thClass + "Discount (%)" + "</th>" + 
+		thClass + "Net Price" + "</th>" + 
+		thClass + "Ext. Net" + "</th>" + 
+		thClass + "Ext. Net Diff" + "</th>" + 
+		//IESCNQRCPQ-1788 - LIK - 04-19-2024 - Replacing Sales ARR with Sales Net New ARR
+		"<th class='list-label' style='border-right: none; padding: 10px;'>" + "Sales Net New ARR" + "</th>" + 
+	"</tr>" + 
+"</thead>" +
+"<tbody class='line-item-grid-body'>";
+
+/* //call the pricing script to populate the attributesDict with the new price values
+executePricing = commerce.pricing(action, triggerDict, attributesDict);*/
+
+totalExtNet = 0.0;
+totalSalesARR = 0.0;
+for key in seqNumArray { //loop that dynamically builds the rows of the HTML table
+	seqNumber = key;
+	docNum = get(seqNumAttributeMappingDict, string(seqNumber)); //sorting magic
+	//docNum = line._document_number;
+	numTransactions = string(get(primeIntegersDict, docNum + DOCNUM_DELIM + "numCommittedTransaction_line"));
+	//numTransactions = string(line.numCommittedTransaction_line);
+	numTransactionsStatic = string(get(primeIntegersDict, docNum + DOCNUM_DELIM + "numCommittedTransaction_line"));
+	//numTransactionsStatic = string(line.numCommittedTransaction_line);
+	origTransactions = string(get(primeIntegersDict, docNum + DOCNUM_DELIM + "originalNumCommittedTransaction_line"));
+	//origTransactions = string(line.originalNumCommittedTransaction_line);
+	prevTransactions = string(get(primeIntegersDict, docNum + DOCNUM_DELIM + "prevNumCommittedTransaction_line")); //string(line.prevNumCommittedTransaction_line);	
+	//prevTransactions = string(line.prevNumCommittedTransaction_line);
+	isTransOverridden = get(primeBooleansDict, docNum + DOCNUM_DELIM + "numTransOverride_line"); //line.numTransOverride_line;
+	//isTransOverridden = line.numTransOverride_line;
+	isGrouped = get(primeBooleansDict, docNum + DOCNUM_DELIM + "isPartOfPackage_line"); //line.isPartOfPackage_line;
+	//isGrouped = line.isPartOfPackage_line;
+	poID = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field1"); //line._part_custom_field1;
+	//poID = line._part_custom_field1;
+	pi = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_number"); //line._part_number;
+	//pi = line._part_number;
+	itemType = get(primeStringsDict, docNum + DOCNUM_DELIM + "piItemType_line"); //line.piItemType_line;
+	//itemType = line.piItemType_line;
+	poCat = get(primeStringsDict, docNum + DOCNUM_DELIM + "poCategory_line"); //line.poCategory_line;
+	//poCat = line.poCategory_line;
+	lineDesc = get(primeStringsDict, docNum + DOCNUM_DELIM + "lineDescription_line"); //line.lineDescription_line;
+	//lineDesc = line.lineDescription_line;
+	listPriceFromDict = get(primeFloatsDict, docNum + DOCNUM_DELIM + "listPrice_line");
+	//listPriceFromGrid = line.listPrice_line;
+	assetDisc = string(get(primeFloatsDict, docNum + DOCNUM_DELIM + "assetsOriginalDiscount_line"));
+	//assetDisc = string(line.assetsOriginalDiscount_line);
+	assetDiscSplit = split(assetDisc, ".");
+	if(len(assetDiscSplit[1]) == 1){
+		assetDisc = assetDisc + "0";
+	}
+	assetAction = get(primeStringsDict, docNum + DOCNUM_DELIM + "assetAction_line");
+	//assetAction = line.assetAction_line;
+	poMapped = containskey(poMappingDict, poID);
+	
+	//prevent modifying num of transactions validation
+	transValidationTrig = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "transactionValidationTrigger_line");
+	transValidationTrig = util.getAttributesDictValue(transValidationTrig);
+	result = result + docNum + "~transactionValidationTrigger_line~" + transValidationTrig + "|";
+	
+	if(pi == "" OR assetAction == TERMINATE_ACTION OR (assetAction == CREATE_ACTION AND itemType <> SETUP_TYPE AND itemType <> PRE_PROD) OR (poMapped AND listPriceFromDict <> 0.0) OR (listPriceFromDict <> 0.0 AND (numTransactions <> origTransactions OR quoteTrans <> origQuoteTrans))){
+		
+		/*Dynamic Table Body*/
+		
+		if(pi == ""){ //model line
+			if(containskey(parentDocMappingDict, docNum) OR (quoteTrans <> origQuoteTrans)){ //print the model info if there was a change of trxns within it. Print all models that include a line with a trans override of false when quote transactions was changed
+				priceTableOld = priceTableOld +
+				trCoreClass + 
+					"<td align='right' style='font-weight:bold;'>" + "Core:" + tdClose + 
+					tdOpen + lineDesc + tdClose + 
+					tdOpen + tdClose +
+					tdOpen + tdClose + 
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+					tdOpen + tdClose +
+					tdOpen + tdClose + 
+					tdOpen + tdClose + 
+				"</tr>";
+			}
+		} else { 
+			/*skip generating lines in these scenarios*/
+			if((isGrouped AND poCat <> "Core Service") OR  
+				 (itemType == SETUP_TYPE) OR
+				 (itemType == PRE_PROD) OR
+			
+				 (NOT poMapped AND quoteTrans == origQuoteTrans AND numTransactions == origTransactions) OR 
+				 
+				 (assetAction <> CREATE_ACTION AND NOT poMapped AND containskey(poTransCheckDict, poID) /*numTransactions <> origQuoteTrans*/ AND quoteTrans <> origQuoteTrans AND (numTransactions <> origTransactions OR containskey(overrideMappingDict, poID))) OR 
+				 
+				 (assetAction == CREATE_ACTION AND NOT poMapped AND containskey(poTransCheckDict, poID) AND quoteTrans <> origQuoteTrans AND (numTransactions <> origQuoteTrans OR containskey(overrideMappingDict, poID)))){
+				
+					if(assetAction <> TERMINATE_ACTION){ //always generate rows for terminated products in the preview table
+						continue;
+					}
+			}
+			
+			//Price variables for committed values: 
+			origListPrice = formatascurrency(get(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalListPrice_list"), quoteCurrency);
+			//origListPrice = formatascurrency(line.assetOriginalListPrice_list, quoteCurrency);
+			origExtendedList = formatascurrency(get(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalExtendedListPrice_list"), quoteCurrency);
+			//origExtendedList = formatascurrency(line.assetOriginalExtendedListPrice_list, quoteCurrency);
+			discount = string(get(primeFloatsDict, docNum + DOCNUM_DELIM + "discount_line"));
+			//discount = string(line.discount_line);
+			discSplit = split(discount, ".");
+			if(len(discSplit[1]) == 1){
+				discount = discount + "0";
+			}
+			//origNetPrice = formatascurrency(line.assetOriginalNetPrice_list, quoteCurrency);
+			origNetPriceOld = formatascurrency(get(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalNetPrice_list"), quoteCurrency);
+			//origExtendedNet = line.assetOriginalExtendedNetPrice_list;
+			origExtendedNet = get(primeFloatsDict, docNum + DOCNUM_DELIM + "assetOriginalExtendedNetPrice_list");
+			//arrNet = line.netNewARRCurrency_line;
+			arrNet = get(primeFloatsDict, docNum + DOCNUM_DELIM + "netNewARRCurrency_line");
+			
+			/*New number of transactions*/
+			newNumTrans = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "numCommittedTransaction_line");
+			newNumTrans = util.getAttributesDictValue(newNumTrans);
+			newNumTransInt = integer(atof(newNumTrans));
+			newNumTrans = string(newNumTransInt);
+
+			/* New Asset Action */
+			newAssetAction = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "assetAction_line");
+			newAssetAction = util.getAttributesDictValue(newAssetAction);
+			
+			/* Price variables for new price values. Pull from attributesDict and parse correctly */
+			newListPrice = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "listPrice_line");
+			newListPrice = util.getAttributesDictValue(newListPrice);
+			newListPriceFloat = util.customAtof(newListPrice, 0.0);
+			newListPrice = formatascurrency(newListPriceFloat, quoteCurrency);
+			
+			newExtendedList = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "extendedList_line");
+			newExtendedList = util.getAttributesDictValue(newExtendedList);
+			newExtendedListFloat = util.customAtof(newExtendedList, 0.0);
+			newExtendedList = formatascurrency(newExtendedListFloat, quoteCurrency);
+			
+			newNetPrice = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "netPriceEach_line");
+			newNetPrice = util.getAttributesDictValue(newNetPrice);
+			newNetPriceFloat = util.customAtof(newNetPrice, 0.0);
+			newNetPrice = formatascurrency(newNetPriceFloat, quoteCurrency);
+			
+			newExtendedNet = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "extendedNetPrice_line");
+			newExtendedNet = util.getAttributesDictValue(newExtendedNet);
+			newExtendedNetFloat = util.customAtof(newExtendedNet, 0.0);
+			newExtendedNet = formatascurrency(newExtendedNetFloat, quoteCurrency);
+			
+			/*newArrNet = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "netNewARRCurrency_line");
+			newArrNet = util.getAttributesDictValue(newArrNet);
+			newArrNetFloat = util.customAtof(newArrNet, 0.0);
+			newArrNet = formatascurrency(newArrNetFloat, quoteCurrency);*/
+			//IESCNQRCPQ-1788 - LIK - 04-19-2024 - Replacing Sales ARR with Sales Net New ARR and commenting the below line
+			//salesARR = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "salesARRCurrency_line");
+			salesARR = util.getStringAttribute(attributesDict, docNum, ATTR_DELIMITER, "salesNetNewARR_line_c");
+			//IESCNQRCPQ-1788 - End
+			salesARR = util.getAttributesDictValue(salesARR);
+			salesARRFloat = util.customAtof(salesARR, 0.0);
+			salesARR = formatascurrency(salesARRFloat, quoteCurrency);
+			
+			if(assetAction == CREATE_ACTION){ //CREATE's have 0 for original values
+				origListPrice = formatascurrency(0.0, quoteCurrency);
+				origExtendedList = formatascurrency(0.0, quoteCurrency);
+				origNetPriceOld = formatascurrency(0.0, quoteCurrency);
+				origExtendedNet = 0.0;
+				assetDisc = "0.00";
+				origTransactions = string(0);
+			}
+			
+			//ext net diff section:
+			extNetStr = formatascurrency(origExtendedNet, quoteCurrency);
+			extNetDiff = newExtendedNetFloat - origExtendedNet;
+			extNetDiffStr = formatascurrency(extNetDiff, quoteCurrency);
+			
+			arrTdClass = "";
+			if(salesARRFloat > 0){
+				arrTdClass = "<td class='view-text' align='right' style='color: green;'>";
+			}
+			else{ 
+				arrTdClass = "<td class='view-text' align='right' style='color: red;'>"; 
+			}
+			if(salesARRFloat == 0.0){
+				arrTdClass = "<td class='view-text' align='right'>";
+				salesARR = ""; //blank out salesARR and don't show zero
+			}
+			
+			if(itemType == INC_TYPE){
+				//numTransactions = string(1);
+				salesARR = ""; //Incrementals don't have ARR
+				newExtendedNetFloat = 0.0; //Don't sum extended net for Incrementals
+				origExtendedNet = 0.0;
+				extNetDiffStr = "";
+			}
+			
+			if(itemType == SETUP_TYPE){
+				salesARR = ""; //setups don't have ARR
+			}
+			
+			totalSalesARR = totalSalesARR + salesARRFloat;	
+
+			totalExtNet = totalExtNet + (newExtendedNetFloat - origExtendedNet);
+
+			if(assetAction <> CREATE_ACTION){ //this check will remove pre-existing tier rows as it pertains to CREATE's (CSYS-80853)
+				priceTableOld = priceTableOld +
+				/*Create an existing tier row and columns for each line item with a tier change*/
+				"<tr class='line-item child-line-item line-item-show'>" + 
+					tdAlignRight + "Pre-existing Tier:" + tdClose + 
+					tdOpen + "&emsp;" + lineDesc + tdClose + 
+					"<td align='center'>" + itemType + tdClose + 
+					tdAlignRight + origTransactions + tdClose + 
+					tdAlignRight + assetAction + tdClose + //CSYS-49649
+					tdAlignRight + origListPrice + tdClose + 
+					tdAlignRight + origExtendedList + tdClose + 
+					tdAlignRight + assetDisc + tdClose + 
+					tdAlignRight + origNetPriceOld + tdClose + 
+					tdAlignRight + extNetStr + tdClose ;
+					//arrTdClass + salesARR + tdClose;//IESCNQRCPQ-1788 - Showing Sales Net New Arr for terminate.
+	
+					if(newAssetAction == TERMINATE_ACTION AND extNetDiff <> 0.0){ //CSYS-49649
+						priceTableOld = priceTableOld + tdAlignRight + extNetDiffStr + tdClose + arrTdClass + salesARR + tdClose+ "</tr>"; //IESCNQRCPQ-1788;
+					} 
+					else{
+						priceTableOld = priceTableOld + tdOpen + tdClose + arrTdClass + salesARR + tdClose + "</tr>"; //IESCNQRCPQ-1788;	
+					}
+					
+					//priceTableOld = priceTableOld + tdOpen + tdClose + 
+					
+					
+				
+			}
+
+			if(assetAction <> TERMINATE_ACTION AND newAssetAction <> TERMINATE_ACTION){
+				/* Create a new tier row and columns for each line item with a tier change */
+				priceTableOld = priceTableOld +													
+				"<tr style='background: #E1EEF4;" + "color: #00496B;"+ "'>" + 
+					tdClass + "New Tier:" + tdClose + 
+					"<td class='view-text'>" + "&emsp;" + lineDesc + tdClose + 
+					"<td class='view-text' align='center'>" + itemType + tdClose + 
+					tdClass + newNumTrans + tdClose + 
+					tdClass + newAssetAction + tdClose + 
+					/* New Pricing values below. These are pulled from the attributesDict built by the Pricing Function */
+					tdClass + newListPrice + tdClose + 
+					tdClass + newExtendedList + tdClose + 
+					tdClass + discount + tdClose + 
+					tdClass + newNetPrice + tdClose + 
+					tdClass + newExtendedNet + tdClose + 
+					tdClass + extNetDiffStr + tdClose + 
+					arrTdClass + salesARR + tdClose + 
+				"</tr>";
+			}
+		}
+	} //end blanket conditional check
+}
+
+//Total ARR formatting:
+totalSalesARRStr = formatascurrency(totalSalesARR, quoteCurrency);
+totalArrTdClass = "";
+if(totalSalesARR > 0){
+	totalArrTdClass = "<td class='view-text' align='right' style='color: green;'>";
+}
+else{ 
+	totalArrTdClass = "<td class='view-text' align='right' style='color: red;'>"; 
+}
+if(totalSalesARR == 0.0){
+	totalArrTdClass = "<td class='view-text' align='right'>";
+}
+
+totalExtNetStr = formatascurrency(totalExtNet, quoteCurrency);
+totalExtNetClass = "";
+if(totalExtNet > 0){
+	totalExtNetClass = "<td class='view-text' align='right' style='color: green;'>";
+}
+else{ 
+	totalExtNetClass = "<td class='view-text' align='right' style='color: red;'>"; 
+}
+
+//Total ARR row:
+priceTableOld = priceTableOld + 
+"<tr class='line-item child-line-item line-item-show'>" +
+tdOpen + tdClose +
+tdOpen + tdClose +
+tdOpen + tdClose +
+tdOpen + tdClose +
+tdOpen + tdClose +
+tdOpen + tdClose +
+tdOpen + tdClose +
+tdOpen + tdClose +
+tdOpen + tdClose +
+"<td align='right' style='font-weight:bold;'>" + "Totals:" + tdClose +
+totalExtNetClass + totalExtNetStr + tdClose +
+totalArrTdClass + totalSalesARRStr + tdClose +
+"</tbody>" + 
+"</table>";
+
+priceTables = priceTables + priceTableOld;
+
+return priceTables;

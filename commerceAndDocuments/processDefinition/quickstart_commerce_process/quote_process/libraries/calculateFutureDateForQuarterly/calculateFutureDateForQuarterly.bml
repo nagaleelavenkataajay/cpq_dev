@@ -1,0 +1,62 @@
+//CSYS-106638 (OK. 7-11-2022) Future Date Calculations for Quarterly Billing Cycle
+
+assetBillingDict = dict("string");
+result = commerce.populateAssetBillingDict(assetBillingDict);
+nbdOldLine = "";
+newProdStartDate = "";
+parentDocId = "";
+
+for line in line_process {
+	nextBillingDate = line.nextBillingDate_line;
+	originalNextBillDate = line.originalNextBillDate_line;
+	assetString = line.assetString_line;
+	pid = line._part_number;
+	docNum = line._document_number;
+	poCategory = line.poCategory_line;
+	assetAction = line.assetAction_line;
+	parentDocNum = line._parent_doc_number;
+	
+	if (poCategory == "Core Service") {
+		if (containskey(anyTypeDict, detectMigrateValue + "NBD")) {  // pulling the NBD value from "newProductStartDate" function using anyTypeDict. key should be append with "NBD". Example: for detect Migration to Verify we are naming it as detectMigrateToVerify. so for NBD key for this scenario is "detectMigrateToVerifyNBD". Like this NBD should be added in the end.
+			nbdOldLine = get(anyTypeDict, detectMigrateValue + "NBD", "string");
+		}
+		if (containskey(anyTypeDict, detectMigrateValue + "ParentDoc")) { // As mentioned above pulling the ParentDocNum from "newProductStartDate" function using anyTypeDict. key should be append with "ParentDoc". Example: for detect Migration to Verify we are naming it as detectMigrateToVerify. so for ParentDoc key for this scenario is "detectMigrateToVerifyParentDoc". Like this "ParentDoc" should be added in the end.
+			parentDocId = get(anyTypeDict, detectMigrateValue + "ParentDoc", "string");
+		}
+		/*
+		if (assetString <> "" AND parentDocId == parentDocNum) {
+			if (containskey(assetBillingDict, pid)) {
+				assetNextBillingDate = get(assetBillingDict, pid);
+				utilResultString = util.formAttrValueStr(attributesDict, "originalNextBillDate_line", docNum, assetNextBillingDate);	 
+			}
+		}
+		if(originalNextBillDate <> ""){
+			nbdOldLine = substring((originalNextBillDate),0,10);	
+		}
+		*/
+	}	
+}
+
+futureMonthDict = dict("string");
+futureMonthValue = "";
+put(futureMonthDict, "detectMigrateToIntelligentAuditAdvanced", string(3));
+put(futureMonthDict, "detectMigrateToIntelligentAuditEssential", string(2));
+put(futureMonthDict, "detectMigrateToVerify", string(1));
+put(futureMonthDict, "detectByAppzenTerminate", string(3));
+put(futureMonthDict, "standardToProfessionalMigration", string(2));
+put(futureMonthDict, "futureDateSpecificSKUs", string(2)); //IESCNQRCPQ-481 (OK. 4-13-2023) Delay Billing of Specific Service Offerings
+
+if (containskey(futureMonthDict, detectMigrateValue)) {
+	futureMonthValue = get(futureMonthDict, detectMigrateValue);
+}
+
+futureDate1 = util.addMonthsToDate(newOrderDate, futureMonthValue); //newOrderDate is referring 1st day of Order effective month. Example: OED is 07/11/2022 here newOrderDate is 07/01/2022.
+futureDate = util.addMonthsToDate(futureDate1, string(1));
+if(nbdOldLine == futureDate) {
+	newProdStartDate = futureDate;
+}
+else{
+	newProdStartDate = util.addMonthsToDate(nbdOldLine, string(3));
+}
+
+return newProdStartDate;

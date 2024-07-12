@@ -1,0 +1,15 @@
+{
+  "name" : "Get Difference in Months",
+  "variableName" : "getDifferenceInMonths",
+  "description" : "Gets the difference in months between two dates. KA. 11-3-2015.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Integer",
+  "parameters" : [ {
+    "name" : "firstDate",
+    "type" : "String"
+  }, {
+    "name" : "secondDate",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

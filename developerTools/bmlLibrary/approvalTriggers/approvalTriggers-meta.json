@@ -1,0 +1,21 @@
+{
+  "name" : "Approval Triggers",
+  "variableName" : "approvalTriggers",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "approvalMsgArray",
+    "type" : "String[]"
+  }, {
+    "name" : "historyMsgArray",
+    "type" : "String[]"
+  }, {
+    "name" : "previousApprovalSequencer",
+    "type" : "String"
+  }, {
+    "name" : "approverLoginDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

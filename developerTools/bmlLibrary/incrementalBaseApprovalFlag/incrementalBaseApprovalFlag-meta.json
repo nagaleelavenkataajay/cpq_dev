@@ -1,0 +1,30 @@
+{
+  "name" : "Incremental Base Approval Flag",
+  "variableName" : "incrementalBaseApprovalFlag",
+  "description" : "Approval logic for base and incremental line items to set a flag if the corresponding inc line is less than the base.",
+  "libraryFunctions" : [ "util.formAttrValueStr", "util.getFloatAttribute", "util.getStringAttribute", "util.putStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "seqNumArray",
+    "type" : "Integer[]"
+  }, {
+    "name" : "seqNumAttributeMappingDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "primeStringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

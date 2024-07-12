@@ -1,0 +1,14 @@
+{
+  "name" : "validateBundleFlagForDynamicGrouping",
+  "variableName" : "validateBundleFlagForDynamicGrouping",
+  "description" : "NOT USED. Runs a validation on all non-Model line items. If any line item's \"Add to Group\" flag is checked, and its Bundle Flag (part custom field) is \"N\", the validation should return an error.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "params",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_part_number", "_sequence_number", "_part_desc", "isPartOfPackage_line" ],
+  "mainDocAttributes" : [ ],
+  "systemAttributes" : [ ]
+}

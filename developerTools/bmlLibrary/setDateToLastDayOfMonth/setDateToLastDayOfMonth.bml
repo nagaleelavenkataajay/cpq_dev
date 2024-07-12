@@ -1,0 +1,43 @@
+//Logic to set date strings to last day of the month
+//applies to date strings in yyyy-MM-dd format
+
+newDate = "";
+yearVal = "";
+monthVal = "";
+dayVal = "";
+splitNewDate = string[];
+
+if( find(inputDate,"-") <> -1 ){
+	splitNewDate = split(inputDate, "-");
+	yearVal = splitNewDate[0];
+	monthVal = splitNewDate[1];
+	dayVal = splitNewDate[2];
+}
+
+isLeapYear = false;
+if (isnumber(yearVal)){
+	isLeapYear = isleap(atoi(yearVal)); 
+}
+
+daysDict = dict("integer");
+put(daysDict,"00",31);
+put(daysDict,"01",31);
+if (NOT isLeapYear){put(daysDict,"02",28);}
+else {put(daysDict,"02",29);}
+put(daysDict,"03",31);
+put(daysDict,"04",30);
+put(daysDict,"05",31);
+put(daysDict,"06",30);
+put(daysDict,"07",31);
+put(daysDict,"08",31);
+put(daysDict,"09",30);
+put(daysDict,"10",31);
+put(daysDict,"11",30);
+put(daysDict,"12",31);
+
+if (sizeofarray(splitNewDate) > 0 AND isnumber(dayVal) AND isnumber(monthVal) AND isnumber(yearVal)){
+	lastDayOfMonth = string(get(daysDict, monthVal));
+	newDate = yearVal + "-" + monthVal + "-" + lastDayOfMonth;
+}
+
+return newDate;

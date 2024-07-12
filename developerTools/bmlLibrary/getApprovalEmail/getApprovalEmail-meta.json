@@ -1,0 +1,15 @@
+{
+  "name" : "Get Approval Email",
+  "variableName" : "getApprovalEmail",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "userLogin",
+    "type" : "String"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

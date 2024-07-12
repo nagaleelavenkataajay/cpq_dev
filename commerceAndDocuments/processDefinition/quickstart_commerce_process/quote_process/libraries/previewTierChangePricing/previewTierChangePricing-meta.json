@@ -1,0 +1,20 @@
+{
+  "name" : "Preview Tier Change Pricing",
+  "variableName" : "previewTierChangePricing",
+  "description" : "Per CSYS-36627, this script builds the HTML table for the Tier Change Preview on add-on quotes.",
+  "libraryFunctions" : [ "commerce.pricing", "util.customAtof", "util.getAttributesDictValue", "util.getFloatAttribute", "util.getIntegerAttribute", "util.getStringAttribute", "util.putFloatAttribute", "util.putIntegerAttribute", "util.putStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "action",
+    "type" : "String"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "numCommittedTransaction_line", "prevNumCommittedTransaction_line", "poCategory_line", "_part_number", "_document_number", "_parent_doc_number", "_sequence_number", "_part_custom_field1", "piItemType_line", "lineDescription_line", "numTransOverride_line", "isPartOfPackage_line", "listPrice_line", "extendedList_line", "netPriceEach_line", "extendedNetPrice_line", "existingARRCurrency_line", "netNewARRCurrency_line", "assetAction_line", "assetsOriginalDiscount_line", "originalNumCommittedTransaction_line", "assetOriginalListPrice_list", "assetOriginalNetPrice_list", "assetOriginalExtendedListPrice_list", "assetOriginalExtendedNetPrice_list", "discountPercent_line", "discount_line", "assetOriginalGroupCheck_line", "netPriceNonUnified_line" ],
+  "mainDocAttributes" : [ "quoteCurrency_quote", "numCommittedTransaction_quote", "oRGNumberOfComittedTransactions_quote" ],
+  "systemAttributes" : [ ]
+}

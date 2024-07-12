@@ -1,0 +1,221 @@
+//CSYS-106714 (OK. 7-22-2022) Start - Calculate Termination date for all the terminated lines and display it in line item grid. 
+TRUE_STR = "true";
+CORE_SERVICE = "Core Service";
+QUOTE_DOC_NUM = "1";
+billingCycle = billingCycle_quote;
+stdToProfMigration = false;
+stdToProfMigrationFutureDated = "";
+detectMigration = "";
+stdToProfMigrationTerminationDate = "";
+legalUpdatedTerminationDate = legalUpdatedTerminationDate_quote;
+detectMigrationTerminationDate = "";
+hDSTerminationDate = "";
+isAccountPreProdTerminate = isAccountPreProdTerminate_quote;
+OED = orderEffectiveDate_quote;
+accPreProdTermDate = "";
+terminationNotes = terminationNotes_quote;
+terminationNotesArr = string[];
+termNotesArray = string[];
+coreNextBillingDate = "";
+isTermNotesNeedsUpdate = "";
+termNotes = "";
+terminationDate = substring(terminationDate_quote, 0, 10);
+termDateString = "";
+legalTermDate = "";
+
+if (terminationDate <> "") {
+	termDateformat = util.getDateFromString(terminationDate);
+	termDateString = datetostr(termDateformat, "yyyy-MM-dd");
+}
+
+if (containskey(anyTypeDict, "stdToProfMigrationValidation")) { 
+	stdToProfMigration = get(anyTypeDict, "stdToProfMigrationValidation", "boolean");
+}
+
+if (containskey(anyTypeDict, "stdToProfMigrationTerminationDate")) { 
+	stdToProfMigrationTerminationDate = get(anyTypeDict, "stdToProfMigrationTerminationDate", "string");
+}
+
+if (containskey(anyTypeDict, "detectMigrationTerminationDate")) { 
+	detectMigrationTerminationDate = get(anyTypeDict, "detectMigrationTerminationDate", "string");
+}
+
+if (containskey(anyTypeDict, "hDSTerminationDate")) { 
+	hDSTerminationDate = get(anyTypeDict, "hDSTerminationDate", "string");
+}
+
+//Termination date for stdToProfMigration is depends on Nextbilldate for quarterly cycle. so if order submitted on next month and nextbilldate changed then we need to display the correct termination date based on the new NBD value in quote level. This function triggered in Save WO Pricing and Submit Order action. so Termination date will get updated based on new NBD values
+if (stdToProfMigration == true AND (billingCycle == "Monthly" OR billingCycle == "Quarterly")) {
+	stdToProfMigrationFutureDated = TRUE_STR;
+	
+	//CSYS-107095 (OK. 9-19-2022) Add "terminationNotes_quote" to the below condition. Termination Date should not populated in opportunity when we have only stdToProfMigration and no other terminations.
+	if (legalUpdatedTerminationDate <> TRUE_STR) {
+		if (terminationNotes_quote <> "") {
+			utilResultString = util.formAttrValueStr(attributesDict, "terminationDate_quote", QUOTE_DOC_NUM, stdToProfMigrationTerminationDate);
+		}
+		utilResultString = util.formAttrValueStr(attributesDict, "systemTerminatedDate_quote", QUOTE_DOC_NUM, stdToProfMigrationTerminationDate);
+	}
+}
+
+//Termination date for detect migration is depends on Nextbilldate for quarterly cycle. so if order submitted on next month and nextbilldate changed then we need to display the correct termination date based on the new NBD value in quote level. This function triggered in Save WO Pricing and Submit Order action. so Termination date will get updated based on new NBD values
+if((detectByAppzenTerminate_quote OR detectMigrateToIntelligentAuditAdvanced_quote == TRUE_STR OR detectMigrateToIntelligentAuditEssential_quote == TRUE_STR OR detectMigrateToVerify_quote == TRUE_STR) AND (billingCycle == "Monthly" OR billingCycle == "Quarterly")) {
+	detectMigration = TRUE_STR;
+	
+	if (legalUpdatedTerminationDate <> TRUE_STR) {
+		utilResultString = util.formAttrValueStr(attributesDict, "terminationDate_quote", QUOTE_DOC_NUM, detectMigrationTerminationDate);
+		utilResultString = util.formAttrValueStr(attributesDict, "systemTerminatedDate_quote", QUOTE_DOC_NUM, detectMigrationTerminationDate);
+	}
+}
+
+//For HDS we are using different termination date field called "terminatedDateHDS_quote" instead of "terminationDate_quote". because of this reason  "terminationDate_quote" and "terminatedDateHDS_quote" both are showing different date values. To avoid the confusion here we are updating the "terminationDate_quote" field with "terminatedDateHDS_quote" field value to keep the field values in sync.
+if (orderEffectiveDateHDS_quote <> "" AND legalUpdatedTerminationDate <> TRUE_STR) {
+	utilResultString = util.formAttrValueStr(attributesDict, "terminationDate_quote", QUOTE_DOC_NUM, hDSTerminationDate);
+	utilResultString = util.formAttrValueStr(attributesDict, "systemTerminatedDate_quote", QUOTE_DOC_NUM, hDSTerminationDate);
+}
+
+//Termination date for Account Pre-Prod should be the last day of the OED month
+if(isAccountPreProdTerminate AND OED <> ""){	
+	OEDForAccPreProd = split(OED, " ");	
+	accPreProdTermDate = util.setDateToLastDayOfMonth(OEDForAccPreProd[0]);	
+}
+
+//We populate the term Date for detect migration future dated scenarios. If the quote is approved in previous month and the order submitted on next month if the nextbilldate changed in the assets based on new NBD we calculate termination date. based on new term date we need to update the termination notes.
+if (detectMigration == TRUE_STR AND terminationNotes_quote <> "" AND detectMigrationTerminationDate <> "") {
+	detectTermDate = detectMigrationTerminationDate;
+	termDate1 = getdate();
+	termDate1 = util.getDateFromString(detectTermDate);
+	detectTermDate = datetostr(termDate1, "yyyy-MM-dd");
+	
+	terminationNotesArr = split(terminationNotes_quote, ";");
+	for res in terminationNotesArr {
+		if (find(res, "Term Date:") <> -1) {
+			notesArr = split(res, "Term Date:");
+			existingTermNotesDate = notesArr[1];
+			if (existingTermNotesDate <> detectTermDate) {				
+				isTermNotesNeedsUpdate = "true";
+				notesArr[1] = replace(existingTermNotesDate, existingTermNotesDate, detectTermDate);				
+			}
+			
+			//If Account Pre-Prod = true then we need use the Pre-Prod term date without considering other special scenarios
+			if (isAccountPreProdTerminate AND accPreProdTermDate <> "") {
+				isTermNotesNeedsUpdate = "true";
+				notesArr[1] = replace(existingTermNotesDate, existingTermNotesDate, accPreProdTermDate);
+			}
+			
+			//If legal update the termination date then display that date in term date value.
+			if (legalUpdatedTerminationDate == TRUE_STR) {				
+				isTermNotesNeedsUpdate = "true";
+				notesArr[1] = replace(existingTermNotesDate, existingTermNotesDate, termDateString);				
+			}
+			res = join(notesArr, " Term Date: ");
+			
+			append(termNotesArray, res);
+		}
+		else {
+			append(termNotesArray, res);
+		}
+	}
+	
+	if (isTermNotesNeedsUpdate == "true") {
+		termNotes = join(termNotesArray, "; ");
+		utilResultString = util.formAttrValueStr(attributesDict, "terminationNotes_quote", QUOTE_DOC_NUM, termNotes);
+	}
+}
+
+for line in line_process{
+	assetAction = line.assetAction_line;
+	poID = line.poId_line;
+	docNum = line._document_number;
+	terminatedDateValue = "";
+	termDate = "";
+	termDateValue = getdate();
+	terminationDate = substring(terminationDate_quote, 0, 10);
+	overridedTermDate = getdate();
+	poCategory = line.poCategory_line;
+	itemType = line.piItemType_line;
+	//nextBillingDate = substring(line.nextBillingDate_line, 0, 10);
+	parentDocNum = line._parent_doc_number;
+	dummyValue = "";
+	
+	if (findinarray(parentDocNumArray, parentDocNum) <> -1 AND poCategory == CORE_SERVICE) {
+		coreNextBillingDate = substring(line.nextBillingDate_line, 0, 10);
+	}
+	
+	if (assetAction == "TERMINATE" AND coreNextBillingDate <> "") {
+		//Populate the Termination date for all the terminated products in line item grid.
+		if (orderEffectiveDateHDS_quote == "" AND NOT(isAccountPreProdTerminate) AND stdToProfMigrationFutureDated <> TRUE_STR) {
+			if (find("*3780125*7507717*", "*"+poID+"*") <> -1) {
+				if (detectMigration == TRUE_STR) {
+					dummyValue = "true";
+				}
+				else {
+					terminatedDateValue = coreNextBillingDate;
+				}
+			}
+			else {
+				terminatedDateValue = coreNextBillingDate;
+			}
+			if (terminatedDateValue <> "") {
+				if (find(terminatedDateValue, "/") <> -1) {
+					termDateValue = minusdays((strtojavadate(terminatedDateValue, "MM/dd/yyyy")), 1);
+				}
+				else {
+					termDateValue = minusdays((strtojavadate(terminatedDateValue, "yyyy-MM-dd")), 1);
+				}
+				termDate = datetostr(termDateValue, "yyyy-MM-dd");
+				utilResultString = util.formAttrValueStr(attributesDict, "termDate_line", docNum, termDate);
+				
+				//Updating Termination Date if the order submitted on next month and nextbilldate changed then we need to display the correct termination date based on the new NBD value in quote level. 
+				//This works for normal termination scenario
+				//detect migration with other product termination in a same quote
+				if (legalUpdatedTerminationDate <> TRUE_STR) {
+					utilResultString = util.formAttrValueStr(attributesDict, "terminationDate_quote", QUOTE_DOC_NUM, termDate);
+					utilResultString = util.formAttrValueStr(attributesDict, "systemTerminatedDate_quote", QUOTE_DOC_NUM, termDate);
+				}
+			}
+		}
+		
+		//if AccountPreProdTerminate flag = true and if any other special future dated scenario in the quote (example: STPM OR DetectMigration OR HDS) we need to use AccountPreProd terminated date to display in the line item grid and in quote level.
+		if (isAccountPreProdTerminate AND legalUpdatedTerminationDate <> TRUE_STR) {
+			utilResultString = util.formAttrValueStr(attributesDict, "termDate_line", docNum, accPreProdTermDate);
+			utilResultString = util.formAttrValueStr(attributesDict, "terminationDate_quote", QUOTE_DOC_NUM, accPreProdTermDate);
+			utilResultString = util.formAttrValueStr(attributesDict, "systemTerminatedDate_quote", QUOTE_DOC_NUM, accPreProdTermDate);
+			utilResultString = util.formAttrValueStr(attributesDict, "termDateForDocumentDesignerOfAccountPreProd_quote", QUOTE_DOC_NUM, (util.formatDate(accPreProdTermDate,"long")));
+		}
+		
+		//When legal override the termination date we need to consider that date for termination date in the line item grid. When legal override the termination date then we are not considering any special scenarios to calculate the termination date.
+		if (legalUpdatedTerminationDate == TRUE_STR AND terminationDate <> "") {
+			overridedTermDate = util.getDateFromString(terminationDate);
+			legalTermDate = datetostr(overridedTermDate, "yyyy-MM-dd");
+			utilResultString = util.formAttrValueStr(attributesDict, "termDate_line", docNum, legalTermDate);
+		}
+	}
+}
+
+if (legalTermDate <> "") { 
+	terminatedDateDD = util.formatDate(legalTermDate,"long");
+	
+	if (orderEffectiveDateHDS_quote <> "") {
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateForDocumentDesignerOfHDS_quote", QUOTE_DOC_NUM, terminatedDateDD);
+	}
+	
+	if (detectMigration == TRUE_STR) {
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateForDDDetect_quote", QUOTE_DOC_NUM, terminatedDateDD);
+	}
+	
+	if (isAccountPreProdTerminate) {
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateForDocumentDesignerOfAccountPreProd_quote", QUOTE_DOC_NUM, terminatedDateDD);
+	}
+	
+	if (stdToProfMigrationFutureDated == TRUE_STR) {
+		termDateSTPMFrench = util.formatDate(legalTermDate, "frenchLong");
+		termDateSTPMSpanish = util.formatDate(legalTermDate, "spanishLong"); 
+		termDateSTPMGerman = util.formatDate(legalTermDate, "germanLong");
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPM", QUOTE_DOC_NUM, terminatedDateDD);
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMFrench_quote", QUOTE_DOC_NUM, termDateSTPMFrench); 
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMSpanish_quote", QUOTE_DOC_NUM, termDateSTPMSpanish); 
+		utilResultString = util.formAttrValueStr(attributesDict, "termDateSTPMGerman_quote", QUOTE_DOC_NUM, termDateSTPMGerman);
+	}	
+}
+
+return "";

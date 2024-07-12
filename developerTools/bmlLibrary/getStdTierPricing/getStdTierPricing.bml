@@ -1,0 +1,125 @@
+/*
+	BML Utility Library
+	getStdTierPricing
+	-------------------
+	Description:
+		For a given list of PIs, imported into this function as piQtyList,
+		populates the piQtyAndImplementationMethodToPriceDict dictionary with the corresponding
+		tier price of the PI, based on its quantity or no. of transactions.
+	
+	Params:
+		String priceList
+		String currencyCode
+		FloatDict piQtyAndImplementationMethodToPriceDict
+		String[] piQtyAndImplementationMethodList
+		String piDelimiter
+	Returns:
+		StringDict resultDict
+	
+	piQtyAndImplementationMethodToPriceDict:
+		This is the dictionary that will be populated with values queried.
+		Key: <pi_number><piDelimiter><qty_or_num_transactions>
+		Value: standard tier price
+		
+	piQtyAndImplementationMethodList:
+		Elements: <pi_number><piDelimiter><qty_or_num_transactions><piDelimiter><implementationMethod>
+*/
+
+resultDict = dict("string");
+
+piList = string[];
+tierPricingConditionsMatrix = string[][];
+piQtyDict = dict("integer"); //Maps a PI to a Quantity/NumTransactions
+
+//From our list of PIs (with Qty/Trxns and Implementation Method), extract the list of PIs only (for the BMQL query)
+index = 0;
+
+for piQty in piQtyAndImplementationMethodList {
+	pricingKeys = split(piQty, piDelimiter);
+	pi = pricingKeys[0];
+	qty = pricingKeys[1];
+	implementationMethod = pricingKeys[2];
+
+	if (pi <> "" and isnumber(qty) and implementationMethod <> "") {
+		append(piList, pi);
+		tierPricingConditionsMatrix[index][0] = pi;
+		tierPricingConditionsMatrix[index][1] = qty;
+		tierPricingConditionsMatrix[index][2] = implementationMethod;
+		index = index + 1;
+	}
+}
+
+tierPricingRecords = bmql("select pi, minTierQty, maxTierQty, price, implementationMethod from stdTierPricing where priceList = $priceList and pi in $piList");
+
+
+	
+count = 0;
+recordCount = 0;
+for tierPricingCondition in tierPricingConditionsMatrix {
+				lineItemPI = tierPricingCondition[0];
+				lineItemQty = atoi(tierPricingCondition[1]); //No isnumber() check is needed here, because when this array was populated, the isnumber() check was already done (line 41)
+				lineItemImplementationMethod = tierPricingCondition[2];
+				isMatchingImplementationMethod = "N/A";
+	
+for tierRecord in tierPricingRecords {
+	//isMatchingImplementationMethod = "N/A";
+	pi = get(tierRecord, "pi");
+	strMinTierQty = get(tierRecord, "minTierQty");
+	strMaxTierQty = get(tierRecord, "maxTierQty");
+	strPrice = get(tierRecord, "price");
+	implementationMethod = get(tierRecord, "implementationMethod");
+
+	if (strMinTierQty <> "" and strMaxTierQty <> "") {
+		if (isnumber(strMinTierQty) and isnumber(strMaxTierQty)) {
+			minTierQty = integer(atof(strMinTierQty));
+			maxTierQty = integer(atof(strMaxTierQty));
+			
+			//for tierPricingCondition in tierPricingConditionsMatrix {
+				//lineItemPI = tierPricingCondition[0];
+				//lineItemQty = atoi(tierPricingCondition[1]); //No isnumber() check is needed here, because when this array was populated, the isnumber() check was already done (line 41)
+				//lineItemImplementationMethod = tierPricingCondition[2];
+				
+				if (lineItemPI == pi and (implementationMethod == lineItemImplementationMethod OR implementationMethod == "" ) and lineItemQty >= minTierQty and lineItemQty <= maxTierQty) {
+					if ( implementationMethod <> "" ){
+						if (isnumber(strPrice)) {
+						
+							price = atof(strPrice);
+							
+							put(piQtyAndImplementationMethodToPriceDict, join(tierPricingCondition, piDelimiter), price);
+							
+							if ( isMatchingImplementationmethod <> "N/A" ){
+								count = count + 1;
+							}
+							isMatchingImplementationMethod = "true";
+						}
+					}
+					
+					else{
+						if ( isMatchingImplementationMethod <> "true" ){
+							if ( isnumber( strPrice ) ){
+							
+								price = atof(strPrice);
+							
+								put(piQtyAndImplementationMethodToPriceDict, join(tierPricingCondition, piDelimiter), price);
+								
+								isMatchingImplementationMethod = "false";
+								count = count + 1;
+							}
+						}
+					}
+				
+				}
+			}
+		}
+	}
+	recordCount = recordCount + 1;
+}
+if (recordCount == 0) {
+	put(resultDict, "error", "No records were returned from the stdTierPricing query");
+} elif (count == 0) {
+	put(resultDict, "error", "No tier prices found.");
+}
+
+put(resultDict, "count", string(count));
+
+return resultDict;

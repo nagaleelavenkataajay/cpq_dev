@@ -1,0 +1,15 @@
+{
+  "name" : "uniqueList",
+  "variableName" : "uniqueList",
+  "description" : "NOT USED. Adds an element to an unique Array.If element exists, it wont be added.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "inputList",
+    "type" : "String[]"
+  }, {
+    "name" : "inputValue",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

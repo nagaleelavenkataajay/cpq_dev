@@ -1,0 +1,27 @@
+{
+  "name" : "Calculate Prod Based Pricing",
+  "variableName" : "calculateProdBasedPricing",
+  "description" : "",
+  "libraryFunctions" : [ "util.getIntegerAttribute", "util.getStringAttribute" ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "modelToLineDocNumsDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "currentDocNum",
+    "type" : "String"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "piDelimiter",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

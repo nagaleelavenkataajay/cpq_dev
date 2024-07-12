@@ -1,0 +1,199 @@
+/*
+	BML Utility Library
+	calculateTierPricing
+	--------------------
+	Params:
+		FloatDict piQtyAndImplementationMethodToPriceDict
+		String piDelimiter
+		String currentDocNum
+		StringDict stringsDict
+		IntegerDict integersDict
+		FloatDict floatsDict
+	Returns:
+		StringDict result
+		
+	Description:
+		This function is meant to be called once per line item. However,
+		it reads from and populates dictionaries that are shared across all
+		line items.
+*/
+//Meta variables
+debug = true;
+
+//Return variables
+result = dict("string");
+error = false;
+msg = "";
+
+/* ------------------------------------------------------------------------ */
+/*							Constants										*/
+/* ------------------------------------------------------------------------ */
+PART_NUM = "_part_number";
+UOM_TYPE = "uomType_line";
+UOM_QTY = "QTY";
+QTY = "_price_quantity";
+TRANSACTIONS = "numCommittedTransaction_line";
+TIER_PRICE = "tierPrice_line";
+EXT_TIER_PRICE = "extTierPrice_line";
+IMPLEMENTATION_METHOD = "implementationMethod_line";
+CORE_SERVICE = "coreOffering_line";
+UNIT_OR_FIXED = "unitOrFixed_line";
+UNIT = "UNIT";
+FIXED = "FIXED";
+RAMP_DELIMITER = "-_**_-";
+INCREMENTAL_PI = "incrementalPi";
+INCREMENTAL_FEE_LIST = "incrementalFeeList";
+// Added by Jim Vey Case 124022
+INCREMENTAL_FEE_NON_UNIFIED_LIST = "increFeeNonUnifiedList";
+//end Case 124022
+
+
+/* ------------------------------------------------------------------------ */
+/*		First, obtain the PI/part number of the current line item			*/
+/* ------------------------------------------------------------------------ */
+piKey = currentDocNum + piDelimiter + PART_NUM;
+pi = "";
+if (containskey(stringsDict, piKey)) {
+	pi = get(stringsDict, piKey);
+} else {
+	error = true;
+	msg = msg +  "calculateTierPricing: could not find PI for docNum " + currentDocNum + "\n";
+}
+PARENT_DOC_NUM = "_parent_doc_number"; //CSYS-106564
+BILLING_COUNTER = "BILLING_COUNTER"; //CSYS-106564
+DELIMITER = "@.@";//CSYS-106564
+parentDocNum = util.getStringAttribute(stringsDict, currentDocNum, DELIMITER, PARENT_DOC_NUM); //CSYS-106564
+billingCounter = util.getStringAttribute( stringsDict, parentDocNum, DELIMITER, BILLING_COUNTER);//CSYS-106564
+
+/* If this is a ramp line item, we need to also find the associated incremental fee */
+incPi = "";
+if ( find( currentDocNum, RAMP_DELIMITER ) <> - 1 ){
+	incrementalPiKey = currentDocNum + piDelimiter + INCREMENTAL_PI;
+	if ( containskey( stringsDict, incrementalPiKey ) ){
+		incPi = get( stringsDict, incrementalPiKey );
+	}
+}
+/* ------------------------------------------------------------------------ */
+/*		Second, obtain the UOM type of the current part						*/
+/* ------------------------------------------------------------------------ */
+uomTypeKey = pi + piDelimiter + UOM_TYPE;
+uomType = "";
+
+if (containskey(stringsDict, uomTypeKey)) {
+	uomType = get(stringsDict, uomTypeKey);
+} else {
+	error = true;
+	msg = msg + "calculateTierPricing: could not find uomType for docNum " + currentDocNum + "\n";
+}
+
+/* ======================================================================== */
+/*			Find out if it is a Unit/Fixed PI						*/
+/* ======================================================================== */
+unitOrFixedKey = pi + piDelimiter + UNIT_OR_FIXED;
+unitOrFixed = "";
+if (containskey(stringsDict, unitOrFixedKey)) {
+	unitOrFixed = get(stringsDict, unitOrFixedKey);
+}
+/* ------------------------------------------------------------------------ */
+/*		Third, obtain the correct multiplier (either Qty or Transactions) 
+		depending on the UOM type											*/
+/* ------------------------------------------------------------------------ */
+multiplier = 0;
+key = currentDocNum + piDelimiter + TRANSACTIONS;
+trxns = 0;
+if ( containskey( integersDict, key ) ){
+	trxns = get( integersDict, key );
+}
+if (uomType == UOM_QTY) {
+	key = currentDocNum + piDelimiter + QTY;
+}
+if (containskey(integersDict, key)) {
+	multiplier = get(integersDict, key);
+} else {
+	error = true;
+	msg = msg + "calculateTierPricing: could not find multiplier for docNum " + currentDocNum + " with uomType " + uomType + "\n";
+}
+
+
+
+/* ------------------------------------------------------------------------ */
+/*		Fourth, determine the current line item's implementation method		*/
+/* ------------------------------------------------------------------------ */
+implementationMethod = "";
+implementationMethodKey = currentDocNum + piDelimiter + IMPLEMENTATION_METHOD;
+if (containskey(stringsDict, implementationMethodKey)) {
+	implementationMethod = get(stringsDict, implementationMethodKey);
+} else {
+	error = true;
+	msg = msg + "calculateTierPricing: could not find implementationMethod for docNum " + currentDocNum + "\n";
+}
+
+/* ------------------------------------------------------------------------ */
+/*		Fifth, determine the current line item's core service       		*/
+/* ------------------------------------------------------------------------ */
+coreService = "";
+coreServiceMethodKey = currentDocNum + piDelimiter + CORE_SERVICE;
+if (containskey(stringsDict, coreServiceMethodKey)) {
+	coreService = get(stringsDict, coreServiceMethodKey);
+} else {
+	error = true;
+	msg = msg + "calculateTierPricing: could not find coreService for docNum " + currentDocNum + "\n";
+}
+
+/* ------------------------------------------------------------------------ */
+/*		Sixth, obtain the tierPrice of the current part from the            
+		piQtyAndImplementationMethodToPriceDict that was populated in the pricing script 
+		by another util														*/
+/* ------------------------------------------------------------------------ */
+//CSYS-106564 - commented pricingKey
+//pricingKey = pi + piDelimiter + string(multiplier) + piDelimiter + implementationMethod + piDelimiter + coreService;
+pricingKey = pi + piDelimiter + string(multiplier) + piDelimiter + implementationMethod + piDelimiter + coreService + piDelimiter + billingCounter;//CSYS-106564
+tierPrice = 0.0;
+
+// For the associated incremental fee, use the number of transactions
+incPricingKey = "";
+if ( incPi <> "" ){
+	//CSYS-106564 - commented incPricingKey
+	//incPricingKey = incPi + piDelimiter + string(multiplier) + piDelimiter + implementationMethod + piDelimiter + coreService;
+	incPricingKey = incPi + piDelimiter + string(multiplier) + piDelimiter + implementationMethod + piDelimiter + coreService + piDelimiter + billingCounter;//CSYS-106564
+}
+if (containskey(piQtyAndImplementationMethodToPriceDict, pricingKey)) {
+	tierPrice = get(piQtyAndImplementationMethodToPriceDict, pricingKey);
+} else {
+	error = true;
+	msg = msg + "calculateTierPricing: could not find tierPrice for docNum " + currentDocNum + "\n";
+}
+incTierPrice = 0.0;
+if ( incPricingKey <> "" ){
+	if (containskey(piQtyAndImplementationMethodToPriceDict, pricingKey)) {
+		incTierPrice = get(piQtyAndImplementationMethodToPriceDict, incPricingKey);
+	}
+}
+
+/* ------------------------------------------------------------------------ */
+/*							Return variables								*/
+/* ------------------------------------------------------------------------ */
+//Don't forget to return our calculated variables...
+tierPriceKey = currentDocNum + piDelimiter + TIER_PRICE;
+incTierPriceKey = currentDocNum + piDelimiter + INCREMENTAL_FEE_LIST;
+// Added by Jim Vey Case 124022
+incNonUnifiedPriceKey = currentDocNum + piDelimiter + INCREMENTAL_FEE_NON_UNIFIED_LIST;
+//end Case 124022
+put(floatsDict, tierPriceKey, tierPrice);
+put(floatsDict, incTierPriceKey, incTierPrice );
+// Added by Jim Vey Case 124022
+put(floatsDict, incNonUnifiedPriceKey, incTierPrice );
+//end Case 124022
+//Finally, calculate the extTierPrice of the current line item, and populate the floatsDict appropriately
+if(unitOrFixed == FIXED) {
+	multiplier = 1;
+}
+extTierPrice = multiplier * tierPrice;
+extTierPriceKey = currentDocNum + piDelimiter + EXT_TIER_PRICE;
+put(floatsDict, extTierPriceKey, extTierPrice);
+
+if (error) {
+	put(result, "error", msg);
+}
+
+return result;

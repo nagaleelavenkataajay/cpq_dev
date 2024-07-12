@@ -1,0 +1,603 @@
+/*
+	BML Utility Library
+	getStandTierPricing
+	-------------------
+	Description:
+		For a given list of PIs, imported into this function as piQtyList,
+		populates the piQtyAndImplementationMethodToPriceDict dictionary with the corresponding
+		tier price of the PI, based on its quantity or no. of transactions.
+	
+	Params:
+		String priceList
+		String currencyCode
+		FloatDict piQtyAndImplementationMethodToPriceDict
+		String[] piQtyAndImplementationMethodList
+		String piDelimiter
+		String quoteTheater
+		String quoteMarket
+		String[] coreService
+		String quoteType
+	Returns:
+		StringDict resultDict
+	
+	piQtyAndImplementationMethodToPriceDict:
+		This is the dictionary that will be populated with values queried.
+		Key: <pi_number><piDelimiter><qty_or_num_transactions>
+		Value: standard tier price
+		
+	piQtyAndImplementationMethodList:
+		Elements: <pi_number><piDelimiter><qty_or_num_transactions><piDelimiter><implementationMethod>
+*/
+
+resultDict = dict("string");
+pricingDict = dict("float");
+tierPricingConditionsMatrix = string[][];
+piQtyDict = dict("integer"); //Maps a PI to a Quantity/NumTransactions
+TILDA = "~";
+PI_ITEM_TYPE = "piItemType_line";
+//PACKAGE_ID = "package_line";
+//stateAndLocalPackageId = "26";
+
+//From our list of PIs (with Qty/Trxns and Implementation Method), extract the list of PIs only (for the BMQL query)
+index = 0;
+rowImp = 0;
+
+piDict = dict("string");
+billingCounter = "";//CSYS-106564
+strPrice = "";//CSYS-106564
+lineBillingCounter = "";//CSYS-106564
+
+for piQty in piQtyAndImplementationMethodList {
+	pricingKeys = split(piQty, piDelimiter);
+	pi = pricingKeys[0];
+	qty = pricingKeys[1];
+	implementationMethod = pricingKeys[2];
+	core = pricingKeys[3];
+	billingCounter = pricingKeys[4];//CSYS-106564
+
+	put(piDict, pi + TILDA + "piCore" + TILDA + core, core); //modified the dictionary key for CSYS-83581 (KA. 7-18-2017)
+
+	if (pi <> "" and isnumber(qty) and implementationMethod <> "" and core <> "") {
+		tierPricingConditionsMatrix[index][0] = pi;
+		tierPricingConditionsMatrix[index][1] = qty;
+		tierPricingConditionsMatrix[index][2] = implementationMethod;
+		tierPricingConditionsMatrix[index][3] = core;
+		tierPricingConditionsMatrix[index][4] = billingCounter;//CSYS-106564
+		index = index + 1;
+	}
+}
+
+count = 0;
+recordCount = 0;
+
+
+//CSYS-83094 (KA. 8-7-2017): replace ownerMarket with quoteMarket and replace ownerTheater with quoteTheater
+for tierPricingCondition in tierPricingConditionsMatrix {
+				lineItemPI = tierPricingCondition[0];
+				lineItemQty = atoi(tierPricingCondition[1]); //No isnumber() check is needed here, because when this array was populated, the isnumber() check was already done (line 41)
+				lineItemImplementationMethod = tierPricingCondition[2];
+				lineCoreService = tierPricingCondition [3];
+				lineBillingCounter = tierPricingCondition [4];
+				isMatchingImplementationMethod = "N/A";
+
+				//CSYS-88979 Moved this farther up to leverage the logic per line item for conditional pricing for State and Local
+				/*packageId = "";
+				if(containsKey(stringsDict, TILDA + lineItemPI + TILDA + piDelimiter + PACKAGE_ID)){
+					packageId = get(stringsDict, TILDA + lineItemPI + TILDA + piDelimiter + PACKAGE_ID);
+				}*/
+
+				//CSYS-88979
+				//CSYS-97295 (OC 9.30.2019) Removing quoteMrkt
+				//quoteMrkt = "";
+				/*if(packageId == stateAndLocalPackageId){
+					quoteMrkt = quoteVertical;
+				} else {*/
+					//quoteMrkt = quoteMarket;
+				//}
+
+				//CSYS-106564 - Commented bmql.
+				//tierPricingRecords = bmql("select pi, minTierQty, maxTierQty, price, implementationMethod, quoteTheater, quoteMarket, coreService, quoteType from stdTierPricing where priceList = $priceList and pi = $lineItemPI and ( minTierQty <= $lineItemQty  and maxTierQty >= $lineItemQty ) and (implementationMethod = $lineItemImplementationMethod or implementationMethod = '' or implementationMethod is null) and (quoteTheater = $quoteTheater or quoteTheater = '' or quoteTheater is null) and (quoteMarket = $quoteMarket or quoteMarket = '' or quoteMarket is null) and (coreService = $lineCoreService or coreService = '' or coreService is null) and (quoteType = $quoteType or quoteType = '' or quoteType is null)");
+				
+				
+
+				rowImp = 33;
+
+				itemType = "";
+				if(containsKey(stringsDict, lineItemPI + piDelimiter + PI_ITEM_TYPE)){
+					itemType = get(stringsDict, lineItemPI + piDelimiter + PI_ITEM_TYPE);
+				}
+				
+				//CSYS-106564 - Start
+				if(quoteMarket == "Japan" AND lineBillingCounter == "Expense User Based" AND (itemType == "Base" OR itemType == "Incremental")){
+					lineCoreService = lineBillingCounter;
+				}
+					tierPricingRecords = bmql("select pi, minTierQty, maxTierQty, price, implementationMethod, quoteTheater, quoteMarket, coreService, quoteType from stdTierPricing where priceList = $priceList and pi = $lineItemPI and ( minTierQty <= $lineItemQty  and maxTierQty >= $lineItemQty ) and (implementationMethod = $lineItemImplementationMethod or implementationMethod = '' or implementationMethod is null) and (quoteTheater = $quoteTheater or quoteTheater = '' or quoteTheater is null) and (quoteMarket = $quoteMarket or quoteMarket = '' or quoteMarket is null) and (coreService = $lineCoreService or coreService = '' or coreService is null) and (quoteType = $quoteType or quoteType = '' or quoteType is null)");
+				//CSYS-106564 - End
+				
+	
+	for tierRecord in tierPricingRecords {
+		//isMatchingImplementationMethod = "N/A";
+		pi = get(tierRecord, "pi");
+		strMinTierQty = get(tierRecord, "minTierQty");
+		strMaxTierQty = get(tierRecord, "maxTierQty");
+		strPrice = get(tierRecord, "price");
+		implementationMethod = get(tierRecord, "implementationMethod");
+		theater = get(tierRecord, "quoteTheater");
+		market = get(tierRecord, "quoteMarket");
+		service = get(tierRecord, "coreService");
+		type = get(tierRecord, "quoteType");
+
+
+		//CSYS-85811 (LN. 9/27/2017) Updates made to handle new Custom Pricing workflow, passing in actionName from pricing
+		if((actionName == "updateCustomPrice") OR
+			(actionName <> "updateCustomPrice" AND containskey(piQtyAndImplementationMethodToPriceDict, "customPricingExecuted" + piDelimiter + "customPricingExecuted"))){
+			if(containskey(piQtyAndImplementationMethodToPriceDict, pi + piDelimiter + "customListPriceStdTierPricing")){
+				//strPrice should equal the customListPriceStdTierPricing sent in as a paramter through Pricing f(x) 
+				
+				strPrice = string(get(piQtyAndImplementationMethodToPriceDict, pi + piDelimiter + "customListPriceStdTierPricing"));
+				
+			}
+		}
+
+
+		if (strMinTierQty <> "" and strMaxTierQty <> "") {
+			if (isnumber(strMinTierQty) and isnumber(strMaxTierQty)) {
+				minTierQty = integer(atof(strMinTierQty));
+				maxTierQty = integer(atof(strMaxTierQty));
+				
+				//for tierPricingCondition in tierPricingConditionsMatrix {
+					//lineItemPI = tierPricingCondition[0];
+					//lineItemQty = atoi(tierPricingCondition[1]); //No isnumber() check is needed here, because when this array was populated, the isnumber() check was already done (line 41)
+					//lineItemImplementationMethod = tierPricingCondition[2];
+					//AND theater == quoteTheater AND market == quoteMarket AND service == lineCoreService AND type == quoteType AND implementationMethod == lineItemImplementationMethod)
+					
+				if (lineItemPI == pi ){
+					if(theater == quoteTheater OR theater == ""){
+						if( market == quoteMarket OR market == "") {
+							if(service == lineCoreService OR service == ""){
+								if(type == quoteType OR type == ""){ 
+									if(implementationMethod == lineItemImplementationMethod OR implementationMethod == "" ){
+										if (lineItemQty >= minTierQty and lineItemQty <= maxTierQty){
+											if (theater <> "" AND market <> "" AND service <> "" AND type <> "" AND implementationMethod <> "" ){
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 1){
+														put(pricingDict, 1, price);
+														rowImp = 1;
+													}															
+													
+													break;
+												}
+											}
+											elif(theater <> "" AND market <> "" AND service == "" AND type <> "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 2){
+														put(pricingDict, 1, price);
+														rowImp = 2;
+													}
+													
+												}
+											}
+											elif(theater <> "" AND market <> "" AND service <> "" AND type <> "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 3){
+														put(pricingDict, 1, price);
+														rowImp = 3;
+													}
+													
+												}
+											}
+											elif(theater <> "" AND market <> "" AND service <> "" AND type == "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 4){
+														put(pricingDict, 1, price);
+														rowImp = 4;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market == "" AND service <> "" AND type <> "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 5){
+														put(pricingDict, 1, price);
+														rowImp = 5;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market <> "" AND service <> "" AND type <> "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+
+													
+													if(rowImp > 6){
+														put(pricingDict, 1, price);
+														rowImp = 6;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market <> "" AND service == "" AND type <> "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 7){
+														put(pricingDict, 1, price);
+														rowImp = 7;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market <> "" AND service == "" AND type == "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 8){
+														put(pricingDict, 1, price);
+														rowImp = 8;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market <> "" AND service <> "" AND type == "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 9){
+														put(pricingDict, 1, price);
+														rowImp = 9;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market == "" AND service == "" AND type <> "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 10){
+														put(pricingDict, 1, price);
+														rowImp = 10;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market == "" AND service <> "" AND type <> "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 11){
+														put(pricingDict, 1, price);
+														rowImp = 11;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market == "" AND service <> "" AND type == "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 12){
+														put(pricingDict, 1, price);
+														rowImp = 12;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market <> "" AND service == "" AND type <> "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 13){
+														put(pricingDict, 1, price);
+														rowImp = 13;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market <> "" AND service <> "" AND type <> "" AND implementationMethod == "" ){
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 14){
+														put(pricingDict, 1, price);
+														rowImp = 14;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market <> "" AND service <> "" AND type == "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 15){
+														put(pricingDict, 1, price);
+														rowImp = 15;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market == "" AND service <> "" AND type <> "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 16){
+														put(pricingDict, 1, price);
+														rowImp = 16;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market <> "" AND service == "" AND type == "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 17){
+														put(pricingDict, 1, price);
+														rowImp = 17;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market == "" AND service == "" AND type <> "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 18){
+														put(pricingDict, 1, price);
+														rowImp = 18;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market == "" AND service == "" AND type == "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 19){
+														put(pricingDict, 1, price);
+														rowImp = 19;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market == "" AND service <> "" AND type == "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 20){
+														put(pricingDict, 1, price);
+														rowImp = 20;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market <> "" AND service == "" AND type <> "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 21){
+														put(pricingDict, 1, price);
+														rowImp = 21;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market <> "" AND service == "" AND type == "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 22){
+														put(pricingDict, 1, price);
+														rowImp = 22;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market <> "" AND service <> "" AND type == "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 23){
+														put(pricingDict, 1, price);
+														rowImp = 23;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market == "" AND service == "" AND type <> "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 24){
+														put(pricingDict, 1, price);
+														rowImp = 24;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market == "" AND service <> "" AND type <> "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 25){
+														put(pricingDict, 1, price);
+														rowImp = 25;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market == "" AND service <> "" AND type == "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 26){
+														put(pricingDict, 1, price);
+														rowImp = 26;
+													}
+													
+															
+												}
+											}
+											elif(theater <> "" AND market == "" AND service == "" AND type == "" AND implementationMethod == "" ){
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 27){
+														put(pricingDict, 1, price);
+														rowImp = 27;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market <> "" AND service == "" AND type == "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 28){
+														put(pricingDict, 1, price);
+														rowImp = 28;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market == "" AND service == "" AND type <> "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 29){
+														put(pricingDict, 1, price);
+														rowImp = 29;
+													}
+													
+															
+												}
+											}
+											elif(theater == "" AND market == "" AND service == "" AND type == "" AND implementationMethod <> "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 30){
+														put(pricingDict, 1, price);
+														rowImp = 30;
+													}
+													
+															
+													}
+											}
+											elif(theater == "" AND market == "" AND service <> "" AND type == "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 31){
+														put(pricingDict, 1, price);
+														rowImp = 31;
+													}
+													
+															
+													}
+											}
+											elif(theater == "" AND market == "" AND service == "" AND type == "" AND implementationMethod == "" ) {
+												if (isnumber(strPrice)) {
+													
+													price = atof(strPrice);
+													
+													if(rowImp > 32){
+														put(pricingDict, 1, price);
+														rowImp = 32;
+													}
+																							
+												}
+											}
+										}
+									}
+								}
+							}
+						}	
+					}
+				}
+			}
+		}
+	}
+	recordCount = recordCount + 1;
+	
+	// MM constainskey check SR=3-8925661361 5/2/14
+	if (containskey(pricingDict, 1)){
+		put(piQtyAndImplementationMethodToPriceDict, join(tierPricingCondition, piDelimiter), get(pricingDict, 1));	
+	}//end MM
+}
+
+
+
+if (recordCount == 0) {
+	put(resultDict, "error", "No records were returned from the stdTierPricing query");
+} elif (count == 0) {
+	put(resultDict, "error", "No tier prices found.");
+}
+
+put(resultDict, "count", string(count));
+
+return resultDict;

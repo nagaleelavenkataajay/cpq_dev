@@ -1,0 +1,12 @@
+{
+  "name" : "Get Currency Data",
+  "variableName" : "getCurrencyData",
+  "description" : "Query currencyData table and return the correct value.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "currencyCode",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

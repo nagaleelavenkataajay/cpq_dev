@@ -1,0 +1,15 @@
+{
+  "name" : "getXMLNodeValues",
+  "variableName" : "getXMLNodeValues",
+  "description" : "Variation of getXMLNode. Returns an array containing only the VALUES of all occurrences of a given node. Handles blank values as well as CDATA.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "xmlString",
+    "type" : "String"
+  }, {
+    "name" : "xmlNodeName",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

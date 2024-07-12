@@ -1,0 +1,15 @@
+{
+  "name" : "formatDate",
+  "variableName" : "formatDate",
+  "description" : "Format Date in short, long or default format",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "inputDate",
+    "type" : "String"
+  }, {
+    "name" : "type",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

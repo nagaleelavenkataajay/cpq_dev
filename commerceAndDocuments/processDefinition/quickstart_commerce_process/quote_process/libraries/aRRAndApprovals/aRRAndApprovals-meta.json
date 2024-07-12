@@ -1,0 +1,29 @@
+{
+  "name" : "ARR and Approvals",
+  "variableName" : "aRRAndApprovals",
+  "description" : "Calculates Sales ARR and sets approvals based on revenue decreases.",
+  "libraryFunctions" : [ "util.formAttrValueStr", "util.getFloatAttribute", "util.getStringAttribute", "util.putFloatAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "actionName",
+    "type" : "String"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "docNumList",
+    "type" : "String[]"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_parent_doc_number", "_part_custom_field23", "poId_line", "salesARRCurrency_line", "prevSalesARR_line", "_sequence_number", "piItemType_line", "numCommittedTransaction_line", "prevNumCommittedTransaction_line", "discount_line", "prevDiscountStatic_line", "_part_number", "salesNetNewARR_line_c", "previousSalesNetNewARR_line_c" ],
+  "mainDocAttributes" : [ "contractRenewalDate_quote", "quoteType_quote", "contractRenewalDateAcc_quote", "contractRenewalDateText_quote", "numCommittedTransaction_quote", "previousOfMonthlyTransactions_quote", "multipleOrdersFlag_quote", "orderEffectiveDate_quote" ],
+  "systemAttributes" : [ ]
+}

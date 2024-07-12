@@ -1,0 +1,15 @@
+{
+  "name" : "getQtyBasedProductPricingConditions",
+  "variableName" : "getQtyBasedProductPricingConditions",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "piList",
+    "type" : "String[]"
+  }, {
+    "name" : "qtyBasedProductPricingDict",
+    "type" : "String[] Dictionary"
+  } ],
+  "attributes" : [ ]
+}

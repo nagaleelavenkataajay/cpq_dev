@@ -1,0 +1,43 @@
+/* Util -> getUnifiedPricingData
+
+uniquePOList - String[]
+unifiedPricingDataDict - String[] Dictionary
+stringsDict - String Dictionary
+*/
+result = true;
+DELIMITER = "@.@";
+unifiedPricingDataResSet = bmql("SELECT coreProdPO, unifiedPO FROM unifiedPricing WHERE coreProdPO IN $uniquePOList AND unifiedPO IN $uniquePOList");
+rowCount = 0;
+
+
+currentModelDocNumForUnified = "";
+if ( containskey( stringsDict, "currentModelDocNumForUnified" ) ){
+	currentModelDocNumForUnified = get( stringsDict, "currentModelDocNumForUnified" );
+	//CSYS-97908
+	if ( currentModelDocNumForUnified <> "" AND containskey(stringsDict, "modelDocNumPO" + currentModelDocNumForUnified) ){
+		PODataArr = string[];
+		rowKey = string(rowCount) + DELIMITER + currentModelDocNumForUnified;
+		append(PODataArr, get(stringsDict, "modelDocNumPO" + currentModelDocNumForUnified));
+		append(PODataArr, "NA");
+		put(unifiedPricingDataDict, rowKey, PODataArr);
+		rowCount = rowCount + 1;	
+	}
+}
+
+
+for unifiedPricingDataRes in unifiedPricingDataResSet {
+	PODataArr = string[]; //static indices are used. index 1 -> coreProdPO, index 2 -> rollupPO, index 3 -> unifiedPO
+	coreProdPO = get(unifiedPricingDataRes, "coreProdPO");
+	unifiedPO = get(unifiedPricingDataRes, "unifiedPO");
+	append(PODataArr, coreProdPO);
+	append(PODataArr, unifiedPO);
+	rowKey = string(rowCount);
+	if ( currentModelDocNumForUnified <> "" ){
+		rowKey = rowKey + DELIMITER + currentModelDocNumForUnified;
+	}
+	put(unifiedPricingDataDict, rowKey, PODataArr);
+	rowCount = rowCount + 1;
+}
+
+ 
+return result;

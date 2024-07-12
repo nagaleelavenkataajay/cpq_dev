@@ -1,0 +1,11 @@
+{
+  "name" : "reOrderAssetString",
+  "variableName" : "reOrderAssetString",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "assetsString_quote" ],
+  "systemAttributes" : [ ]
+}

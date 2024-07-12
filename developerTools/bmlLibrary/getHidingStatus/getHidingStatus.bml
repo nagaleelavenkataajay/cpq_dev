@@ -1,0 +1,31 @@
+/* util - Get Hiding Status
+
+coreOffering - String
+implementationMethod - String
+serviceAttr - String
+*/
+availibilityArray = String[];
+//BM_VT. Business unit is required as additional filter. Getting the business unit from the commerce process
+ownerBusUnit = "%"+ ownerBusinessUnit +"%";
+theater = "%"+ ownerTheater +"%";
+market = "%"+ ownerMarket +"%";
+type = "%"+ quoteType +"%";
+
+
+// Add Business unit filter
+recordSet = bmql("select availability from serviceCompatibility where coreOffering = $coreOffering and implementationMethod = $implementationMethod and serviceAttr = $serviceAttr and (businessUnit like $ownerBusUnit or businessUnit = '' or businessUnit is null) and (ownerTheater like $theater or ownerTheater = '' or ownerTheater is null) and (ownerMarket like $market or ownerMarket = '' or ownerMarket is null) AND (quoteType like $type or quoteType = '' or quoteType is null)");
+
+
+for rec in recordSet
+{
+	append(availibilityArray, get(rec,"availability"));
+}
+
+if((findinarray(availibilityArray,"TRUE")>-1)) //or(isempty(availibilityArray)==True))
+{
+	return false;
+}
+else
+{
+	return true;
+}

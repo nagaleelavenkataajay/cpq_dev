@@ -1,0 +1,17 @@
+{
+  "name" : "Calculate Forecasted Yearly ARR",
+  "variableName" : "calculateForecastedYearlyARR",
+  "description" : "CSYS-104790 (SV. 10-12-2021) To calculate the Forecasted ARR for three years",
+  "libraryFunctions" : [ "util.customAtoi", "util.formAttrValueStr", "util.getCurrencyData", "util.getStringAttribute", "util.getXMLNodeValues" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "piItemType_line", "_part_number", "assetAction_line", "_part_custom_field1", "lineDescription_line", "overrideDefaultRampPlan_line", "numCommittedTransaction_line" ],
+  "mainDocAttributes" : [ "quoteCurrency_quote", "billingCycle_quote" ],
+  "systemAttributes" : [ ]
+}

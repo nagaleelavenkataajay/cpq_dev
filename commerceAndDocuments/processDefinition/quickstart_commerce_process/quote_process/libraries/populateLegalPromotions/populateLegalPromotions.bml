@@ -1,0 +1,215 @@
+result = "";
+resultSb = stringbuilder();
+legalPromo = legalPromotion_quote;
+ownerRegion = ownerRegion_quote;
+ownerBU = ownerBU_quote;
+segment = segment_quote;
+ownerMarket = ownerMarket_quote;
+ownerRevenueGroup = ownerRevenueGroup_quote;
+ownerTheater = ownerTheater_quote;
+ownerTeam = ownerTeam_quote;
+accountVertical = accountVertical_quote;
+customerType = customerType_quote;
+quoteType = quoteType_quote;
+currentDate = datetostr(getDate());
+currentDateFormat= "";
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd"; 
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+startDateFormat = "";
+endDateFormat = "";
+promoPI = "";
+masterPromoId = stringbuilder("*");
+legalPromoSFDCCodeDict = dict("string");
+legalPromoEndPeriodDict = dict("string");
+promoSFDCCodeDict = dict("string");
+commaDelim = ",";
+listOfLegalPromos = string[]{"LEGALBASE30DAYSFREE", "LEGALBASE60DAYSFREE", "LEGALBASE90DAYSFREE", "LEGALBASE120DAYSFREE", "LEGALBASE150DAYSFREE", "LEGALBASE180DAYSFREE"};
+legalPromoSFDCId = dict("string");
+promoEndPeriod = "";
+internalDescription = "";
+//masterPromoId = "*";
+if(find(currentDate, "/") <> -1) {
+	currentDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+} else {
+	currentDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+}
+applicablePromoResSet = bmql("SELECT startDate, endDate, promotionCode, promoSfdcId, promoPI, promoValue, promoStartPeriod, promoEndPeriod FROM PromoCodeDetails WHERE (promotionCode = $legalPromo) AND (ownerRegion IS NULL OR ownerRegion=$ownerRegion) AND (businessUnit IS NULL OR businessUnit=$ownerBU) AND (accountSegment IS NULL OR accountSegment=$segment) AND (ownerMarket IS NULL OR ownerMarket=$ownerMarket) AND (ownerRevenueGroup IS NULL OR ownerRevenueGroup=$ownerRevenueGroup) AND (ownerTheater IS NULL OR ownerTheater=$ownerTheater) AND (ownerTeam IS NULL OR ownerTeam=$ownerTeam) AND (accountVertical IS NULL OR accountVertical=$accountVertical) AND (customerType IS NULL OR customerType=$customerType) AND (quoteType IS NULL OR quoteType=$quoteType)");
+//applicablePromoResSet = bmql("SELECT startDate, endDate, promotionCode, promoSfdcId, promoPI FROM PromoCodeDetails WHERE (promotionCode = $legalPromo)");
+for applicablePromoRes in applicablePromoResSet {
+	startDate = get(applicablePromoRes, "startDate");
+    	endDate = get(applicablePromoRes, "endDate");	
+	if(find(startDate, "/") <> -1) {
+		startDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+	} else {
+		startDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+	}
+	if(find(endDate, "/") <> -1) {
+		endDateFormat = DATE_FORMAT_PREFERENCE_SLASH;
+	} else {
+		endDateFormat = DATE_FORMAT_PREFERENCE_HYPHEN;
+	}
+	//put(stringsDict, "promoCodeSFDC" + stringsDictDelimiter + tempPromoCode, tempPromoSfdcId ); 
+	if((comparedates(strtojavadate(currentDate, currentDateFormat), strtojavadate(startDate, startDateFormat)) >= 0) AND (comparedates(strtojavadate(currentDate, currentDateFormat), strtojavadate(endDate, endDateFormat)) <= 0)) {
+		promoCodeSFDC = get(applicablePromoRes, "promoSfdcId");		
+    		promoPI = get(applicablePromoRes, "promoPI");    
+    		//masterPromoId = stringbuilder(masterPromoId ,promoPI,"*");
+    		sbappend(masterPromoId, promoPI,"*");
+    		put(legalPromoSFDCCodeDict,legalPromo,promoCodeSFDC);
+    		if(get(applicablePromoRes, "promoEndPeriod") <> "and beyond"){
+    			promoEndPeriod = get(applicablePromoRes, "promoEndPeriod");
+    			put(legalPromoEndPeriodDict,legalPromo,promoEndPeriod);
+    		}
+	}	
+	//promPI = stringbuilder("*",promoPI, "*");
+	//masterPromoId = promoPI;
+	//masterPromoId = masterPromoId+"*";
+	//masterPromoId = masterPromoId+promoPI+"*";	
+}
+masterPromoIdStr = sbtostring(masterPromoId);
+legalPromosSFDCCode = get(legalPromoSFDCCodeDict,legalPromo);
+internalDescriptionResSet = bmql("SELECT promotionCode, description FROM PromoMessage WHERE (promotionCode = $legalPromo) AND (descriptionType = 'INTERNAL_DESC')");
+for rec in internalDescriptionResSet{
+	internalDescription = get(rec, "description");
+}
+for line in line_process{
+	piId = line._part_number;
+	itemType = line.piItemType_line;
+	actionCode = line.assetAction_line;	
+	docNum = line._document_number;
+	promoCode = line.promotionCode_line;
+	promoSFDCCode = line.promotionSFDCCode_line;	
+	nonLegalPromo = promoCode;
+	nonLegalSFDCPromo = promoSFDCCode;
+	put(promoSFDCCodeDict,promoCode,promoSFDCCode);
+	promoEndPeriod = get(legalPromoEndPeriodDict,legalPromo);
+	nextPromoStartPeriod = 0;
+	if(isnumber(promoEndPeriod)) {
+		nextPromoStartPeriod = atoi(promoEndPeriod) + 1;
+	}
+	listPriceUSD = line.listPriceUSD_line;
+	promotionDetails = line.promotionDetails_line;
+	promotionDetailsStr = line.promotionDetailsStr_line;
+	promotionDetailsForLegal = "<promoDetails><promo promoID='1'><code>"+legalPromo+"</code><beginPeriod>0</beginPeriod><endPeriod>"+promoEndPeriod+"</endPeriod><discPercent>100.0</discPercent><price>0.0</price><INTERNAL_NAME>"+internalDescription +"</INTERNAL_NAME></promo><promo promoID='2'><code>"+legalPromo+"</code><beginPeriod>"+string(nextPromoStartPeriod)+"</beginPeriod><endPeriod>and beyond</endPeriod><discPercent>0.0</discPercent><price>"+string(listPriceUSD)+"</price><INTERNAL_NAME>"+internalDescription+"</INTERNAL_NAME></promo></promoDetails>";
+	promotionDetailsStrForLegal = legalPromo+"#^#0#^#"+promoEndPeriod+"#^#100.0#^#$0.00$^$"+legalPromo+"#^#"+string(nextPromoStartPeriod)+"#^#and beyond#^#0.0#^#$"+string(listPriceUSD)+"$^$";
+	//for legPromo in listOfLegalPromos{
+		//replace(str, old, new)
+		//if(find(nonLegalPromo, legPromo) <> -1){
+	if(find(promoCode, "LEGALBASE30DAYSFREE") <> -1 OR find(promoCode, "LEGALBASE60DAYSFREE") <> -1 OR find(promoCode, "LEGALBASE90DAYSFREE") <> -1 OR find(promoCode, "LEGALBASE120DAYSFREE") <> -1 OR find(promoCode, "LEGALBASE150DAYSFREE") <> -1 OR find(promoCode, "LEGALBASE180DAYSFREE")<> -1){
+		//legPromo = "LEGALBASE";
+		posOfLegalPromo = 0;
+		if(find(promoCode, "LEGALBASE30DAYSFREE") <> -1){
+			posOfLegalPromo = find(promoCode, "LEGALBASE30DAYSFREE");
+		}
+		elif(find(promoCode, "LEGALBASE60DAYSFREE") <> -1){
+			posOfLegalPromo = find(promoCode, "LEGALBASE60DAYSFREE");
+		}
+		elif(find(promoCode, "LEGALBASE90DAYSFREE") <> -1){
+			posOfLegalPromo = find(promoCode, "LEGALBASE90DAYSFREE");
+		}
+		elif(find(promoCode, "LEGALBASE120DAYSFREE") <> -1){
+			posOfLegalPromo = find(promoCode, "LEGALBASE120DAYSFREE");
+		}
+		elif(find(promoCode, "LEGALBASE150DAYSFREE") <> -1){
+			posOfLegalPromo = find(promoCode, "LEGALBASE150DAYSFREE");
+		}
+		else{
+			posOfLegalPromo = find(promoCode, "LEGALBASE180DAYSFREE");
+		}		
+		//posOfLegalPromo = find(promoCode, legPromo);
+		legalPromoPresent = substring(promoCode, posOfLegalPromo);
+		promoArr = split(nonLegalPromo,",");
+		indexOfLegalPromoPresent = findinarray(promoArr, legalPromoPresent );
+		promoSFDCIdArr = split(promoSFDCCode,",");
+		remove(promoArr, indexOfLegalPromoPresent);
+		remove(promoSFDCIdArr, indexOfLegalPromoPresent);
+		nonLegalPromo = join(promoArr, ",");
+		nonLegalSFDCPromo = join(promoSFDCIdArr, ",");
+		
+		//if(find(promoCode, ","+legPromo) <> -1){
+		/*if(find(promoCode, legPromo) <> -1){
+			posOfCommaLegalPromo = find(promoCode, ","+legPromo);
+			promoArr = split(nonLegalPromo,",");
+			nonLegalPromo = substring(promoCode, 0,posOfCommaLegalPromo);			
+			//posPromoArr = findinarray(promoArr ,"ESSLCARE12TERM");
+			sizeOfArrayPromo  = sizeofarray(promoArr);
+			promoSFDCIdArr = split(promoSFDCCode,",");
+			//remove(promoSFDCIdArr, sizeOfArrayPromo);
+			//nonLegalSFDCPromo = join(promoSFDCIdArr, ",");
+			//legpromoSFDCId = get(legalPromoSFDCCodeDict,legPromo);
+			//posLegpromoSFDCId = find(promoSFDCCode, legpromoSFDCId);
+			//endPosOfNoLegalpromoSFDCId = posLegpromoSFDCId -1;				
+			//nonLegalSFDCPromo = substring(promoSFDCCode, 0,endPosOfNoLegalpromoSFDCId);
+			//nonLegalPromo= replace(promoCode , ","+legPromo, "");			
+			//nonLegalSFDCPromo = replace(promoSFDCCode, ","+get(legalPromoSFDCCodeDict,legalPromo), "");
+			//nonLegalPromo = substring(promoCode, start);			
+		}
+		if(find(nonLegalPromo, legPromo) <> -1 AND find(nonLegalPromo, ","+legPromo)== -1){
+			nonLegalPromo= substring(promoCode, 0,posOfLegalPromo);
+			legpromoSFDCId = get(legalPromoSFDCCodeDict,legalPromo);
+			posLegpromoSFDCId = find(promoSFDCCode, legpromoSFDCId);
+			endPosOfNoLegalpromoSFDCId = posLegpromoSFDCId;
+			nonLegalSFDCPromo = substring(promoSFDCCode, 0,endPosOfNoLegalpromoSFDCId);
+			//nonLegalPromo= replace(promoCode , legPromo, "");
+			//nonLegalSFDCPromo = get(legalPromoSFDCCodeDict,legalPromo);	
+			//nonLegalSFDCPromo = replace(promoSFDCCode, nonLegalSFDCPromo , "");
+			//nonLegalPromo = substring(promoCode, start);
+			
+		}*/
+		/* if(find(nonLegalPromo, legPromo) == -1 AND nonLegalPromo <> ""){
+			nonLegalPromo = promoCode;
+			nonLegalSFDCPromo = promoSFDCCode;			
+		} */						
+		//}
+		/*else{	
+			nonLegalPromo = nonLegalPromo;
+			nonLegalSFDCPromo = line.promotionSFDCCode_line;			
+		}*/
+	//}
+	}
+	/*nonLegalSFDCPromoArr = string[];
+	nonLegalSFDCPromoArr = split(nonLegalPromo,commaDelim);
+	if(sizeofarray(nonLegalSFDCPromoArr)>=1){
+		for each in nonLegalSFDCPromoArr{
+			if(containskey(promoSFDCCodeDict, each)){
+				nonLegalSFDCPromo = nonLegalSFDCPromo+get(promoSFDCCodeDict,each)+commaDelim;	
+			}
+			else{
+				nonLegalSFDCPromo = nonLegalSFDCPromo+""+commaDelim;
+			}	
+		}
+	}
+	nonLegalSFDCPromo = substring(nonLegalSFDCPromo , 0,len(nonLegalSFDCPromo)-1);*/
+	
+	
+	if(itemType == "Base" AND actionCode == "CREATE" AND find(sbtostring(masterPromoId), "*"+piId+"*") > -1){
+		if(nonLegalPromo == ""){
+			sbappend(resultSb, docNum,"~","promotionCode_line","~",legalPromo,"|",docNum,"~","promotionSFDCCode_line","~",legalPromosSFDCCode,"|");
+		}
+		else{
+			sbappend(resultSb, docNum,"~","promotionCode_line","~",nonLegalPromo,commaDelim,legalPromo,"|",docNum,"~","promotionSFDCCode_line","~",nonLegalSFDCPromo,commaDelim,legalPromosSFDCCode,"|");
+		}
+		if(promotionDetails == ""){
+			sbappend(resultSb, docNum,"~","promotionDetails_line","~",promotionDetailsForLegal,"|");
+		}
+		else{
+			sbappend(resultSb, docNum,"~","promotionDetails_line","~",promotionDetails,promotionDetailsForLegal,"|");
+		}
+		if(promotionDetailsStr == ""){
+			sbappend(resultSb, docNum,"~","promotionDetailsStr_line","~",promotionDetailsStrForLegal,"|");
+		}
+		else{
+			sbappend(resultSb, docNum,"~","promotionDetailsStr_line","~",promotionDetailsStr,promotionDetailsStrForLegal,"|");
+		}
+		
+		//result = result + docNum+"~"+promoCode+"~"+legalPromo+"|";
+	}	
+	if(legalPromo == "" AND nonLegalPromo <> ""){
+		sbappend(resultSb, docNum,"~","promotionCode_line","~",nonLegalPromo,"|",docNum,"~","promotionSFDCCode_line","~",nonLegalSFDCPromo,"|");
+	}
+	if(legalPromo == "" AND nonLegalPromo == ""){
+		sbappend(resultSb, docNum,"~","promotionCode_line","~","","|",docNum,"~","promotionSFDCCode_line","~","","|");
+	}
+}
+
+result = sbtostring(resultSb);
+return result;

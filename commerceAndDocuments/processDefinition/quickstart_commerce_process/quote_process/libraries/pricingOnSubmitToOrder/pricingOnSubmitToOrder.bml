@@ -1,0 +1,223 @@
+result = "";
+lineResArr = string[];
+quoteResArr = string[];
+
+EXT_NET_PRICE = "extendedNetPrice_line";
+PRICING_CHANGED_BY_REVOPS = "pricingChangedByRevOps_line";
+PCF_YES = "Y";
+INCREMENTAL_FEE = "Incremental Fee";
+RAMP_FLAG_MULTIPLIER = 12;
+UNIT = "UNIT";
+FIXED = "FIXED";
+ASSET_DELIMITER = "@@";
+ASSET_NEXT_BILLING_DATE = 15;
+ASSET_PID = 0;
+INTERNAL_DELIMITER = "$$";
+TRUE_STR = "true";
+TERMINATE_ACTION = "TERMINATE";//CSYS-87864 (LN 12/4/2017)
+CREATE_ACTION = "CREATE";
+MODIFY_ACTION = "MODIFY";
+CORE_SERVICE = "Core Service";
+SETUP_FEE = "Setup";
+coreNBDDict = dict("string");
+
+totalArrNet = 0.0;
+totalOneTimeFeeNet = 0.0;
+totalExtendedNetPrice = 0.0;
+quoteDocNum = "1";
+pricingChanged = "false";
+nextBillDate = ""; //CSYS-103048 (SV. 02/08/2021)
+//CSYS-105450 (SV. 14-02-2022) commented the below declaration to use the new attibute terminationDate_quote instead of terminatedDate_quote
+//termDateString = terminatedDate_quote; //CSYS-103048 (SV. 02/08/2021)
+termDateString = terminationDate_quote; //CSYS-103048 (SV. 02/08/2021)
+TermDateIsLess = false; //CSYS-104060 (SV. 01/09/2021)
+TILDE_DELIMITER = "~"; //CSYS-103048 (SV. 02/08/2021)
+nextBillDateSO = ""; //CSYS-104060 (SV. 27/08/2021)
+hdsSKUPoids = "*6969989*6969986*"; //CSYS-104418 (SV. 21/10/2021)
+actionDict = dict("string"); //CSYS-104418 (SV. 21/10/2021)
+hasHDS = false; //CSYS-104418 (SV. 21/10/2021)
+hasDetect = false; //CSYS-104418 (SV. 21/10/2021)
+actionArr = string[]; //CSYS-104418 (SV. 21/10/2021)
+stringsDict = dict("string");
+assetBillingDict = dict("string");
+result = commerce.populateAssetBillingDict(assetBillingDict);//CSYS-100741
+result = commerce.manageNextBillDates(attributesDict, assetBillingDict, stringsDict);//CSYS-100741
+
+for item in line_process {
+	docNum = item._document_number;
+	numTrx = item.numCommittedTransaction_line;
+	netEach = item.netPriceEach_line;
+	origNetEach = item.origNetPriceEa_line;
+	rampFlag = item.rampFlag_line;
+	piItemType = item.piItemType_line;
+	unitOrFixed = item.unitOrFixed_line;
+	pid = item._part_number;
+	extendedNetPrice = netEach;
+	arrNet = item.arrNet_line;
+	parentDocNum = item._parent_doc_number;
+	assetAction = item.assetAction_line;
+	poID = item._part_custom_field1;//CSYS-104418 (SV. 21/10/2021)														   
+	/* Removed by Nick Helpdesk Case 00127607
+	if(unitOrFixed == FIXED) {
+		extendedNetPrice = netEach;
+	} else {
+		extendedNetPrice = netEach * numTrx;
+	}*/
+	//Jim Vey CSYS-15598, 00136159 //append(lineResArr, util.makeReturnString(docNum, EXT_NET_PRICE, string(extendedNetPrice)));
+	if(netEach <> origNetEach) {
+		append(lineResArr, util.makeReturnString(docNum, PRICING_CHANGED_BY_REVOPS, "true"));
+		pricingChanged = "true";
+	} else {
+		append(lineResArr, util.makeReturnString(docNum, PRICING_CHANGED_BY_REVOPS, "false"));
+	}
+	if (rampFlag == PCF_YES AND piItemType <> INCREMENTAL_FEE) {
+		totalArrNet = totalArrNet + arrNet;
+	} elif( piItemType <> INCREMENTAL_FEE) {
+		totalOneTimeFeeNet = totalOneTimeFeeNet + extendedNetPrice; 
+	}
+	if ( piItemType <> INCREMENTAL_FEE ){
+		totalExtendedNetPrice = totalExtendedNetPrice + extendedNetPrice;
+	}
+	//CSYS-104418 (SV. 21/10/2021) Start
+	put(actionDict,poID,assetAction);
+}	
+	
+actionArr = values(actionDict);
+sizeActionArr = sizeofarray(actionArr);
+if((containskey(actionDict, 6969985)) AND get(actionDict, 6969985) == CREATE_ACTION AND sizeActionArr >1 AND findinarray(actionArr,"NONE") == -1 AND findinarray(actionArr,"MODIFY") == -1 AND findinarray(actionArr,"TERMINATE") <> -1){
+	hasHDS = true;
+}
+									  
+//CSYS-104060 (SV. 27/08/2021) Start Added new line item block
+/*if(termDateString <> "" AND NOT(isnull(termDateString))){
+	termDateForComparison = strtodate(termDateString , "%Y-%m-%d");
+	termDateForComparison = adddays(termDateForComparison, 2);
+	currentDate = getdate();
+	if(comparedates(termDateForComparison, currentDate) == -1){
+		TermDateIsLess = true;
+	}
+	else{
+		TermDateIsLess = false;
+	}
+}*/	
+nPSDDetectOversight="";
+BASE_FEE = "Base";
+dateText = substring((orderEffectiveDate_quote),0,10);
+dateString = string[];
+newOrderDate="";
+if (find(dateText,"-") <> -1){
+	dateString = split(dateText, "-");	
+}
+
+if(sizeofarray(dateString) > 0 AND isnumber(dateString[2])){
+	dateString[2] = "01";
+	newOrderDate = join(dateString,"-");
+}	
+//if(TermDateIsLess){
+arrayOfTerminate = string[];
+termDateDetect="";
+nbdOldLine=""; //CSYS-104596 NP 11-09-2021
+
+//CSYS-106714 (OK. 7-22-2022) Start - Comment out the below logic to remove the duplicate code. We have all Termination date logic in "newProductStartDate" finction. "newProductStartDate" function is getting called last in Submit Order action.
+/*
+if(termDateString <> "" AND NOT(isnull(termDateString))){
+	for item in line_process {
+		docNum = item._document_number;
+		poID = item._part_custom_field1;
+		assetAction = item.assetAction_line;
+		itemType = item.piItemType_line;
+		//CSYS-104596 NP 11-09-2021 Start
+		if(item.poCategory_line == CORE_SERVICE){
+			nbdOldLine = substring((item.nextBillingDate_line),0,10);
+		}
+		//CSYS-104596 End
+		if(detectByAppzenTerminate_quote AND (billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly") AND find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == TERMINATE_ACTION){	//CSYS-104595 NP 10/26/2021 Removed condition for Quarterly CSYS-104596 NP 11-09-2021
+			//CSYS-104596 NP 11-09-2021 Start
+			if(billingCycle_quote == "Monthly"){
+				nPSDDetectOversight = util.addMonthsToDate (newOrderDate, string(4));
+			}
+			elif(billingCycle_quote == "Quarterly"){
+				nPSDDetectOversight = util.addMonthsToDate (nbdOldLine, string(3));
+			}
+			//CSYS-104596 End
+			termDateDetect = datetostr(minusdays(util.getDateFromString(nPSDDetectOversight), 1), "yyyy-MM-dd");
+		}
+		if(detectByAppzenTerminate_quote AND billingCycle_quote == "Monthly" AND itemType == BASE_FEE AND assetAction == TERMINATE_ACTION){ //CSYS-104595 NP 10/26/2021 Removed condition for Quarterly
+			append(arrayOfTerminate, poID);					
+		}
+		nextBillDate = util.getStringAttribute(attributesDict, docNum, TILDE_DELIMITER, "nextBillingDate_line");//CSYS-103048 (SV. 02/08/2021)
+		nextBillDate = util.getAttributesDictValue(nextBillDate); //CSYS-103048 (SV. 02/08/2021)
+		if(assetAction == TERMINATE_ACTION AND nextBillDate <> "") {
+			if(itemType == BASE_FEE){
+				nextBillDateSO = nextBillDate;
+			}
+		}
+		/*	
+			if(nextBillDate <> "" AND NOT(isnull(nextBillDate))){
+				nextBillDateSO = nextBillDate;
+				break;
+			}
+		*/
+	//}
+	/*
+	sizeOTerminate = sizeofarray(arrayOfTerminate);
+	//CSYS-103372 (SV. 02-08-2021) Start
+	OED = orderEffectiveDate_quote;
+	isAccountPreProdTerminate = isAccountPreProdTerminate_quote;	
+	if(nPSDDetectOversight<>"" AND sizeOTerminate == 1){
+		//termDateString=termDateDetect;//Assigning future date by 3 whole months to the terminated date for Concur Detect by AppZen		
+		hasDetect = true;
+	}	
+	if(isAccountPreProdTerminate AND OED <> "" AND NOT(isnull(OED))){	
+		OEDForAccPreProd = split(OED, " ");	
+		terminatedDate = util.setDateToLastDayOfMonth(OEDForAccPreProd[0]);	
+		termDateString = terminatedDate;
+	}else{
+	//CSYS-103372 End
+		//CSYS-103048 (SV. 02/08/2021) Start
+		//CSYS-104060 (SV. 27/08/2021) Modifed the name from nextBillDate to nextBillDateSO to fetch the value of nextBillDateSO instead of nextBillDate
+		if(nextBillDateSO <> "" AND NOT(isnull(nextBillDateSO)) AND NOT(hasHDS) AND NOT(hasDetect) AND NOT(standardToProfessionalMigrationFlag)){
+			nextBillDateSO = nextBillDateSO+" 00:00:00";
+			termDate = strtodate(nextBillDateSO , "yyyy-MM-dd HH:mm:ss");
+			termDate = minusdays(termDAte , 1);
+			termDateString = datetostr(termDate ,"yyyy-MM-dd");
+		}
+	}
+}
+//CSYS-104060 End
+
+//CSYS-104349 (OK. 10-22-2021) Added if condition to verify is there any change in Terminated date. If terminated date is updated by user then dont allow the system to update the calculated date again. Keep the date entered by the user.
+if (systemTerminatedDate_quote <> "" AND NOT(isnull(systemTerminatedDate_quote))) { 
+	//CSYS-105450 (SV. 14-02-2022) commented the below condition and the result string to use instead terminationDate_quote of terminatedDate_quote
+	//if (systemTerminatedDate_quote == terminatedDate_quote) {
+	//CSYS-105719 (SV. 23-02-2022) Added substring fucntionality to avaoid issue with time
+	terminationDate = terminationDate_quote;
+	terminationDate = substring(terminationDate, 0, 10);	
+	if (systemTerminatedDate_quote == terminationDate) {
+		//append(quoteResArr, util.makeReturnString(quoteDocNum, "terminatedDate_quote", termDateString));
+		append(quoteResArr, util.makeReturnString(quoteDocNum, "terminationDate_quote", termDateString));
+	}
+}
+else { 
+	//CSYS-105450 (SV. 14-02-2022) commented the below result string to use instead terminationDate_quote of terminatedDate_quote
+	//append(quoteResArr, util.makeReturnString(quoteDocNum, "terminatedDate_quote", termDateString));
+	append(quoteResArr, util.makeReturnString(quoteDocNum, "terminationDate_quote", termDateString));
+}*/
+//CSYS-106714 (OK. 7-22-2022) - End
+
+append(quoteResArr, util.makeReturnString(quoteDocNum, "sendTerminationNotes_quote", TRUE_STR));
+//CSYS-103048 (SV. 02/08/2021) End
+append(quoteResArr, util.makeReturnString(quoteDocNum, "totalArrNet_quote", string(totalArrNet)));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "totalOneTimeNetFee_quote", string(totalOneTimeFeeNet)));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "totalNetPrice_quote", string(totalExtendedNetPrice)));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "total_quote", string(totalExtendedNetPrice)));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "pricingChangedByRevOps_quote", pricingChanged));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "submitOrderExecuted_quote", TRUE_STR)); //CSYS-81281
+
+if (sizeofarray(lineResArr) > 0) {
+	result = join(lineResArr, "");
+}
+if (sizeofarray(quoteResArr) > 0) {
+	result = result + join(quoteResArr, "");
+}
+return result;

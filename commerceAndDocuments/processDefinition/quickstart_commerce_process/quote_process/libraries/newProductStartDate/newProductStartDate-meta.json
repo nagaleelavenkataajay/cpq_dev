@@ -1,0 +1,17 @@
+{
+  "name" : "New Product Start Date",
+  "variableName" : "newProductStartDate",
+  "description" : "Sets the NPSD for Non-Terminated line items, the BMI Account Pre Prod flag, as well as dynamic TFSD language for the contract.",
+  "libraryFunctions" : [ "commerce.calculateFutureDateForQuarterly", "commerce.calculateTerminationDate", "commerce.overrideTFSDDateInLIG", "util.addMonthsToDate", "util.customAtoi", "util.formAttrValueStr", "util.formatDate", "util.getDateFromString", "util.getStringAttribute", "util.setDateToFirstDayOfMonth", "util.setDateToLastDayOfMonth" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "coreOffering_line", "implementationMethod_line", "poCategory_line", "piItemType_line", "assetAction_line", "_parent_doc_number", "nextBillingDate_line", "monthlyOffset_line", "_part_custom_field26", "promotionCode_line", "poId_line", "_part_number", "lineDescription_line", "_part_custom_field1", "originalNextBillDate_line", "preProductionExtNetPrice_line", "monthlyOffSetBeforeSubmit_line" ],
+  "mainDocAttributes" : [ "ownerBU_quote", "ownerTheater_quote", "monthlyWaivePeriod_quote", "preproductionWaive_quote", "orderEffectiveDate_quote", "quoteType_quote", "accountPreProduction_quote", "accountPreProductionStatic_quote", "ownerMarket_quote", "partnerBillingQuote_quote", "stateAndLocal_quote", "accountVertical_quote", "contractRenewalDate_quote", "contractingEntity_quote", "sAPSellsConcur_quote", "contractConversionToSAPGTC_quote", "appliedPromotion_quote", "SAPSellsConcurFromAccount_quote", "referringPartnerCategory_quote", "referralStatus_quote", "orderEffectiveDateHDS_quote", "billingCycle_quote", "detectByAppzenTerminate_quote", "termDateForDocumentDesignerOfAccountPreProd_quote", "terminationDate_quote", "detectMigrateToIntelligentAuditAdvanced_quote", "detectMigrateToIntelligentAuditEssential_quote", "detectMigrateToVerify_quote", "isAccountPreProdTerminate_quote", "contractTFSDOverride_quote", "createdDate_quote" ],
+  "systemAttributes" : [ ]
+}

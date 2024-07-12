@@ -1,0 +1,86 @@
+{
+  "name" : "manageAssetAndTrxnInfo",
+  "variableName" : "manageAssetAndTrxnInfo",
+  "description" : "",
+  "libraryFunctions" : [ "commerce.calculateContractRenewalDate", "commerce.detectEditionAndCoreChanges", "commerce.incrementalBaseApprovalFlag", "commerce.isPrimeRequired", "commerce.manageAssetNBDValidation", "commerce.manageOEDBillingException", "commerce.pricingMisc", "commerce.setIsBIselected", "commerce.setNonSystematizedReason", "commerce.setPaymentMethodChangedCCDD", "util.addMonthsToDate", "util.calculateProdBasedPricing", "util.calculateProductBasedPricing", "util.calculatePromotion", "util.calculateTierPricing", "util.calculateUnifiedPricing", "util.convertDictCurrency", "util.customAtof", "util.customAtoi", "util.evaluate", "util.formAttrValueStr", "util.getBillingCycleNumber", "util.getBooleanDict", "util.getConfigValue", "util.getCountryISOCode", "util.getCurrencyData", "util.getDateFromString", "util.getDifferenceInMonths", "util.getFloatAttribute", "util.getFloatDict", "util.getFloatListDict", "util.getInitialRampTransactionsForAO", "util.getIntDict", "util.getIntListDict", "util.getIntegerAttribute", "util.getIntellConstrainAttr", "util.getMultiplier", "util.getNewTransactionValues", "util.getPIBasedProductPricingData", "util.getPOsforConcurForceAndPremierTravelSOF", "util.getPartFields", "util.getPriceList", "util.getProductBasedPricingData", "util.getProductBasedRecurringServicesPO", "util.getProfOnlyPOsForUniversal", "util.getPromoCodeDetails", "util.getQtyBasedProductPricingConditions", "util.getQuoteRampPlanTrxnRatios", "util.getSelectAccessLevelFee", "util.getStandTierPricing", "util.getStdTierPricing", "util.getStrDict", "util.getStrListDict", "util.getStringAttribute", "util.getTermBasedDisc", "util.getTransactionMatchPOs", "util.getTravelAndExpensePIs", "util.getUnifiedPricingData", "util.getUnitBasedRecurringServicesPI", "util.getUserTimeZone", "util.getXMLNodeValues", "util.isDateWithinTheCurrentQuarter", "util.isDigitalCommerceTransaction", "util.isPOGrouped", "util.makeReturnString", "util.manageARROffsetWithinProductFamily", "util.populatePricingKeyCollections", "util.printDebug", "util.printDebugHeader", "util.printDebugSubsection", "util.printError", "util.printInternalSection", "util.putFloatAttribute", "util.putIntegerAttribute", "util.putPromotionsInfo", "util.putStringAttribute", "util.setDateToLastDayOfMonth", "util.setPropertiesOfCIPParts", "util.setRampPlanData", "util.sortLineItems", "util.sortModelToLineDictionaries", "util.spliceXMLNodeValuesExtended", "util.updateTransactionsAfterAttributeGathering" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "seqNumAttributeMappingDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "seqNumArray",
+    "type" : "Integer[]"
+  }, {
+    "name" : "baseArray",
+    "type" : "String[]"
+  }, {
+    "name" : "incArray",
+    "type" : "String[]"
+  }, {
+    "name" : "listOfNumOfTransPOs",
+    "type" : "String[]"
+  }, {
+    "name" : "overwriteTransactionArr",
+    "type" : "String[]"
+  }, {
+    "name" : "piQtyAndImplementationMethodToPriceDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "isCoreChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "isEditionChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "coreTerminateEditionDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "travelAndExpenseWithTriplinkProductArr",
+    "type" : "String[]"
+  }, {
+    "name" : "incrementalFeeTransactionDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "CORE_TIER_INCREASE",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "CORE_TIER_DECREASE",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "fullPOlist",
+    "type" : "String[]"
+  }, {
+    "name" : "conversionRate",
+    "type" : "Float"
+  }, {
+    "name" : "assetBillingDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "assetAdjArrDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "quoteRampTransactionStrings",
+    "type" : "String[]"
+  }, {
+    "name" : "actionName",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_part_number", "_price_quantity", "numCommittedTransaction_line", "_sequence_number", "_parent_doc_number", "discountType_line", "isPartOfPackage_line", "discount_line", "numTransOverride_line", "prevNumCommittedTransaction_line", "implementationMethod_line", "piItemType_line", "uomType_line", "_config_attr_info", "rampPlanDetails_line", "coreOffering_line", "edition_line", "_line_item_comment", "_part_custom_field1", "customListPrice_line", "_model_name", "_part_custom_field21", "discountPercent_line", "_part_custom_field20", "partNumber_line", "isFirstIteration_line", "assetAction_line", "assetOriginalNetPrice_list", "assetOriginalListPrice_list", "assetsOriginalDiscount_line", "assetAdjustedArr_line", "salesARR_line", "netNewARR_line", "netNewARRCurrency_line", "existingARRCurrency_line", "originalNumCommittedTransaction_line", "tierChange_line", "poCategory_line", "poId_line", "_part_custom_field23", "prevSalesARR_line", "assetString_line", "nextBillingDate_line", "netPriceEach_line", "listPrice_line", "prevDiscount_line", "prevDiscountStatic_line", "assetOriginalExtendedListPrice_list", "assetOriginalExtendedNetPrice_list", "lineRampFromMonths_line", "overrideRampPrice_line", "auditTransactionsDefaulted_line", "unitBasedProductCanBeRamped_line", "unitBasedProductCanUseOverridePrice_line", "pricebookChange_line", "pricebookChangeUpdatedDiscount_line", "customQuantity_line", "editQuantity_line", "_part_custom_field8", "customPricingHasOccured_line", "longDiscount_line", "assetOriginalGroupCheck_line", "overrideDefaultRampPlan_line", "originalBundleID_line", "salesARRCurrency_line", "useCustomPrice_line", "advLearningSvcsReqd_line", "_part_custom_field13", "lineDescription_line", "pricebookChangeWithinBundle_line", "isT4C_line" ],
+  "mainDocAttributes" : [ "createdDate_quote", "businessUnit_quote", "numCommittedTransaction_quote", "quoteType_quote", "greatestLineDisc_quote", "highestDiscountItemType_quote", "rampPlanTransactions", "implementationMethods_quote", "customPricingFlag_quote", "oRGNumberOfComittedTransactions_quote", "ownerBU_quote", "ownerTheater_quote", "ownerMarket_quote", "ownerRegion_quote", "assetsString_quote", "reconfigure", "setupOnlyFlag_quote", "billingCycle_quote", "SAPSellsConcurFromAccount_quote", "rampPlanDetails_quote", "quoteCurrency_quote", "oRGRampPlanInformation_quote", "editionlessUniversal_quote", "implementationPlatform_quote", "auditTransactionsDefaulted_quote", "partnerDiscount_quote", "orderEffectiveDate_quote", "previousOfMonthlyTransactions_quote", "currentBillingCycle_quote", "updateCustomPriceForAdvantageServices_quote", "referralStatus_quote", "referringPartnerCategory_quote", "monthlyWaivePeriod_quote" ],
+  "systemAttributes" : [ ]
+}

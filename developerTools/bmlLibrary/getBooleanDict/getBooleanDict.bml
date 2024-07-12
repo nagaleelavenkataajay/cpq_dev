@@ -1,0 +1,11 @@
+/* 
+	getBooleanDict
+		- get the value from the dictionary if exists. otherwise, return defaultValue;
+*/
+
+result = defaultValue;
+
+if ( containskey(dictionary, key) ) {
+	result = get(dictionary, key);
+} 
+return result;

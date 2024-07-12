@@ -1,0 +1,9 @@
+{
+  "name" : "GetPOsToBeGrouped",
+  "variableName" : "isPOGrouped",
+  "description" : "This Function returns all the PO IDs that need to be grouped",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "attributes" : [ ]
+}

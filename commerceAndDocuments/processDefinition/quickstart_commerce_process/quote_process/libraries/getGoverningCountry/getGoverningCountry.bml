@@ -1,0 +1,37 @@
+//Populate Governing Country Law Exception for Enterprise BU
+//CSYS-91507 Commenting out the Owner BU check, this should be populated on all Contracts where referenced.
+//CSYS-93776 (LN. 11-8-2018) Need to ensure the validation trigger fires accordingly
+
+// if (ownerBU_quote == "Enterprise BU"){
+result = "";
+governingCountry = "";
+LATAMCountry = ""; //IESCNQRCPQ-363 (OK. 2-6-2023) LATAMcountry check added in below logic to decide the governingCountry 
+
+serviceCountryResSet = bmql("SELECT governingCountryLaw, LATAMCountry FROM governingLawMapping WHERE svcAddressCountry = $_quote_process_serviceAddress_country");
+
+for serviceCountryRes in serviceCountryResSet {
+	governingCountry = get(serviceCountryRes, "governingCountryLaw");
+	LATAMCountry = get(serviceCountryRes, "LATAMCountry");
+}
+
+if (LATAMCountry == "Y") {
+	result = "(LATAM)";
+}
+//IESCNQRCPQ-1379 (AKG 20-12-2023) Checking condition for contracting entity
+//IESCNQRCPQ-1520 (OK. 2-12-2024) Comment out the below if condition and change it to elif condition to fix the existing logic
+//if( (contractingEntity_quote == "Concur Holdings (Netherlands) B.V." OR contractingEntity_quote== "Concur Technologies Inc." )AND _quote_process_serviceAddress_country=="China Peoples Rep")
+elif( (contractingEntity_quote == "Concur Holdings (Netherlands) B.V." OR contractingEntity_quote== "Concur Technologies Inc." )AND _quote_process_serviceAddress_country=="China Peoples Rep")
+{
+	result = "(Netherlands)";
+}
+//IESCNQRCPQ-1379 END
+else {
+	if (governingCountry <> ""){
+		result = "(" + governingCountry + ")";
+	}
+	else {
+		result = "Governing Law Country"; //CSYS-104247 changed from Validation Trigger to Governing Law Country
+	}
+}
+
+return result;

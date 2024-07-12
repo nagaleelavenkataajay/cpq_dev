@@ -1,0 +1,67 @@
+/*
+  BML Util (formatPrice):
+      - Format PriceFormats float into currency format (returns a string)
+  param:
+    price - Float
+    currencySymbol - String
+	numDecimals  - Integer
+  return 
+    String
+*/
+
+
+thousandSep = ",";
+decimalPt = ".";
+
+price1 = 0.0;
+array = string[15];
+i = 0;
+price1 = round(price,numDecimals);
+neg = false;
+if (price1 < 0) {
+  price1 = price1 * -1;
+  neg = true;
+}
+
+decimal = substring(string(round(price1 % 1,numDecimals)),1);
+
+for item in array {
+  
+  array[i] = string(integer(price1 % 1000));
+  price1 = price1/1000;
+  
+  if (price1 < 1 ) { break; }
+  i = i + 1;
+}
+
+newArray = string[i+1];
+
+
+j = 0;
+for newItem in newArray {
+  if (j == 0 OR len(array[i]) == 3) {
+    newArray[j] = array[i];
+  } elif (len(array[i]) == 2) {
+    newArray[j] = "0" + array[i];
+  } elif (len(array[i]) == 1) {
+    newArray[j] = "00" + array[i];
+  }
+  i = i - 1;
+  j = j + 1;
+}
+
+
+
+if (len(decimal) < 3) {
+  decimal = decimal + "0";
+}
+
+if (decimalPt <> ".") {
+  decimal = replace(decimal,".",decimalPt);	
+}
+
+formattedPrice = join(newArray,thousandSep);
+if (neg) {
+  formattedPrice = "-" + formattedPrice;
+}
+return currencySymbol + formattedPrice + decimal ;

@@ -1,0 +1,42 @@
+//CSYS-99878, BS. 09/10/2020, Used to flip action code to "Terminate" for professional services when "Terminate Setup Fee" flag is checked and New Save is clicked.
+
+result = "";
+TERMINATE_ACTION = "TERMINATE";
+NONE_ACTION = "NONE";
+ADD_ON = "Add-On Business";
+//attributesDict = dict("string");
+utilResultString = ""; //dwc
+
+if(quoteType_quote == ADD_ON AND isProfessionalServicesImport_quote == true){ // Run only for Add-On quotes when only Professional Services are imported
+	for line in line_process{
+		docNum = line._document_number;
+		pi = line._part_number;
+		assetAction = line.assetAction_line;
+		
+		if(pi <> ""){
+			if(line.terminateSetupFee_line == true){  
+			//Only for those professional services where Terminate checkbox is selected, set the asset action code to "TERMINATE"				
+				if( assetAction == NONE_ACTION){
+					utilResultString = util.formAttrValueStr(attributesDict, "assetAction_line", docNum, TERMINATE_ACTION );			
+				}
+				else{
+					utilResultString = util.formAttrValueStr(attributesDict, "assetAction_line", docNum, assetAction );
+				}
+			}
+			else{
+			//When Terminate checkbox is unchecked, set the asset action code back to "NONE"				
+				utilResultString = util.formAttrValueStr(attributesDict, "assetAction_line", docNum, NONE_ACTION );
+			//When Terminate checkbox is unchecked, re-set the creditAmount back to "0.00"
+				utilResultString = util.formAttrValueStr(attributesDict, "creditAmount_line", docNum, "0.00" );
+			}
+			
+			//IESCNQRCPQ-660 (OK. 5-19-2023) Set new flag to true for existing asstes
+			utilResultString = util.formAttrValueStr(attributesDict, "isExistingAsset_line", docNum, "true");
+		}
+	}
+}
+
+if(NOT(isnull(attributesDict))){	
+	result = commerce.setAttributes(attributesDict);  //Parses the attributes dictionary and sets quote and line level attributes based on that parsing.
+}
+return result;

@@ -1,0 +1,12 @@
+{
+  "name" : "Get Services UOM",
+  "variableName" : "getServicesUOM",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "recPOArray",
+    "type" : "String[]"
+  } ],
+  "attributes" : [ ]
+}

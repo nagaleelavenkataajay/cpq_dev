@@ -1,0 +1,15 @@
+{
+  "name" : "Get Unified Pricing Info For Model",
+  "variableName" : "getUnifiedPricingInfoForModel",
+  "description" : "CSYS-97908",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[] Dictionary",
+  "parameters" : [ {
+    "name" : "unifiedPricingDataDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "modelDocNum",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,16 @@
+/* util -> printInternalSection
+
+description - String
+tabs - Integer
+*/
+result = "";
+
+tabList = range(tabs);
+
+for t in tabList {
+	result = result + "> > ";
+}
+
+result = result + description + "\n";
+
+return result;

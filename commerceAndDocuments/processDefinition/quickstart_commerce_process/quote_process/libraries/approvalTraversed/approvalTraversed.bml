@@ -1,0 +1,17 @@
+res = false;
+
+approvalStateList = String[];
+delim = "^_^";
+
+approvalStateList = split(sequence_quote, delim);
+
+if(NOT(isempty(approvalStateList))){
+	for approvalState in approvalStateList{
+		if (approvalState <> "" AND approvalState <> "N"){
+			res = true;
+			break;	
+		}
+	}
+}
+
+return res;

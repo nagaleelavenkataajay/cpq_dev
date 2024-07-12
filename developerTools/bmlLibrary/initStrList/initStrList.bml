@@ -1,0 +1,17 @@
+/*
+  initStrList 
+  param:
+    numElement      - integer
+    defaultValue    - string
+  return 
+    integer[];
+*/
+result = String[];
+
+list = range(numElement);
+
+for element in list {
+  result[element] = defaultValue;
+} 
+
+return result;

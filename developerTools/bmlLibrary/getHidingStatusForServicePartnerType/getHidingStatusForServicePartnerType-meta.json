@@ -1,0 +1,21 @@
+{
+  "name" : "Get Hiding Status For Service Partner Type",
+  "variableName" : "getHidingStatusForServicePartnerType",
+  "description" : "CSYS-82704",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "coreOffering",
+    "type" : "String"
+  }, {
+    "name" : "serviceAttr",
+    "type" : "String"
+  }, {
+    "name" : "quoteType",
+    "type" : "String"
+  }, {
+    "name" : "accntSvcPartnerType",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

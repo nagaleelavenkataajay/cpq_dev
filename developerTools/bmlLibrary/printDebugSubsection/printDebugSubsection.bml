@@ -1,0 +1,17 @@
+/* util -> printDebugSubsection
+
+description - String
+tabs - Integer
+*/
+tabString = "";
+tabList = range(tabs);
+for t in tabList {
+	tabString = tabString + "> > ";
+}
+
+
+result = tabString + "--------------------------------------------------------\n";
+result = result + tabString + description + "\n";
+result = result + tabString + "--------------------------------------------------------\n";
+
+return result;

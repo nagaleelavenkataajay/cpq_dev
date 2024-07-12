@@ -1,0 +1,18 @@
+{
+  "name" : "getUnifiedPricingData",
+  "variableName" : "getUnifiedPricingData",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "uniquePOList",
+    "type" : "String[]"
+  }, {
+    "name" : "unifiedPricingDataDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

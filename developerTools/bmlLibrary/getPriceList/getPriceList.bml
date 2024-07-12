@@ -1,0 +1,24 @@
+errorMsg = "";
+priceList = "";
+priceListDict = dict("string");
+
+internalCount = 0;
+records = bmql("select priceList from companyToPriceList where companyName = $companyName and businessUnit = $businessUnit and currencyCode = $currencyCode");
+
+for record in records {
+	priceList = get(record, "priceList");
+	internalCount = internalCount + 1;
+}
+
+if (internalCount < 1) {
+	priceList = "";
+	errorMsg = "No price lists found for companyName: " + companyName + ", businessUnit: " + businessUnit + " and currencyCode: " + currencyCode;
+} elif (internalCount > 1) {
+	priceList = "";
+	errorMsg = "Multiple price lists found for companyName: " + companyName + ", businessUnit: " + businessUnit + " and currencyCode: " + currencyCode;
+}
+
+put(priceListDict, "pricelist", priceList);
+put(priceListDict, "error", errorMsg);
+
+return priceListDict;

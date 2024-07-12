@@ -1,0 +1,828 @@
+TRIG_KEY_VALUE_DELIM = "$,$";
+RAMP_DELIMITER = "-_**_-";
+DELIMITER = "@.@";
+utilResultString = "";
+QUOTE_DOC_NUM = "1";
+APPROVAL_STEP = "underManagerReview_process";
+currentDateTextFull = datetostr(getdate());
+revisedDate = substring(currentDateTextFull, 0, 10); //IESCNQRCPQ-564 - VK(14-04-2023)
+/* -------------------- Constants for Line Item Attributes ---------------- */
+APPROVAL_LINE_TRIGGER = "approval_line";
+ADV_LEARNING_SERVICES_REQUIRED = "advLearningSvcsReqd_line";
+PART_NUM = "_part_number";
+SPECIAL_WORKFLOW_FLAG = "specialWorkflowFlag_line";
+FALSE_STR = "false";
+/* ------------------------- Variables for Approval	----------------------- */
+// This dictionary stores approval history messages
+historyMsgDict = dict("string");
+put(historyMsgDict, "mgrApprovalHistory_quote", mgrApprovalHistory_quote);
+put(historyMsgDict, "vpApprovalHistory_quote", vpApprovalHistory_quote);
+put(historyMsgDict, "svpApprovalHistory_quote", svpApprovalHistory_quote);
+put(historyMsgDict, "gmApprovalHistory_quote", gmApprovalHistory_quote);
+put(historyMsgDict, "evpApprovalHistory_quote", evpApprovalHistory_quote);
+put(historyMsgDict, "cfoApprovalHistory_quote", cfoApprovalHistory_quote);
+put(historyMsgDict, "sapApprovalHistory_quote", sapApprovalHistory_quote); //KA. CSYS-48808. 9-4-2015
+put(historyMsgDict, "miscApprovalHistory_quote", miscApprovalHistory_quote); //KA. CSYS-78785. 4-4-2017
+
+approverLoginDict = dict("string");
+//put(approverLoginDict, "mgrLogin_quote", mgrLogin_quote); //KA TEST, moved lower
+//put(approverLoginDict, "vpLogin_quote", vpLogin_quote); //KA TEST, moved lower
+//put(approverLoginDict, "svpLogin_quote", svpLogin_quote); //KA TEST, moved lower
+//put(approverLoginDict, "gmLogin_quote", gmLogin_quote); //KA TEST, moved lower
+//put(approverLoginDict, "evpLogin_quote", evpLogin_quote); //KA TEST, moved lower
+//put(approverLoginDict, "cfoLogin_quote", cfoLogin_quote); //KA TEST, moved lower
+
+lineTriggersKeys = string[];
+advantageServicesFlag = false;
+learningServicesFlag = false;
+partnerServicesFlag = false;//CSYS-83096 (LN. 8/4/2017)
+billingTermsDifferentFlag = false;  //Added to fix CSYS-24698 [OC]
+rerequireCFOApprovalFlag = false;  //Added for CSYS-96590 [OC]
+//advLearningReqdResult = "";
+docNumList = string[];
+partNumDict = dict("string");
+customPricingOccurredDict = dict("string");
+floatsDict = dict("float"); //IESCNQRCPQ-810/IESCNQRCPQ-984 (PG 28-07-2023)
+
+/*actionName = "";
+if (containskey( stringsDict, "actionName")){
+	actionName = get(stringsDict, "actionName");
+}*/
+
+//CSYS-97078
+if ( preproductionWaive_quote <> "" AND NOT (isnull(preproductionWaive_quote)) ){
+	daysArr = split(preproductionWaive_quote, " ");
+	if ( find(daysArr[1], "days") <> -1 ){
+		preProdWaivePeriod = atoi(daysArr[0])/30;
+	}
+	else{
+		preProdWaivePeriod = atoi(daysArr[0]);
+	}
+}else{
+	preProdWaivePeriod = 0;
+}
+
+for line in line_process {
+	docNum = line._document_number;
+	append(docNumList, docNum);
+	partNum = line._part_number;
+	put(partNumDict, docNum, partNum);
+	customPricingHasOccured = line.customPricingHasOccured_line;
+	itemType = line.piItemType_line;
+	discount = line.discount_line;
+	put(customPricingOccurredDict, docNum, string(customPricingHasOccured));
+	put(floatsDict,docNum,discount); //IESCNQRCPQ-810/IESCNQRCPQ-984 (PG 28-07-2023)
+	remainingDays = util.getStringAttribute(triggerDict, docNum, "~","modifyRevDecreaseInTermDays");//IESCNQRCPQ-1852
+	assetAction = line.assetAction_line;
+	//IESCNQRCPQ-250 SV. 23-02-2023 Start
+	//IESCNQRCPQ-860 SV. 27-07-2023 Removed the association of quote type
+	//if(quoteType_quote == "New Business" AND referralStatus_quote == "Accept" AND referringPartnerCategory_quote == "VAR" AND (itemType == "Base" OR itemType == "Incremental") and discount > 30){
+	if(referralStatus_quote == "Accept" AND referringPartnerCategory_quote == "VAR" AND (itemType == "Base" OR itemType == "Incremental") and discount > 30){
+		put(triggerDict, "preNegotialtedDiscountGreaterThan30", "true");
+	}
+	//IESCNQRCPQ-250 End
+}
+
+for docNum in docNumList {
+	assetActionFromDict = get(attributesDict, docNum + "~" + "assetAction_line");
+	actionSplit = split(assetActionFromDict, "~");
+	assetActionSplit = actionSplit[2];
+	AssetAction = replace(assetActionSplit, "|", "");
+	approvalLineTrigger = false;
+	//lineItemPI = util.getStringAttribute(stringsDict, docNum, DELIMITER, PART_NUM);
+	lineItemPI = get(partNumDict, docNum);
+	utilResultString = util.formAttrValueStr(attributesDict, APPROVAL_LINE_TRIGGER, docNum, string(approvalLineTrigger));
+	//specialWorkflowFlag = util.getStringAttribute(stringsDict, lineItemPI, DELIMITER, SPECIAL_WORKFLOW_FLAG);
+	specialWorkflowFlag = util.getStringAttribute(triggerDict, lineItemPI, DELIMITER, SPECIAL_WORKFLOW_FLAG);
+	//advLearningServicesRequired = util.getStringAttribute(stringsDict, docNum, DELIMITER, ADV_LEARNING_SERVICES_REQUIRED);
+	advLearningServicesRequired = util.getStringAttribute(triggerDict, docNum, DELIMITER, ADV_LEARNING_SERVICES_REQUIRED);
+	customPricingHasOccured = get(customPricingOccurredDict, docNum); //CSYS-87380
+	currenDiscount = util.getStringAttribute(triggerDict, docNum, "~","currentDiscountAsset");
+	discountLine = get(floatsDict, docNum); //IESCNQRCPQ-810/IESCNQRCPQ-984 (PG 28-07-2023)
+	piidStr = "*6428*13961*9811*8911*13962*9814*8918*13965*9817*8925*13968*9820*8932*13971*9823*5983970*5983967*5983964"; //IESCNQRCPQ-493 (PG 27/3/2023)																					
+																																		
+	//CSYS-87380: commented out the "Not Verified" checks below and use customPricingHasOccurred instead:
+	if (find(docNum, RAMP_DELIMITER) == - 1){
+		if(/*advLearningServicesRequired == "Not Verified" AND*/ find (piidStr, lineItemPI) == -1 AND customPricingHasOccured == FALSE_STR AND specialWorkflowFlag == "Advantage Services" AND assetAction <> "NONE" AND assetAction <> "TERMINATE") {
+			advantageServicesFlag = true;
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Required");
+		//IESCNQRCPQ-493 (PG 27/3/2023) When Custom Connector-Hosted(1-5) is on the quote with action of NONE or MODIFY, in addition to Action of CREATE, require custom pricing.
+		//IESCNQRCPQ-810/IESCNQRCPQ-984 (PG 28-07-2023)
+		} elif(/*advLearningServicesRequired == "Not Verified" AND*/ find (piidStr, lineItemPI) <> -1 AND customPricingHasOccured == FALSE_STR AND specialWorkflowFlag == "Advantage Services" AND (assetAction == "CREATE" OR assetAction == "MODIFY")) {
+			advantageServicesFlag = true;
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Required");
+		} elif(/*advLearningServicesRequired == "Not Verified" AND*/ find (piidStr, lineItemPI) <> -1 AND customPricingHasOccured == FALSE_STR AND specialWorkflowFlag == "Advantage Services" AND discountLine >30 AND assetAction == "NONE") {
+			advantageServicesFlag = true;
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Required");
+		} elif(/*advLearningServicesRequired == "Not Verified" AND*/ customPricingHasOccured == FALSE_STR AND specialWorkflowFlag == "Learning Services" AND assetAction <> "NONE" AND assetAction <> "TERMINATE") {
+			learningServicesFlag = true;
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Required");
+		} elif(/*advLearningServicesRequired == "Not Verified" AND*/ customPricingHasOccured == FALSE_STR AND  specialWorkflowFlag == "Partner Services" AND assetAction <> "NONE" and assetAction <> "TERMINATE") {//CSYS-83096 (LN. 8/4/2017)
+			partnerServicesFlag = true;
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Required");	
+		} elif(specialWorkflowFlag <> "Advantage Services" AND specialWorkflowFlag <> "Learning Services" AND specialWorkflowFlag <> "Partner Services") {
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Not Required");
+
+		//CSYS-87380 (KA. 12-6-2017): ensure that advLearningSvcsReqd_line gets set back to "Not Required" on NONE's and TERMINATE's:
+		} elif(find (piidStr, lineItemPI) == -1 AND specialWorkflowFlag == "Advantage Services" AND (assetAction == "NONE" OR assetAction == "TERMINATE")){
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Not Required");
+		//IESCNQRCPQ-493 (PG 27/3/2023) When Custom Connector-Hosted(1-5) is on the quote with action of NONE or MODIFY, in addition to Action of CREATE, require custom pricing.
+		} elif(find (piidStr, lineItemPI) <> -1 AND specialWorkflowFlag == "Advantage Services" AND ((assetAction == "NONE" AND discountLine <30) OR assetAction == "TERMINATE")){
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Not Required");
+		} elif(specialWorkflowFlag == "Learning Services" AND (assetAction == "NONE" OR assetAction == "TERMINATE")){
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Not Required");
+		} elif(specialWorkflowFlag == "Partner Services" AND (assetAction == "NONE" OR assetAction == "TERMINATE")){
+			utilResultString = util.formAttrValueStr(attributesDict, "advLearningSvcsReqd_line", docNum, "Not Required");
+		}
+
+	}
+}
+
+userLogin = _system_user_login;
+approvalEmailSet = bmql("SELECT mgrEmail, vpEmail, svpEmail, gmEmail, evpEmail, cfoEmail, sapEmail, miscEmail FROM approverNames WHERE userLogin = $userLogin");
+for approvalEmail in approvalEmailSet{
+	put(approverLoginDict, "mgrLogin_quote", get(approvalEmail, "mgrEmail")); //KA approval hierarchy integrity
+	put(approverLoginDict, "vpLogin_quote", get(approvalEmail, "vpEmail" )); //KA approval hierarchy integrity
+	put(approverLoginDict, "svpLogin_quote", get(approvalEmail, "svpEmail")); //KA approval hierarchy integrity
+	put(approverLoginDict, "gmLogin_quote", get(approvalEmail, "gmEmail")); //KA approval hierarchy integrity
+	put(approverLoginDict, "evpLogin_quote", get(approvalEmail, "evpEmail")); //KA approval hierarchy integrity
+	put(approverLoginDict, "cfoLogin_quote", get(approvalEmail, "cfoEmail" )); //KA approval hierarchy integrity
+	put(approverLoginDict, "sAPLogin_quote", get(approvalEmail, "sapEmail" )); //KA. CSYS-48808. 9-4-2015
+	put(approverLoginDict, "miscLogin_quote", get(approvalEmail, "miscEmail" )); //CSYS-78785. KA. 4-4-2017
+}
+
+if (_system_current_step_var<> APPROVAL_STEP ){
+	mgrEmail = "";
+	vpEmail = "";
+	svpEmail = "";
+	gmEmail = "";
+	evpEmail = "";
+	cfoEmail = "";
+	sapEmail = ""; //CSYS-48808
+	miscEmail = ""; //CSYS-78785
+
+	// Cycle through the returns and save the information
+	// We only want to keep one result
+	for approvalEmail in approvalEmailSet{
+		mgrEmail = get(approvalEmail, "mgrEmail");
+		vpEmail = get(approvalEmail, "vpEmail" );
+		svpEmail = get(approvalEmail, "svpEmail");
+		gmEmail = get(approvalEmail, "gmEmail");
+		evpEmail = get(approvalEmail, "evpEmail");
+		cfoEmail = get(approvalEmail, "cfoEmail" );
+		sapEmail = get(approvalEmail, "sapEmail"); //KA. CSYS-48808. 9-4-2015
+		miscEmail = get(approvalEmail, "miscEmail"); //KA. CSYS-78785. 4-4-2017
+	}
+	utilResultString = util.formAttrValueStr(attributesDict, "mgrEmail_quote", QUOTE_DOC_NUM, mgrEmail);
+	utilResultString = util.formAttrValueStr(attributesDict, "vPEmail_quote", QUOTE_DOC_NUM, vpEmail);
+	utilResultString = util.formAttrValueStr(attributesDict, "sVPEmail_quote", QUOTE_DOC_NUM, svpEmail);
+	utilResultString = util.formAttrValueStr(attributesDict, "gMEmail_quote", QUOTE_DOC_NUM, gmEmail);
+	utilResultString = util.formAttrValueStr(attributesDict, "evpEmail_quote", QUOTE_DOC_NUM, evpEmail);
+	utilResultString = util.formAttrValueStr(attributesDict, "cFOEmail_quote", QUOTE_DOC_NUM, cfoEmail);
+	utilResultString = util.formAttrValueStr(attributesDict, "sAPEmail_quote", QUOTE_DOC_NUM, sapEmail); //KA. CSYS-48808. 9-4-2015
+	utilResultString = util.formAttrValueStr(attributesDict, "miscEmail_quote", QUOTE_DOC_NUM, miscEmail); //KA. CSYS-78785. 4-4-2017
+
+	//if ( actionName == "submit" OR actionName == "request approval"){ //KA commenting out for Approval Hierarchy inheritance 1-15-2015
+		utilResultString = util.formAttrValueStr(attributesDict, "mgrLogin_quote", QUOTE_DOC_NUM, mgrEmail);
+		utilResultString = util.formAttrValueStr(attributesDict, "vpLogin_quote", QUOTE_DOC_NUM, vpEmail);
+		utilResultString = util.formAttrValueStr(attributesDict, "svpLogin_quote", QUOTE_DOC_NUM, svpEmail);
+		utilResultString = util.formAttrValueStr(attributesDict, "gmLogin_quote", QUOTE_DOC_NUM, gmEmail);
+		utilResultString = util.formAttrValueStr(attributesDict, "evpLogin_quote", QUOTE_DOC_NUM, evpEmail);
+		utilResultString = util.formAttrValueStr(attributesDict, "cfoLogin_quote", QUOTE_DOC_NUM, cfoEmail);
+		utilResultString = util.formAttrValueStr(attributesDict, "sAPLogin_quote", QUOTE_DOC_NUM, sapEmail); //KA. CSYS-48808. 9-4-2015
+		utilResultString = util.formAttrValueStr(attributesDict, "miscLogin_quote", QUOTE_DOC_NUM, miscEmail); //KA. CSYS-78785. 4-4-2017
+	//}
+}
+
+// #############################################################################
+// // Approvals //
+// #############################################################################
+
+approvalTriggers = bmql("SELECT reasonName, condition, reason, reasonId, customApprover FROM approvalTriggers WHERE triggerLevel = 'Quote'");
+
+approvalReasonDict = dict("string");
+totalArrNet = get(triggerDict, "totalArrNet"); //for CSYS-51758. KA. 12-3-2015.
+termNotice = termNotice_quote; //for CSYS-55141. KA. 12-15-2015.
+if(find(termNotice, "30") <> -1){
+	termNotice = "30";
+}
+elif(find(termNotice, "60") <> -1){
+	termNotice = "60";
+}
+elif(find(termNotice, "90") <> -1){
+	termNotice = "90";
+}
+
+
+triggerArray = String[][] {
+//	{"monthlyWaivePeriod", monthlyWaivePeriod_quote}, // Updated by Omar for SAP China
+//	{"preproductionWaive", preproductionWaive_quote}, // Updated for SAP China/Brasil CSYS-80846 LN 4/18/17
+	{"billingCycle", billingCycle_quote},
+	{"paymentMethod", paymentMethod_quote},
+	{"amexReferral", string(amexReferral_quote)},
+	/*BM_VT. New rows added for Systematized Contracts */
+	{"businessUnit", businessUnit_quote},
+	{"segment", segment_quote},
+//	{"countryScope", countryScope_quote}, //CSYS-96892 SN. 08/2019
+	{"implementationMethods", implementationMethods_quote},
+	{"quoteType", quoteType_quote},
+	{"termNumMonths", termNumMonths_quote},
+	{"market", market_quote},
+	{"ownerMarket", ownerMarket_quote},
+	{"billToCountryISOCode", billTo_countryISOCode_quote},
+	{"ownerBusinessUnit", ownerBU_quote},
+	{"ownerTheater", ownerTheater_quote},
+	{"quoteCurrency", quoteCurrency_quote},
+	{"currentPaymentMethod", currentPaymentMethod_quote},
+	{"totalArrNet", totalArrNet}, //for CSYS-51758. KA. 12-3-2015.
+	{"termNotice", termNotice}, //for CSYS-55141. KA. 12-15-2015.
+	{"ownerDivision", ownerDivision_quote}, //for CSYS-55141. KA. 12-15-2015.
+	//{"contractAutomation", contractAutomation_quote},
+
+//	{"bsaType", bsaType_quote}, //for CSYS-58565. KA. 4/12/2016.
+	{"contractType", contractType_quote}, //for CSYS-58565. KA. 4/12/2016.
+	{"purchasedFromPartnerCategory", purchasedFromPartnerCategorySFDC_quote}, //IESCNQRCPQ-250 SV. 23-02-2023
+	{"referralStatus", referralStatus_quote} //IESCNQRCPQ-250 SV. 29-03-2023
+//	{"rerequireCFOApproval", string(rerequireCFOApproval_quote)}
+//	{"contractingEntity", contractingEntity_quote}, //for CSYS-78996. Omar.
+//	{"externalPromotion", externalPromotion_quote} //for CSYS-78996. Omar.
+	/*BM_VT. END */
+	//{"differenceARRFlag", differenceARRFlag}
+};
+
+if(quoteType_quote == "Add-On Business"){  //Added to fix CSYS-24698 [OC]
+	if((terms_quote <> addOnPaymentTerms_quote) OR (billingCycle_quote <> currentBillingCycle_quote) OR (paymentMethod_quote <> currentPaymentMethod_quote)){
+	billingTermsDifferentFlag = true;
+	}
+	put(triggerDict, "billingTermsDifferentFlag", string(billingTermsDifferentFlag));
+}
+utilResultString = util.formAttrValueStr(attributesDict, "billingTermsDifferentFlag_quote", QUOTE_DOC_NUM, string(billingTermsDifferentFlag));
+// End CSYS-24698 fix [OC]
+
+//CSYS-96590 (O.C. & L.N. 11-13-2019) STARTING LOGIC HERE
+
+PREVIOUS_OED = previousOrderEffectiveDate_quote;
+CURRENT_OED = orderEffectiveDate_quote;
+RE_REQUIRE_CFO_APPROVAL = "rerequireCFOApproval_quote"; 
+
+if(PREVIOUS_OED <> "" AND CURRENT_OED <> ""){
+
+	CURRENT_OED_MONTH = "";
+	CURRENT_OED_YEAR = "";
+	PREVIOUS_OED_MONTH = "";
+	PREVIOUS_OED_YEAR = "";
+	Q1_MONTHS_ARR = string[]{"01", "02", "03", "1", "2", "3"};
+	Q2_MONTHS_ARR = string[]{"04", "05", "06", "4", "5", "6"};
+	Q3_MONTHS_ARR = string[]{"07", "08", "09", "7", "8", "9"};
+	Q4_MONTHS_ARR = string[]{"10", "11", "12"};
+	
+	//Retrieve the current OED Month & Year for comparison later
+	if(find(CURRENT_OED, "/") <> -1) {
+		CURRENT_OED_MONTH = substring(CURRENT_OED, 0, 2);	
+		CURRENT_OED_YEAR = substring(CURRENT_OED, 6, 10);
+	}
+	else{
+		CURRENT_OED_MONTH = substring(CURRENT_OED, 5, 7);	
+		CURRENT_OED_YEAR = substring(CURRENT_OED, 0, 4);
+	}
+
+	//Retrieve the previous OED Month & Year for comparison later
+	if(find(PREVIOUS_OED, "/") <> -1) {	
+		PREVIOUS_OED_MONTH = substring(PREVIOUS_OED, 0, 2);
+		PREVIOUS_OED_YEAR = substring(PREVIOUS_OED, 6, 10);
+	}
+	else{
+		PREVIOUS_OED_MONTH = substring(PREVIOUS_OED, 5, 7);
+		PREVIOUS_OED_YEAR = substring(PREVIOUS_OED, 0, 4);
+	}
+
+	//Evaluate if Previous OED Month/Year is outside the current FQ of the Current OED Month/Year
+	if( ( ((findinarray(Q1_MONTHS_ARR, PREVIOUS_OED_MONTH) <> -1 AND findinarray(Q1_MONTHS_ARR, CURRENT_OED_MONTH) == -1) OR
+		   (findinarray(Q2_MONTHS_ARR, PREVIOUS_OED_MONTH) <> -1 AND findinarray(Q2_MONTHS_ARR, CURRENT_OED_MONTH) == -1) OR
+		   (findinarray(Q3_MONTHS_ARR, PREVIOUS_OED_MONTH) <> -1 AND findinarray(Q3_MONTHS_ARR, CURRENT_OED_MONTH) == -1) OR 
+		   (findinarray(Q4_MONTHS_ARR, PREVIOUS_OED_MONTH) <> -1 AND findinarray(Q4_MONTHS_ARR, CURRENT_OED_MONTH) == -1)
+		) OR CURRENT_OED_YEAR <> PREVIOUS_OED_YEAR) AND NOT(isnull(cfoApprovalHistory_quote) ) AND cfoApprovalHistory_quote <> "") {
+		put(triggerDict, "crossQuarterQuote", "true");
+		rerequireCFOApprovalFlag = true;  
+	}	
+}
+utilResultString = util.formAttrValueStr(attributesDict, RE_REQUIRE_CFO_APPROVAL, QUOTE_DOC_NUM, string(rerequireCFOApprovalFlag));
+//CSYS-96590 (O.C. & L.N. 11-13-2019) ENDING LOGIC HERE
+
+
+// Put Special Terms into the dictionary. If there is no Special Terms entered by the user, map "BLANK" as value. It's being used in "Approval Triggers" data table condition. Do the same for SAP MAR ID, CSYS-48808, KA, 9-4-2015.
+if(specialTerms_quote == "") {
+  put(triggerDict, "specialTerms", "BLANK");
+} else {
+  put(triggerDict, "specialTerms", specialTerms_quote);
+}
+if(SAP_MAR_ID_quote == "") { //CSYS-48808, KA, 9-4-2015.
+  put(triggerDict, "sapMarId", "BLANK");
+} else {
+  put(triggerDict, "sapMarId", SAP_MAR_ID_quote);
+}
+if(terms_quote == "") {
+  put(triggerDict, "terms", "BLANK");
+} else {
+  put(triggerDict, "terms", terms_quote);
+}
+//Added by OC for SAP China
+if(contractingEntity_quote == "") {
+  put(triggerDict, "contractingEntity", "BLANK");
+} else {
+  put(triggerDict, "contractingEntity", contractingEntity_quote);
+}
+if(externalPromotion_quote == "") {
+  put(triggerDict, "externalPromotion", "BLANK");
+} else {
+  put(triggerDict, "externalPromotion", externalPromotion_quote);
+}
+//CSYS-94744
+/*
+if(monthlyWaivePeriod_quote == "") {
+  put(triggerDict, "monthlyWaivePeriod", "BLANK");
+} else {
+  put(triggerDict, "monthlyWaivePeriod", monthlyWaivePeriod_quote);
+}
+*/
+// Done adding by OC for SAP China
+// CSYS-80846 LN 4/18/17 Updating for SAP China/Brasil Approval expansion
+//CSYS-97078
+put(triggerDict, "preProdWaivePeriod", string(preProdWaivePeriod));
+/*
+if(preproductionWaive_quote == "") {
+  put(triggerDict, "preproductionWaive", "BLANK");
+} else {
+  put(triggerDict, "preproductionWaive", preproductionWaive_quote);
+}
+*/
+//Case#112366
+if(addOnPaymentTerms_quote == "") {
+  put(triggerDict, "addOnPaymentTerms", "BLANK");
+} else {
+  put(triggerDict, "addOnPaymentTerms", addOnPaymentTerms_quote);
+}
+for eachTrigger in triggerArray {
+	put(triggerDict, eachTrigger[0], eachTrigger[1]);
+}
+
+//CSYS-99150 SN. 05/2020
+//Standard Request for Fee Adjustment, approvals through VP
+if (rFAmore_quote == "125%" AND
+	rFAbillingCycle_quote == "2" AND
+	rFAless_quote == "75%"){
+	put(triggerDict, "standardRequestFeeAdjustment", "true");
+}
+//CSYS-99150 SN. 05/2020
+//Non Standard Request for Fee Adjustment, approvals through CFO
+if ((rFAmore_quote <> "" AND
+	rFAmore_quote <> "NA" AND
+	rFAmore_quote <> "125%") OR
+	(rFAbillingCycle_quote <> "" AND
+	rFAbillingCycle_quote <> "2") OR
+	(rFAless_quote <> "" AND
+	rFAless_quote <> "NA" AND
+	rFAless_quote <> "75%")){
+	put(triggerDict, "nonStandardRequestFeeAdjustment", "true");
+}
+
+//CSYS-99879, (BS. 09/23/2020) Triggering approvals when terminating Professional Services.
+//Start
+if (quoteType_quote == "Add-On Business" AND isProfessionalServicesImport_quote == true) {
+	for line in line_process{
+		docNum = line._document_number;
+
+		if(line.terminateSetupFee_line == true AND (line.assetAction_line == "TERMINATE" OR line.assetAction_line == "NONE")){//dwc
+			put(triggerDict, docNum + "~" + "terminateProfessionalService", docNum + "~" + "terminateProfessionalService" + TRIG_KEY_VALUE_DELIM + "true");
+		} 
+	}
+}
+//End CSYS-99879
+
+//CSYS-107365 (OK. 10-21-2022) Start - No smart approvals for CFO level. Once CFO approved and revised the quote then on submit again it should ask for CFO approval.
+if(cfoApprovalHistory_quote <> "") { 
+	cfoApprovalHistory = cfoApprovalHistory_quote;
+	if(find(cfoApprovalHistory_quote, "CFO Approval Always Required") <> -1) {
+		repValue = "";
+		if(find(cfoApprovalHistory_quote, "CFO Approval Always Required; ") <> -1) {
+			repValue = "CFO Approval Always Required; ";
+		}
+		elif(find(cfoApprovalHistory_quote, "; CFO Approval Always Required") <> -1) {
+			repValue = "; CFO Approval Always Required";
+		}
+		elif(find(cfoApprovalHistory_quote, "CFO Approval Always Required") <> -1) {
+			repValue = "CFO Approval Always Required";
+		}
+		
+		cfoApprovalHistory = replace(cfoApprovalHistory_quote, repValue, "");
+		utilResultString = util.formAttrValueStr(attributesDict, "cfoApprovalHistory_quote", QUOTE_DOC_NUM, cfoApprovalHistory);
+	}
+}
+//CSYS-107365 - End
+
+// #############################################################################
+// Evaluate approval trigger conditions
+// #############################################################################
+
+for eachApprovalTrigger in approvalTriggers {
+  reasonName = get(eachApprovalTrigger, "reasonName");
+  condition = get(eachApprovalTrigger, "condition");
+  thisReason = get(eachApprovalTrigger, "reason");
+  reasonId = get(eachApprovalTrigger, "reasonId");
+  customApprover = get(eachApprovalTrigger, "customApprover");
+
+  // #####################################################################
+  // Dynamic quote level approval reasons within a single approval trigger.
+  // #####################################################################
+
+  //Dynamic Special Terms reason. CSYS-72206. KA. 11-21-2016:
+  if(reasonId == "specialTermsReason"){
+ 	thisReason = thisReason + " (" + specialTerms_quote + ")";
+  }
+	//CSYS-94744
+	
+	if(reasonId == "monthlyWaivePeriod"){
+		if(containskey(triggerDict, "monthlyWaivePeriod")) {
+			thisReason = thisReason + " = " + get(triggerDict, "monthlyWaivePeriod");
+		}
+	}
+	elif(reasonId == "monthlyRampWaivePeriod"){ //CSYS-97404
+		if(containskey(triggerDict, "monthlyRampWaivePeriod")) {
+			thisReason = thisReason + " for " + get(triggerDict, "monthlyRampWaivePeriod") + " months";
+		}
+	}
+	elif(reasonId == "preProdWaivePeriod"){ //CSYS-97078
+		thisReason = thisReason + " = " + get(triggerDict, "preProdWaivePeriod");
+	}
+  //Future dynamic quote level approval reasons go here:
+  //......
+	//CSYS-103193 (LIN 07-15-2021) - Adding dymanic message
+	if(reasonId == "reduceTermination"){
+		if(containskey(triggerDict, "reduceTerminationForConvenience")) {
+			thisReason = thisReason + " " + terminationForConvenienceMonths_quote;
+		}
+	}
+	//END - CSYS-103193													
+  // END Dynamic quote level approval reasons
+
+  if(lower(util.evaluate(condition, triggerDict)) == "true") {
+
+  	//CSYS-78785: overwrite the dictionary with any custom approvers found in the approvalTriggers table for quote level triggers:
+  	//CSYS-82518 LN. 6-6-2017 Adding logic to account for not having a miscLogin in the approverNames table but having a customApprover in the approvalTriggers Table --> should NOT trigger an approval in this scenario
+	//IESCNQRCPQ-1879 (OK. 6-17-2024) Update below condition with "Misc Approval" reasonName
+  	if(customApprover <> "" AND NOT isnull(customApprover) AND (get(approverLoginDict, "miscLogin_quote") <> "" AND NOT isnull(get(approverLoginDict, "miscLogin_quote"))) AND reasonName == "Misc Approval"){
+  		put(approverLoginDict, "miscLogin_quote", customApprover); //KA. CSYS-78785. 4-4-2017
+
+		if (_system_current_step_var <> APPROVAL_STEP ){
+			utilResultString = util.formAttrValueStr(attributesDict, "miscEmail_quote", QUOTE_DOC_NUM, customApprover);
+			utilResultString = util.formAttrValueStr(attributesDict, "miscLogin_quote", QUOTE_DOC_NUM, customApprover);
+		}
+  	}
+	
+	//IESCNQRCPQ-1879 (OK. 6-17-2024) Start: Add custom approver logic for SAP approval step
+	if(customApprover <> "" AND NOT isnull(customApprover) AND (get(approverLoginDict, "sAPLogin_quote") <> "" AND NOT isnull(get(approverLoginDict, "sAPLogin_quote"))) AND reasonName == "SAP Cloud Extension Approval"){
+  		put(approverLoginDict, "sAPLogin_quote", customApprover); 
+
+		if (_system_current_step_var <> APPROVAL_STEP ){
+			utilResultString = util.formAttrValueStr(attributesDict, "sAPEmail_quote", QUOTE_DOC_NUM, customApprover);
+			utilResultString = util.formAttrValueStr(attributesDict, "sAPLogin_quote", QUOTE_DOC_NUM, customApprover);
+		}
+  	}
+	//IESCNQRCPQ-1879 - End
+
+	for eachTrigger in triggerArray {
+	  thisReason = replace(thisReason, "$" + eachTrigger[0], eachTrigger[1]);
+	}
+	approverReason = "";
+	if(containskey(approvalReasonDict, reasonName)) {
+	  approverReason = get(approvalReasonDict, reasonName);
+	}
+	if(find(approverReason, thisReason) == -1) {
+	  if(approverReason <> "") {
+		approverReason = approverReason + "; ";
+	  }
+	  approverReason = approverReason + thisReason;
+	}
+	put(approvalReasonDict, reasonName, approverReason);
+  }
+}
+
+// #############################################################################
+// Evaluate line level approval trigger conditions
+// #############################################################################
+approvalTriggers = bmql("SELECT reasonName, condition, reason, customApprover, reasonId FROM approvalTriggers WHERE triggerLevel = 'Line'");// CSYS-96150, SN. Added customApprover
+
+approvalLineTriggerResArr = string[];
+
+//triggerKeyValuePairs = values(lineTriggersDict); //Values will also have the key : structure of this dict is (lineTriggersDict, Key, Key + TRIG_KEY_VALUE_DELIM + Value)
+triggerKeyValuePairs = values(triggerDict); //Values related to linelevelApprovals will also have the key and structure of these specific keys and values in the dictionari is (dict, key, key + + TRIG_KEY_VALUE_DELIM + value)
+triggerKeyArr = string[];
+triggerValueArr = string[];
+for eachKeyValue in triggerKeyValuePairs{
+	if(NOT isnull(eachKeyValue)){ //Get rid of the Save action debug runtime error when debugging quotes
+		if(find(eachKeyValue, TRIG_KEY_VALUE_DELIM) <> -1){
+			keyValueSplitArr = split(eachKeyValue, TRIG_KEY_VALUE_DELIM);
+			triggerKey = keyValueSplitArr[0];
+			triggerValue = keyValueSplitArr[1];
+			append(triggerKeyArr, triggerKey);
+			append(triggerValueArr, triggerValue);
+		}
+	}
+}
+
+
+for eachApprovalTrigger in approvalTriggers {
+	reasonName = get(eachApprovalTrigger, "reasonName");
+	condition = get(eachApprovalTrigger, "condition");
+	thisReason = get(eachApprovalTrigger, "reason");
+	customApprover = get(eachApprovalTrigger, "customApprover");
+	reasonId = get(eachApprovalTrigger, "reasonId");
+	
+	if(reasonId == "increasedDiscount"){
+		if(containskey(triggerDict, "increasedDiscReviseCoreBase")) {
+			thisReason = thisReason + " = "  + get(triggerDict, "currentDiscountAsset");
+		}
+	}
+	//IESCNQRCPQ-1852- Setting remaining days -Start
+	if(reasonId == "modifyRevDecreaseInTermDays"){
+		if(containskey(triggerDict, "modifyRevDecreaseInTermDays")) {
+			thisReason = thisReason + " "  + get(triggerDict, "modifyRevDecreaseInTermDays");
+		}
+	}
+	//IESCNQRCPQ-1852- End
+	lineTriggerVal = "";
+	for docNum in docNumList {
+		if ( find( docNum, RAMP_DELIMITER ) <> -1 ){
+			continue;
+		}
+		lineTriggerKeySplitArr = string[];
+		for triggerKey in triggerKeyArr{
+			if(startswith(triggerKey, docNum + "~")) {
+				arrIndx = findinarray(triggerKeyArr, triggerKey);
+				triggerValue = triggerValueArr[arrIndx];
+				lineTriggerKeySplitArr = split(triggerKey, "~");
+				put(triggerDict, lineTriggerKeySplitArr[1], triggerValue); //lineTriggerKeySplitArr contains the triggerName
+
+			}
+		}
+		if(lower(util.evaluate(condition, triggerDict)) == "true") {
+
+			//CSYS-78785: overwrite the dictionary with any custom approvers found in the approvalTriggers table for quote level triggers:
+  			// CSYS-96150, SN. Adding logic to account for not having a miscLogin in the approverNames table but having a customApprover in the approvalTriggers Table --> should NOT trigger an approval in this scenario
+			//IESCNQRCPQ-1879 (OK. 6-17-2024) Update below condition with "Misc Approval" reasonName
+  			if(customApprover <> "" AND NOT isnull(customApprover) AND (get(approverLoginDict, "miscLogin_quote") <> "" AND NOT isnull(get(approverLoginDict, "miscLogin_quote"))) AND reasonName == "Misc Approval"){
+  				put(approverLoginDict, "miscLogin_quote", customApprover); //KA. CSYS-78785. 4-4-2017
+
+				if (_system_current_step_var <> APPROVAL_STEP ){
+					utilResultString = util.formAttrValueStr(attributesDict, "miscEmail_quote", QUOTE_DOC_NUM, customApprover);
+					utilResultString = util.formAttrValueStr(attributesDict, "miscLogin_quote", QUOTE_DOC_NUM, customApprover);
+				}
+
+  			}
+			
+			//IESCNQRCPQ-1879 (OK. 6-17-2024) Start: Add custom approver logic for SAP approval step
+			if(customApprover <> "" AND NOT isnull(customApprover) AND (get(approverLoginDict, "sAPLogin_quote") <> "" AND NOT isnull(get(approverLoginDict, "sAPLogin_quote"))) AND reasonName == "SAP Cloud Extension Approval"){
+  				put(approverLoginDict, "sAPLogin_quote", customApprover); 
+
+				if (_system_current_step_var <> APPROVAL_STEP ){
+					utilResultString = util.formAttrValueStr(attributesDict, "sAPEmail_quote", QUOTE_DOC_NUM, customApprover);
+					utilResultString = util.formAttrValueStr(attributesDict, "sAPLogin_quote", QUOTE_DOC_NUM, customApprover);
+				}
+
+  			}
+  			//IESCNQRCPQ-1879 - End
+  			
+			for eachTrigger in triggerArray {
+				thisReason = replace(thisReason, "$" + eachTrigger[0], eachTrigger[1]);
+			}
+			approverReason = "";
+			if(containskey(approvalReasonDict, reasonName)) {
+				approverReason = get(approvalReasonDict, reasonName);
+			}
+			if(find(approverReason, thisReason) == -1) {
+				if(approverReason <> "") {
+					approverReason = approverReason + "; ";
+				}
+				approverReason = approverReason + thisReason;
+			}
+			put(approvalReasonDict, reasonName, approverReason);
+			// Set line level approval attribute
+			approvalLineTrigger = true;
+
+			//CSYS-93941 (LN. 1-2-2019) Added a NULL check here - the script was breaking commerce in this instance.
+			if(NOT(isnull(lineTriggerKeySplitArr[0]))){
+				utilResultString = util.formAttrValueStr(attributesDict, APPROVAL_LINE_TRIGGER, lineTriggerKeySplitArr[0], string(approvalLineTrigger)); //lineTriggerKeySplitArr[0] is the docNumber
+			}
+			
+		}
+	}
+}
+
+approvers = String[];
+historyMessages = String[];
+// On Revise Set revision number and Submitted Date
+if( lower(actionName) == "revise" ){
+	revisionNumber = revisionNumber_quote + 1;
+	utilResultString = util.formAttrValueStr(attributesDict, "revisionNumber_quote", QUOTE_DOC_NUM, string(revisionNumber));
+	utilResultString = util.formAttrValueStr(attributesDict, "sequence_quote_history", QUOTE_DOC_NUM, sequence_quote);
+	//IESCNQRCPQ-564 VK(14-04-2023) - Start
+	utilResultString = util.formAttrValueStr(attributesDict, "revisionDate_quote", QUOTE_DOC_NUM, revisedDate);
+	//IESCNQRCPQ-564 -End
+	//utilResultString = utilResultString	+ "1~revisionNumber_quote~" + string(revisionNumber) + "|" ;
+  //utilResultString = utilResultString	+ "1~sequence_quote_history~" + sequence_quote + "|" ;
+  // Save historical reasons for smart approval
+ /* for eachApprovalHistoryAndMessageMapping in approvalHistoryAndMessageArray {
+	thisHistoryAttribute =  eachApprovalHistoryAndMessageMapping[0];
+	thisMessage = eachApprovalHistoryAndMessageMapping[1];
+	result = result + "1~" + thisHistoryAttribute + "~" + thisMessage  + "|";
+  }*/
+}
+
+// #############################################################################
+// Set approvers and reasons
+// #############################################################################
+
+//IESCNQRCPQ-1179 (OK. 2-27-2024) Start - If the created date is before deployment then we need use the old approval order. Quotes created after the deployment will use the new order
+validateDate = "false";
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+approvalHierarchy = recordset();
+
+if (createdDate_quote <> "") {
+	createdDate = util.getDateFromString(createdDate_quote);
+	if (comparedates(createdDate, strtojavadate("02/29/2024", DATE_FORMAT_PREFERENCE_SLASH)) < 1) {
+		validateDate = "true";
+	}
+}
+if (validateDate == "true") {
+	approvalHierarchy = bmql("SELECT ReasonName, MSG_HIST_varName FROM ApprovalHierarchy ORDER BY Old_HR_level");
+}
+else { //IESCNQRCPQ-1179 - End
+	approvalHierarchy = bmql("SELECT ReasonName, MSG_HIST_varName FROM ApprovalHierarchy ORDER BY HR_level");
+}
+
+approvalReasons = String[];
+
+for eachApprovalLevel in approvalHierarchy {
+  thisReasonName = get(eachApprovalLevel, "ReasonName");
+  thisReason = "";
+  if(containskey(approvalReasonDict, thisReasonName)) {
+	thisReason = get(approvalReasonDict, thisReasonName);
+  }
+
+  thisHistoryMsg = "";
+  thisHistoryVar = get(eachApprovalLevel, "MSG_HIST_varName");
+  if(containskey(historyMsgDict, thisHistoryVar)) {
+	thisHistoryMsg = get(historyMsgDict, thisHistoryVar);
+  }
+
+  append(approvalReasons, thisReason);
+  append(historyMessages, thisHistoryMsg);
+}
+
+// #############################################################################
+// Set approval sequence
+// #############################################################################
+
+
+
+if(( _system_current_step_var == "start_step" or _system_current_step_var == "pending_process") AND lower(actionName) <> "revise") { //status_quote <> "Approved" AND
+	//CSYS-83096 (LN. 8/4/2017) Write to _quote level attributes the value of Pending if the flag from above is true
+	if(advantageServicesFlag){
+		utilResultString = util.formAttrValueStr(attributesDict, "advantageServicesFlag_quote", QUOTE_DOC_NUM, "Pending");
+	} else{ //CSYS-87380 (KA. 12-6-2017): set back to "NA" if needed:
+		utilResultString = util.formAttrValueStr(attributesDict, "advantageServicesFlag_quote", QUOTE_DOC_NUM, "NA");
+	} 
+
+	if(learningServicesFlag){
+		utilResultString = util.formAttrValueStr(attributesDict, "learningServicesFlag_quote", QUOTE_DOC_NUM, "Pending");
+	} else{ //CSYS-87380 (KA. 12-6-2017): set back to "NA" if needed:
+		utilResultString = util.formAttrValueStr(attributesDict, "learningServicesFlag_quote", QUOTE_DOC_NUM, "NA");
+	}
+
+	if(partnerServicesFlag){ //CSYS-87380 (KA. 12-6-2017): set back to "NA" if needed:
+		utilResultString = util.formAttrValueStr(attributesDict, "partnerServicesFlag_quote", QUOTE_DOC_NUM, "Pending");
+	} else{ //CSYS-87380 (KA. 12-6-2017): set back to "NA" if needed:
+		utilResultString = util.formAttrValueStr(attributesDict, "partnerServicesFlag_quote", QUOTE_DOC_NUM, "NA");
+	}
+
+	/*else {
+		advLearningResult = advLearningResult + "1~" +  "advantageServicesFlag_quote" + "~" + "NA"  + "|";
+		advLearningResult = advLearningResult + "1~" +  "learningServicesFlag_quote" + "~" + "NA"  + "|";
+	}*/
+	//approvalResults =  util.approvalTriggers(approvalReasons, historyMessages, sequence_quote_history, approverLoginDict); //Nov 6- This needs to be modified as below:
+	  /***************************************************************************\
+	|              GENERIC ATTRIBUTES AND ACTIONS - DO NOT CHANGE               |
+	\***************************************************************************/
+	AppFlag_varName = string[];
+	AppMsg_varName = string[];
+	Hierarchy_array = integer[];
+	PRVapprovalArray = string[];
+	reasonNameArray = string[];
+
+	approverGroupArray = string[];
+	approverLoginVarArray = string[];
+	approverLoginValueArray = string[];
+	
+	previousApprovalSequencer = sequence_quote_history; //sequence_quote_history is a quote attribute
+	pop=false;
+	if(previousApprovalSequencer == ""){
+		pop=true;
+	}else{
+		PRVapprovalArray = split(previousApprovalSequencer,"^_^");
+	}
+	key_dict = dict("integer");
+	reasonNum = 0;
+	
+	//IESCNQRCPQ-1179 (OK. 2-27-2024) Start - If the created date is before deployment then we need use the old approval order. Quotes created after the deployment will use the new order
+	rez = recordset();
+	if (validateDate == "true") {
+		rez = bmql("SELECT Sequence, ReasonName, FlagVarName, MSG_varName, HR_level, ApproverGroup, emailVar FROM ApprovalHierarchy ORDER BY Old_HR_level");
+	}
+	else { //IESCNQRCPQ-1179 - End
+	rez = bmql("SELECT Sequence, ReasonName, FlagVarName, MSG_varName, HR_level, ApproverGroup, emailVar FROM ApprovalHierarchy ORDER BY HR_level");// ORDER BY HR_level  ORDER BY Level");
+	}
+
+	for entry in rez{
+		append(AppFlag_varName,get(entry,"FlagVarName"));
+		append(AppMsg_varName,get(entry,"MSG_varName"));
+		append(Hierarchy_array,getint(entry,"HR_level"));
+		append(approverGroupArray, get(entry, "ApproverGroup"));
+		append(reasonNameArray, get(entry, "ReasonName"));
+		append(approverLoginVarArray, get(entry, "emailVar"));
+		//append(sequenceArray, get(entry,"FlagVarName") + "@_@" + string(getint(entry,"HR_level")) + "@_@" + get(entry, "ApproverGroup") + "@_@");
+		put(key_dict,get(entry,"ReasonName"),getint(entry,"Sequence"));
+		if(pop){
+			PRVapprovalArray[reasonNum]="N";
+		}
+		reasonNum =reasonNum + 1;
+	}
+	reason_Key = string[reasonNum];//{"","","","","","","",""};//an array of reasons flags - MUST EQUAL NUMBER OF REASONS.
+
+	size = range(reasonNum);
+	for i in size{
+		reason_Key[i] = "";
+	}
+
+	// Get the login values from the dictionary
+	for loginVar in approverLoginVarArray {
+	  if(containskey(approverLoginDict, loginVar)) {
+		tempApproverLoginValue = get(approverLoginDict, loginVar);
+		if(len(tempApproverLoginValue) > 0) {
+		  append(approverLoginValueArray, tempApproverLoginValue);
+		} else {
+		  append(approverLoginValueArray, "NA");
+		}
+	  } else {
+		append(approverLoginValueArray, "NA");
+	  }
+	}
+
+	for app in size {
+		if(approvalReasons[app] <> historyMessages[app] AND historyMessages[app] == "" AND approvalReasons[app] <> "" AND approverLoginValueArray[app] <> "NA"){//if the history changed always set to Q.
+			reason_Key[app] = "Q";
+		}
+		elif((find(historyMessages[app],approvalReasons[app]) == -1) AND historyMessages[app] <> "" AND approvalReasons[app] <> "" AND approverLoginValueArray[app] <> "NA"){//if the history changed always set to Q.
+			reason_Key[app] = "Q";
+		}
+		//CSYS-106447 - Start
+		//IESCNQRCPQ-943 (OK. 8-16-2023) Added approvalReasons in the below condition
+		elif(PRVapprovalArray[app]=="Q" AND approverLoginValueArray[app] <> "NA" AND approvalReasons[app] <> ""){//if the history changed always set to Q.
+			reason_Key[app] = "Q";
+		}
+		//CSYS-106447 - End
+		else{
+			if(PRVapprovalArray[app]=="N" OR PRVapprovalArray[app]=="A" OR approvalReasons[app] == "" OR approverLoginValueArray[app] == "NA"){//if the history is the same and the reason was approved in the last revision:
+				reason_Key[app] = "N";//request the reason again.
+			}else{
+				reason_Key[app] = "Q";
+			}
+		}
+	}
+	
+	Pflag = false;//Pending flag - true once the first reason is set to pending.
+	sequencer = "";
+	size = range(sizeofarray(reason_Key));
+	HR_level = 1;
+
+	allPending = "";
+	currentPending = "";
+
+	for i in size {
+		if(reason_Key[i] == "N"){								//if this reason is not required;
+			sequencer = sequencer + "N^_^";							//set the sequencer to N
+			utilResultString = util.formAttrValueStr(attributesDict, AppFlag_varName[i], QUOTE_DOC_NUM, "NA");			//and the flag to "NA"
+		} elif(reason_Key[i] == "Q" AND HR_level <> Hierarchy_array[i] AND Pflag){					//if reason is required AND it is not the first reason:
+			sequencer = sequencer + "Q^_^"; 						//set the sequencer to Q
+			utilResultString = util.formAttrValueStr(attributesDict, AppFlag_varName[i], QUOTE_DOC_NUM, "queueing");//and the flag to "queueing"
+		} else{													//if the reason is required AND it is the first reason:
+			sequencer = sequencer + "P^_^";							//set the sequencer to "A"
+			utilResultString = util.formAttrValueStr(attributesDict, AppFlag_varName[i], QUOTE_DOC_NUM, "pending");//and the trigger to "pending"
+			HR_level = Hierarchy_array[i];
+			Pflag = true;											//set the flag to true.
+		}
+		utilResultString = util.formAttrValueStr(attributesDict, AppMsg_varName[i], QUOTE_DOC_NUM, approvalReasons[i]);
+	}
+	sequencer = substring(sequencer,0,-3); //trim the last delimiter;
+	utilResultString = util.formAttrValueStr(attributesDict, "sequence_quote", QUOTE_DOC_NUM, sequencer);
+}
+return utilResultString;

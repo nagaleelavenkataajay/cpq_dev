@@ -1,0 +1,20 @@
+/*
+  BML util (customAtoi)
+   - To convert the string into integer.
+   - if the input is not a valid number, the application will take the default value input and return back as a result.
+   
+  param:
+    inputValue - String
+    defaultValue   - integer
+  result:
+    Integer
+
+*/
+
+result = defaultValue;
+
+if (  isnumber(inputValue) ) {
+	result = integer(atof(inputValue));
+} 
+
+return result;

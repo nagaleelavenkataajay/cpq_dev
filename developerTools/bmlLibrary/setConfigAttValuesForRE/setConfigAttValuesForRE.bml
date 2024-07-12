@@ -1,0 +1,31 @@
+/*
+isSize
+attributeName
+valuesDelString
+*/
+
+ASSET_DELIMITER = "@@";
+INTERNAL_DELIMITER = "$$";
+NEW_DEL = "*|*";
+VALUE = 1;
+
+if(find(valuesDelString,attributeName)==-1){
+	return "FALSE";
+}
+
+newValuesDelString = replace(valuesDelString,attributeName,NEW_DEL+attributeName);
+
+attributesArray = split(newValuesDelString ,NEW_DEL);
+
+retSize = 0;
+ret = "";
+for entry in attributesArray{
+	if(NOT(startswith(entry,attributeName))){continue;}
+	if(isSize){retSize = retSize + 1; ret = string(retSize)+INTERNAL_DELIMITER;continue;}
+	tempArr = split(entry,ASSET_DELIMITER);
+	CurData = split(tempArr[0],INTERNAL_DELIMITER);
+	ret = ret + curData[VALUE] + INTERNAL_DELIMITER;
+}
+
+ret = substring(ret,0,-2);
+return ret;

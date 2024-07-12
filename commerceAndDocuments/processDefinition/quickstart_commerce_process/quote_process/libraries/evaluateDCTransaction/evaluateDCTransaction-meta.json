@@ -1,0 +1,14 @@
+{
+  "name" : "evaluateDCTransaction",
+  "variableName" : "evaluateDCTransaction",
+  "description" : "Populates Qty for Digital Commerce  transactions",
+  "libraryFunctions" : [ "util.formAttrValueStr" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_part_number" ],
+  "mainDocAttributes" : [ "dcLineItemsString_quote" ],
+  "systemAttributes" : [ ]
+}

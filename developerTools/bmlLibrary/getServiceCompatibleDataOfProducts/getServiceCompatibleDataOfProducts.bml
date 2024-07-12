@@ -1,0 +1,71 @@
+result = "";
+returnArray = String[];
+returnFalseArray = String[];
+pipe = "|^|";
+returnArray[0] = pipe;
+
+//BM_VT. Business unit is required as additional filter. Getting the business unit from the commerce process
+ownerBusUnit = "";
+ownerTheater = "";
+ownerMarket = "";
+quoteType = "";
+qType = "";
+resSet = bmql("SELECT ownerBU_quote, ownerTheater_quote, ownerMarket_quote, quoteType_quote FROM commerce.quote_process");
+
+for res in resSet {
+	ownerBusUnit = "%"+get(res, "ownerBU_quote")+"%";
+	ownerTheater = "%"+get(res, "ownerTheater_quote")+"%";
+	ownerMarket = "%"+get(res, "ownerMarket_quote")+"%";
+	quoteType = "%"+get(res, "quoteType_quote")+"%";
+	qType = get(res, "quoteType_quote"); //Adding this since quoteType would get stamped as %quoteType% from the above line
+}
+selectAssetArray = get(configAttribs, "selectAssetArray","string[]");
+assetsImport = get(configAttribs, "assetsImport","string");
+poID = get(configAttribs, "poID","string[]");
+serviceVal = get(configAttribs, "serviceVal","string[]");
+assetAccountServiceIDArray = get(configAttribs, "assetAccountServiceIDArray","string[]");
+//CSYS-101678 Start
+assetImplementationSelectionArray = get(configAttribs, "assetImplementationSelectionArray","string[]");
+assetCoreSelectionArray = get(configAttribs, "assetCoreSelectionArray","string[]");
+//CSYS-101678 End
+hasAsset = false;
+// Add Business unit filter
+recordSet = bmql("select serviceValue, availability from serviceCompatibility where serviceAttr = $serviceAttr and coreOffering = $coreOffer and implementationMethod = $implementationMethod and (businessUnit like $ownerBusUnit or businessUnit = '' or businessUnit is null) and (ownerTheater like $ownerTheater or ownerTheater = '' or ownerTheater is null) and (ownerMarket like $ownerMarket or ownerMarket = '' or ownerMarket is null) AND (quoteType like $quoteType or quoteType = '' or quoteType is null)");
+
+for rec in recordSet
+{
+	if((upper(get(rec,"availability"))=="TRUE"))
+	{
+		append(returnArray, trim(get(rec,"serviceValue")));
+	}
+	else{ 
+		append(returnFalseArray, trim(get(rec,"serviceValue")));
+	}		
+}
+//CSYS-101678 moved the belwo two lines out of the if loop below 
+YES = "Yes";
+loc = findinarray(selectAssetArray,YES); //current selected core in config		
+existingCore = assetCoreSelectionArray[loc];//CSYS-101678
+existingEdition = assetImplementationSelectionArray[loc];//CSYS-101678
+//CSYS-101678 Modifed the below if condition to add the existingCore == coreOffer AND existingEdition == implementationMethod condition
+//IESCNQRCPQ-1318- Commenting the condition for CSYS-101678
+//if(NOT(isempty(returnFalseArray)) AND qType == "Add-On Business" AND existingCore == coreOffer AND existingEdition == implementationMethod){ 	
+if(NOT(isempty(returnFalseArray)) AND qType == "Add-On Business" AND coreOffer <> "Historical Data Services"){  	
+	ASSET_DELIMITER = "@@";
+	INTERNAL_DELIMITER = "$$";	
+	assetsArray = split(assetsImport,ASSET_DELIMITER);//split the entire assets delimited string		
+	size = range(sizeofarray(assetsArray));	
+		
+	for i in size {
+		assetDetail = split(assetsArray[i],INTERNAL_DELIMITER);//split each asset
+		if (findinarray(poID, assetDetail[1])> -1 AND assetDetail[16] == assetAccountServiceIDArray[loc]) { 
+			pos= findinarray(poID, assetDetail[1]);
+			append(returnArray, serviceVal[pos]); // Set to TRUE if any of the above declared PO's are found in the Asset string, relevant to the core we're dealing with in the current config trip
+			break;		
+		}
+	}	
+}
+
+result = join(returnArray,pipe);
+
+return result;

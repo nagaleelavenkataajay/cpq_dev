@@ -1,0 +1,20 @@
+{
+  "name" : "Systematized Terminations",
+  "variableName" : "systematizedTerminations",
+  "description" : "Per CSYS-40346, this util sets the attribute terminatedCoreMapping_line for use by the Document Engine, in order to systematize product terminations. Also, it builds out termination notes for the opportunity.",
+  "libraryFunctions" : [ "util.formAttrValueStr", "util.getStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "isCoreChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "isEditionChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_parent_doc_number", "_part_custom_field20", "assetAction_line", "_part_custom_field23", "lineDescription_line", "_part_custom_field8", "_part_custom_field1", "_part_number", "coreOffering_line", "_part_custom_field25", "termDate_line" ],
+  "mainDocAttributes" : [ "editionlessUniversal_quote", "editionlessContract_quote", "detectByAppzenTerminate_quote", "billingCycle_quote", "terminationDate_quote", "detectMigrateToIntelligentAuditAdvanced_quote", "detectMigrateToIntelligentAuditEssential_quote", "detectMigrateToVerify_quote" ],
+  "systemAttributes" : [ ]
+}

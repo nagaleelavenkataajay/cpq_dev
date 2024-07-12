@@ -1,0 +1,9 @@
+{
+  "name" : "GetPOsforConcurForceAndPremierTravelSOF",
+  "variableName" : "getPOsforConcurForceAndPremierTravelSOF",
+  "description" : "This Util Library returns a dictionary with PO IDs and the SOF template required. Different template is required for Concurforce and Premier travel.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ ],
+  "attributes" : [ ]
+}

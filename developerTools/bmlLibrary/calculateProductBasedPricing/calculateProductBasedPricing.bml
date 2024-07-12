@@ -1,0 +1,704 @@
+/*
+	BML Utility Library
+	calculateProductBasedPricing
+	----------------------------
+	Params:
+		String[]Dict piBasedProductPricingDict
+		String[]Dict qtyBasedProductPricingDict
+		String[]Dict modelToLineDocNumsDict
+		String currentDocNum
+		StringDict stringsDict
+		IntegerDict integersDict
+		FloatDict floatsDict
+		String piDelimiter
+	Returns:
+		StringDict result
+			productBasedDiscountUsed => true or false
+			error => error message
+			
+	Description and Usage:
+		This function is meant to be called once for each line item. For a
+		given line item, it calculates the productBasedPrice_line.
+*/
+//Meta control variables
+debug = false;
+DEBUG_PREFIX = "> > > > ";
+
+/* ======================================================================== */
+/*								CONSTANTS									*/
+/* ======================================================================== */
+//Constants for piBasedProductPricingDict array indexes
+COND_PI1 = 0;
+COND_PI2 = 1;
+DISC_PI = 2;
+DISC_VAL = 3;
+DISC_TYPE = 4;
+LISTPRICE_PI = 5;
+
+//Constants for qtyBasedProductPricingDict array indexes
+Q_PI = 0;
+Q_TRANS_BASED_PI = 1;
+Q_QTY_BASED_PI = 2;
+Q_LISTPRICE_PI = 3;
+Q_PRICING_TYPE = 4;
+
+//Constants for attribute names
+PART_NUM = "_part_number";
+PARENT_DOC_NUM = "_parent_doc_number";
+TIER_PRICE = "tierPrice_line";
+PRODUCT_BASED_PRICE = "productBasedPrice_line";
+TRANSACTIONS_LABEL = "numCommittedTransaction_line";
+QTY_LABEL = "_price_quantity";
+
+//Constants for part custom field names
+PI_ITEM_TYPE = "piItemType_line";
+PO_ID = "poId";
+
+//Constants for part custom field values
+PRE_PRODUCTION = "Pre-Prod Fee";
+BASE_FEE = "Base Fee";
+
+//Constants for BMQL tables
+FIXED_PRICE = "FIXED_PRICE";
+PRE_PROD_PERCENT = "preProdPercent";
+INCREMENTAL = "INCRE_FEE";
+BASE = "BASE_FEE";
+//Constants
+HUNDRED_PERCENT = 100.0;
+MAX_ARRAY_SIZE = 1000;
+MAX_ARRAY_SIZE_FLOAT = 1000.00;
+/* ======================================================================== */
+/*								VARIABLES									*/
+/* ======================================================================== */
+//Result variables
+result = dict("string");
+error = false;
+errorMsg = "";
+productBasedPriceFound = false;
+productBasedPrice = 0.0;
+
+//Instance variables
+isPreProductionItem = false;
+
+if (debug) {
+	print(DEBUG_PREFIX + "calculateProductBasedPricing called");
+}
+
+/* ======================================================================== */
+/* 			First, get the Model associated with this line item 			*/
+/* ======================================================================== */
+parentDocNumKey = currentDocNum + piDelimiter + PARENT_DOC_NUM;
+parentDocNum = "";
+if (containskey(stringsDict, parentDocNumKey)) {
+	parentDocNum = get(stringsDict, parentDocNumKey);
+} else {
+	//If no associated model is found for this line item, stop the script
+	error = true;
+	errorMsg = errorMsg + "calculateProductBasedPricing(1): could not find _parent_doc_number for docNum " + currentDocNum + "\n";
+	put(result, "error", errorMsg);
+	return result;
+}
+if (debug) {
+	print("\n" + DEBUG_PREFIX + "====================================");
+	print(DEBUG_PREFIX + "FIRST: Model associated with this line item"); 
+	print(DEBUG_PREFIX + "parentDocNumKey: " + parentDocNumKey);
+	print(DEBUG_PREFIX + "parentDocNum: " + parentDocNum);
+}
+
+/* ======================================================================== */
+/* 			Second, get the PI of this line item 							*/
+/* ======================================================================== */
+piKey = currentDocNum + piDelimiter + PART_NUM;
+pi = "";
+if (containskey(stringsDict, piKey)) {
+	pi = get(stringsDict, piKey);
+} else {
+	//If no PI is found for the current line item, stop the script
+	error = true;
+	errorMsg = errorMsg + "calculateProductBasedPricing(2): could not find PI (_part_num) for docNum " + currentDocNum + " with piKey " + piKey + "\n";
+	put(result, "error", errorMsg);
+	return result;
+}
+
+if (debug) {
+	print(DEBUG_PREFIX + "====================================");
+	print(DEBUG_PREFIX + "SECOND: Get PI of this line item");
+	print(DEBUG_PREFIX + "piKey: " + piKey);
+	print(DEBUG_PREFIX + "pi: " + pi);
+}
+
+/* ======================================================================== */
+/*			Third, find out if it is a Pre-Production PI					*/
+/* ======================================================================== */
+piItemTypeKey = pi + piDelimiter + PI_ITEM_TYPE;
+piItemType = "";
+if (containskey(stringsDict, piItemTypeKey)) {
+	piItemType = get(stringsDict, piItemTypeKey);
+} else {
+	error = true;
+	errorMsg = errorMsg + "calculateProductBasedPricing(3): could not find PI Item Type (custom_field8) for docNum " + currentDocNum + "\n";
+	put(result, "error", errorMsg);
+	return result;
+}
+
+if (piItemType == PRE_PRODUCTION) {
+	isPreProductionItem = true;
+}
+
+if (debug) {
+	print("\n" + DEBUG_PREFIX + "====================================");
+	print(DEBUG_PREFIX + "THIRD: Get PI Item Type of this line item");
+	print(DEBUG_PREFIX + "piItemTypeKey: " + piItemTypeKey);
+	print(DEBUG_PREFIX + "piItemType: " + piItemType);
+	print(DEBUG_PREFIX + "Control variable comparator used to determine Pre-Prod status: PRE_PRODUCTION: " + PRE_PRODUCTION);
+	print(DEBUG_PREFIX + "The two values on the right must be equal if this item is a Pre-Prod Fee: " + "[" + piItemType + ", " + PRE_PRODUCTION + "]"); 
+}
+/* ======================================================================== */
+/* 		Fourth, get dicts of:
+			- line item PIs
+			- line item Tier Prices under this Model
+			- line item quantities
+			- line item numTransactions
+
+		If this line item is a Pre-Prod Fee, we also want to find the 
+		Base Fee line item for each PO ID.
+*/
+/* ======================================================================== */
+lineItemDocNums = string[];
+if (containskey(modelToLineDocNumsDict, parentDocNum)) {
+	lineItemDocNums = get(modelToLineDocNumsDict, parentDocNum);
+} else {
+	//If no child line item docNums are found for the current Model, stop the script
+	error = true;
+	errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find child docNums for parent docNum " + parentDocNum + " of docNum " + currentDocNum + "\n";
+	put(result, "error", errorMsg);
+	return result;
+}
+
+lineItemTierPriceDict = dict("float");
+lineItemTransactionsDict = dict("integer");
+lineItemQtyDict = dict("integer");
+poIdToBaseFeeLineItemDocNumDict = dict("string");
+
+for lineItemDocNum in lineItemDocNums {
+	
+	/* -------------------------------------------------------------------- */
+	//Get the lineItemPi
+	/* -------------------------------------------------------------------- */
+	lineItemPiKey = lineItemDocNum + piDelimiter + PART_NUM;
+	lineItemPi = "";
+	if (containskey(stringsDict, lineItemPiKey)) {
+		lineItemPi = get(stringsDict, lineItemPiKey);
+	} else {
+		//If no child line item PIs are found for the current Model, stop the script
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find PI (_part_num) for childDocNum " + lineItemDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	
+	/* -------------------------------------------------------------------- */
+	//Get the lineItemTierPrice
+	/* -------------------------------------------------------------------- */
+	lineItemTierPriceKey = lineItemDocNum + piDelimiter + TIER_PRICE;
+	lineItemTierPrice = 0.0;
+	if (containskey(floatsDict, lineItemTierPriceKey)) {
+		lineItemTierPrice = get(floatsDict, lineItemTierPriceKey);
+	} else {
+		//If no child line item PI tier prices are found for the current Model, stop the script
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find tierPrice_line for childDocNum " + lineItemDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	put(lineItemTierPriceDict, lineItemPi, lineItemTierPrice);
+	
+	/* -------------------------------------------------------------------- */
+	//Get lineItemTransactions
+	/* -------------------------------------------------------------------- */
+	lineItemTransactionsKey = lineItemDocNum + piDelimiter + TRANSACTIONS_LABEL;
+	lineItemTransactions = 0;
+	if (containskey(integersDict, lineItemTransactionsKey)) {
+		lineItemTransactions = get(integersDict, lineItemTransactionsKey);
+	} else {
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find numCommittedTransactions_line for childDocNum " + lineItemDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	put(lineItemTransactionsDict, lineItemPi, lineItemTransactions);
+	
+	/* -------------------------------------------------------------------- */
+	//Get the lineItemQty
+	/* -------------------------------------------------------------------- */
+	lineItemQtyKey = lineItemDocNum + piDelimiter + QTY_LABEL;
+	lineItemQty = 0;
+	if (containskey(integersDict, lineItemQtyKey)) {
+		lineItemQty = get(integersDict, lineItemQtyKey);
+	} else {
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find _price_quantity for childDocNum " + lineItemDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	put(lineItemQtyDict, lineItemPi, lineItemQty);
+	
+	/* -------------------------------------------------------------------- */
+	//Get the Base Fee docNum associated with this PO ID
+	/* -------------------------------------------------------------------- */
+	if (isPreProductionItem) {
+		//Get the PI Item Type of this line item 
+		piItemTypeKey = lineItemPi + piDelimiter + PI_ITEM_TYPE;
+		piItemType = "";
+		if (containskey(stringsDict, piItemTypeKey)) {
+			piItemType = get(stringsDict, piItemTypeKey);
+			
+			if (piItemType == BASE_FEE) {
+				//Get the PO ID associated with this line item
+				poIdKey = lineItemPi + piDelimiter + PO_ID;
+				poId = "";
+				if (containskey(stringsDict, poIdKey)) {
+					poId = get(stringsDict, poIdKey);
+					if (containskey(poIdToBaseFeeLineItemDocNumDict, poId)) {
+						error = true;
+						errorMsg = errorMsg + "calculateProductBasedPricing(4): duplicate PO ID detected for multiple Base Fee items! childDocNum " + lineItemDocNum + "\n";
+						put(result, "error", errorMsg);
+						return result;
+					}
+					put(poIdToBaseFeeLineItemDocNumDict, poId, lineItemDocNum);
+				} else {
+					error = true;
+					errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find PO ID for childDocNum " + lineItemDocNum + "\n";
+					put(result, "error", errorMsg);
+					return result;
+				}
+			}
+		} else {
+			error = true;
+			errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find PI Item Type for childDocNum " + lineItemDocNum + "\n";
+			put(result, "error", errorMsg);
+			return result;
+		}
+	}
+}
+
+if (debug) {
+	print("\n" + DEBUG_PREFIX + "====================================");
+	print(DEBUG_PREFIX + "FOURTH:");
+	print(DEBUG_PREFIX + "parentDocNum: " + parentDocNum);
+	print(DEBUG_PREFIX + "List of line item docNums under this Model");
+	print(DEBUG_PREFIX + "lineItemDocNums:");
+	print(lineItemDocNums);
+	print(DEBUG_PREFIX + "PIs of child docNums under this Model (lineItemTierPriceDict)");
+	print(lineItemTierPriceDict);
+	print(DEBUG_PREFIX + "lineItemTransactionsDict");
+	print(lineItemTransactionsDict);
+	print(DEBUG_PREFIX + "lineItemQtyDict");
+	print(lineItemQtyDict);
+	print(DEBUG_PREFIX + "poIdToBaseFeeLineItemDocNumDict");
+	print(poIdToBaseFeeLineItemDocNumDict);
+}
+
+/* ======================================================================== */
+/* 		FINALLY, calculate the product based price for this line item		*/
+/* ======================================================================== */
+/*
+	There are four Product Based Pricing mechanisms:
+	A. Pre-production Fee Calculation (miscCommerceData table):
+	
+		preProdFee = <preProdPercent> * <tierPrice of Core Service Base Fee>
+	
+	B. PI Based (productBasedDisc table):
+	
+		if (discountType == FIXED) {
+			productBasedPrice = <discountVal>
+		} else {
+			productBasedPrice = <tierPrice of listPricePI> * (1 - <discountVal>/100.0)
+		}
+	
+	C. Incremental Fee Calculation (productDepdendentPIs table):
+	
+		incrementalFee = <tierPrice of Core Service Usage Fee> / <numTransactions of Core Service Usage Fee>
+	
+	D. Qty/Trxn Based (productDependentPIs table):
+	
+		numQty = 1;
+		if (qtyBasedPI <> "") {
+			numQty = <qty of qtyBased PI>
+		}
+		productBasedPrice = <numTransactions of transactionBasedPI> * <numQty> * <tierPrice of listPricePI>
+	
+	
+*/
+
+if (debug) {
+	print(DEBUG_PREFIX + "  /============================================\\");
+	print(DEBUG_PREFIX + " /                                              \\");
+	print(DEBUG_PREFIX + "/                                                \\");
+	print(DEBUG_PREFIX + "Calculate product based price for this line item");
+	print(DEBUG_PREFIX + "Loop over all conditions in the piBasedProductPricingDict dict");
+}
+
+if (isPreProductionItem) {
+	if (debug) {
+		print(DEBUG_PREFIX + "----------------------------");
+		print(DEBUG_PREFIX + "Pre-production line item found");
+	}
+	/* ---------------------------------------------------------------- */
+	/*	A. Pre-production Fee Calculation (miscCommerceData table)		*/
+	/* ---------------------------------------------------------------- */
+	
+	//Obtain the PO ID of this line item
+	poIdKey = pi + piDelimiter + PO_ID;
+	poId = "";
+	if (containskey(stringsDict, poIdKey)) {
+		poId = get(stringsDict, poIdKey);
+	} else {
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(5): could not find PO ID for docNum " + currentDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	
+	//Obtain the associated Base Fee docNum
+	baseFeeDocNum = "";
+	if (containskey(poIdToBaseFeeLineItemDocNumDict, poId)) {
+		baseFeeDocNum = get(poIdToBaseFeeLineItemDocNumDict, poId);
+	} else {
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(5): could not find PO ID for docNum " + currentDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	
+	//Obtain the associated Base Fee tierPrice
+	baseFeeTierPriceKey = baseFeeDocNum + piDelimiter + TIER_PRICE;
+	baseFeeTierPrice = 0.0;
+	if (containskey(floatsDict, baseFeeTierPriceKey)) {
+		baseFeeTierPrice = get(floatsDict, baseFeeTierPriceKey);
+	} else {
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(5): could not find baseFeeTierPrice for baseFeeDocNum " + baseFeeDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	
+	//Obtain the preProdPercent from the miscCommerceData table
+	miscCommerceDataRecords = bmql("select miscDataVal from miscCommerceData where miscDataKey = $PRE_PROD_PERCENT");
+	preProdPercentString = "";
+	for record in miscCommerceDataRecords {
+		preProdPercentString = get(record, "miscDataVal");
+	}
+	if (preProdPercentString == "") {
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(5): preProdPercentString is empty or missing for docNum " + currentDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	preProdPercent = 0.0;
+	if (isNumber(preProdPercentString)) {
+		preProdPercent = atof(preProdPercentString);
+	} else {
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(5): preProdPercentString is NOT a number! for docNum " + currentDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	
+	//Calculate the productBasedPrice
+	productBasedPrice = baseFeeTierPrice * (preProdPercent/HUNDRED_PERCENT);
+	productBasedPriceFound = true;
+	
+	if (debug) {
+		print(DEBUG_PREFIX + "A. Pre-production Fee Calculation");
+		print(DEBUG_PREFIX + "PO ID: " + poId);
+		print(DEBUG_PREFIX + "Base Fee DocNum: " + baseFeeDocNum);
+		print(DEBUG_PREFIX + "baseFeeTierPrice: " + string(baseFeeTierPrice));
+		print(DEBUG_PREFIX + "productBasedPriceFound: " + string(productBasedPriceFound));
+		print(DEBUG_PREFIX + "productBasedPrice: " + string(productBasedPrice));
+	}
+	
+} else {
+	if (debug) {
+		print(DEBUG_PREFIX + "----------------------------");
+		print(DEBUG_PREFIX + "Non-Pre-production line item found");
+	}
+	/* --------------------------------------------------------------- */
+	/*
+		B. PI Based Pricing
+		
+		In this section, we calculate the Product Based Price of 
+		non-Pre-Prod Fee type PI/line items. The Product Based Price is
+		dependent on the Product Based Pricing condition found in the data
+		table, if any. It is possible to NOT have a Product Based Price, in
+		which case the subsequent section assigns a default (which is the
+		same as the tierPrice).
+	*/
+	/* --------------------------------------------------------------- */
+	
+	/*	
+		If the number of conditions we have to evaluate is larger
+		than 1000, the maximum array size, we need to loop more than
+		once. 
+	*/
+	
+	piRowCount = piBasedRowCount;
+	print(piRowCount/MAX_ARRAY_SIZE_FLOAT);
+	numLoops = integer(ceil(piRowCount / MAX_ARRAY_SIZE_FLOAT));
+	numLoopsArray = range(numLoops);
+	
+	index = 0;
+	
+	if (debug) {
+		print(DEBUG_PREFIX + "piBasedRowCount:" + string(piBasedRowCount));
+		print(DEBUG_PREFIX + "numLoops: " + string(numLoops));
+		print(DEBUG_PREFIX + "numLoopsArray:");
+		print(numLoopsArray);
+	}
+	
+	for loop in numLoopsArray {
+		if (piRowCount > MAX_ARRAY_SIZE) {
+			piRowCount = piRowCount - MAX_ARRAY_SIZE;
+			currentPiBasedRowCount = MAX_ARRAY_SIZE;
+		} else {
+			currentPiBasedRowCount = piRowCount;
+		}
+		
+		numConditionsArray = range(currentPiBasedRowCount);
+		if (debug) {
+			print(DEBUG_PREFIX + "> > currentPiBasedRowCount: " + string(currentPiBasedRowCount));
+			print(DEBUG_PREFIX + "> > numConditionsArray");
+			print(numConditionsArray);
+		}
+		
+		/* ----------------------------------------------------------------	*/
+		/* Loop over each data table row from the productBasedDisc table.	*/
+		/* ----------------------------------------------------------------	*/
+		for condition in numConditionsArray {
+			if (debug) {
+				print("\n" + DEBUG_PREFIX + "------ Loop " + string(index) + " --------------------");
+			}
+			
+			piBasedProductPricingCondition = get(piBasedProductPricingDict, index);
+			print(DEBUG_PREFIX + DEBUG_PREFIX + "piBasedProductPricingCondition:");
+			print(piBasedProductPricingCondition);
+			
+			discPi = piBasedProductPricingCondition[DISC_PI];
+			if (debug) {
+				print(DEBUG_PREFIX + "> > > > piBasedProductPricingCondition: ");
+				print(DEBUG_PREFIX + "> > > > condPI1: " + piBasedProductPricingCondition[COND_PI1]);
+				print(DEBUG_PREFIX + "> > > > condPI2: " + piBasedProductPricingCondition[COND_PI2]);
+				print(DEBUG_PREFIX + "> > > > discountPI: " + piBasedProductPricingCondition[DISC_PI]);
+				print(DEBUG_PREFIX + "> > > > discountVal: " + piBasedProductPricingCondition[DISC_VAL]);
+				print(DEBUG_PREFIX + "> > > > discountType: " + piBasedProductPricingCondition[DISC_TYPE]);
+				print(DEBUG_PREFIX + "> > > > listPricePI: " + piBasedProductPricingCondition[LISTPRICE_PI]);
+				print(DEBUG_PREFIX + "> > > > ");
+				print(DEBUG_PREFIX + "> > > > Current line item's PI: " + pi);
+			}
+				
+			//If the PI of the current line item is the PI that is to be discounted, continue
+			if (discPi == pi) {
+				if (debug) {
+					print(DEBUG_PREFIX + "> > > > CHECK PASSED: Current line item PI matches discountPI");
+				}
+				cond1 = piBasedProductPricingCondition[COND_PI1];
+				cond2 = piBasedProductPricingCondition[COND_PI2];
+				
+				//If the current Model's child line items contain both PIs that are conditional for the product based discount
+				if (containskey(lineItemTierPriceDict, cond1) and containskey(lineItemTierPriceDict, cond2)) {
+					if (debug) {
+						print(DEBUG_PREFIX + "> > > > CHECK PASSED: condPI1 and condPI2 are sibling line items");
+					}
+					discountType = piBasedProductPricingCondition[DISC_TYPE];
+					
+					//Then proceed to calculate the discount/productBasedPrice accordingly, based on the discountType in the data table
+					if (isnumber(piBasedProductPricingCondition[DISC_VAL])) {
+						discountVal = atof(piBasedProductPricingCondition[DISC_VAL]);
+						productBasedPrice = 0.0;
+						
+						if (debug) {
+							print(DEBUG_PREFIX + "> > > > discountType: " + discountType);
+						}
+						if (discountType == FIXED_PRICE) {
+							productBasedPrice = discountVal;
+							productBasedPriceFound = true;
+						} else {
+							listPricePi = piBasedProductPricingCondition[LISTPRICE_PI];
+							if (listPricePi <> "" and containskey(lineItemTierPriceDict, listPricePi)) {
+								listPricePiTierPrice = get(lineItemTierPriceDict, listPricePi);
+								productBasedPrice = listPricePiTierPrice * (1 - discountVal / HUNDRED_PERCENT);
+								productBasedPriceFound = true;
+							} else {
+								error = true;
+								errorMsg = errorMsg + "calculateProductBasedPricing(5): listPricePI is empty or not present as a sibling for docNum " + currentDocNum + "\n";
+								if (debug) {
+									print(DEBUG_PREFIX + "> > > > listPricePI is empty or not present as a sibling for docNum " + currentDocNum);
+									print(DEBUG_PREFIX + "> > > > listPricePI: " + listPricePi);
+								}
+							}
+						}
+						if (productBasedPriceFound) {
+							//If a productBasedPrice is successfully found, break
+							break;
+						}
+						if (debug) {
+							print(DEBUG_PREFIX + "> > > > productBasedPriceFound: " + string(productBasedPriceFound));
+							print(DEBUG_PREFIX + "> > > > productBasedPrice: " + string(productBasedPrice));
+						}
+					} else {
+						error = true;
+						errorMsg = errorMsg + "calculateProductBasedPricing(5): discountVal not a valid number for docNum " + currentDocNum + "\n";
+						if (debug) {
+							print(DEBUG_PREFIX + "> > > > discountVal not a valid number for docNum " + currentDocNum);
+						}
+					}
+				}
+			}
+			index = index + 1;
+		}
+	}
+	/* --------------------------------------------------------------- */
+	/* 
+		C. Incremental Fee Calculation and 
+		D. Qty/Trxn Based pricing
+	*/
+	/* --------------------------------------------------------------- */
+	qtyRowCount = qtyBasedRowCount;
+	numLoops = integer(ceil(qtyRowCount / MAX_ARRAY_SIZE_FLOAT));
+	numLoopsArray = range(numLoops);
+	
+	index = 0;
+	
+	for loop in numLoopsArray {
+		if (qtyRowCount > MAX_ARRAY_SIZE) {
+			qtyRowCount = qtyRowCount - MAX_ARRAY_SIZE;
+			currentQtyBasedRowCount = MAX_ARRAY_SIZE;
+		} else {
+			currentQtyBasedRowCount = qtyRowCount;
+		}
+		
+		numConditionsArray = range(currentQtyBasedRowCount);
+		
+		/* ----------------------------------------------------------------	*/
+		/* Loop over each data table row from the productBasedDisc table.	*/
+		/* ----------------------------------------------------------------	*/
+		for condition in numConditionsArray {
+			qtyBasedProductPricingCondition = get(qtyBasedProductPricingDict, index);
+			
+			discountPi = qtyBasedProductPricingCondition[Q_PI];
+			transactionBasedPi = qtyBasedProductPricingCondition[Q_TRANS_BASED_PI];
+			listPricePi = qtyBasedProductPricingCondition[Q_LISTPRICE_PI];
+			//Check that the condition's discountPI is the current PI
+			if (discountPi == pi) {
+				qtyBasedPi = qtyBasedProductPricingCondition[Q_QTY_BASED_PI];
+				listPricePi = qtyBasedProductPricingCondition[Q_LISTPRICE_PI];
+				pricingType = qtyBasedProductPricingCondition[Q_PRICING_TYPE];
+				
+				//Check that transactionBasedPi and listPricePi are on the Model, and qtyBasedPi is on the model if qtyBasedPi is NOT blank
+				if (containskey(lineItemTierPriceDict, discountPi) and ((qtyBasedPi <> "" and containskey(lineItemTierPriceDict, qtyBasedPi)) or qtyBasedPi == "") and (containskey(lineItemTierPriceDict, transactionBasedPi))) {
+					numTransactions = get(lineItemTransactionsDict, transactionBasedPi);
+					unmodifiedPrice = get(lineItemTierPriceDict, listPricePi);
+					listTransactions = get( lineItemTransactionsDict, listPricePi );
+					listPrice = unmodifiedPrice * listTransactions;
+					if (pricingType == INCREMENTAL) {
+						if ( numTransactions <> 0 ){
+							productBasedPrice = listPrice / numTransactions;
+							productBasedPriceFound = true;
+						}
+						break;
+					} else {
+						numQty = 0;
+						if (qtyBasedPi <> "") {
+							numQty = get(lineItemQtyDict, qtyBasedPi);
+						} else {
+							numQty = 1;
+						}
+						numTransactions = get(lineItemTransactionsDict, transactionBasedPi);
+						implMethod = "";
+						implKey = currentDocNum + piDelimiter + "implementationMethod_line";
+						pricelistKey = "1" + piDelimiter + "priceList";
+						priceList = get( stringsDict, pricelistkey );
+						currencyCodeKey = "1" + piDelimiter + "currencyCode";
+						currencyCode = get( stringsDict, currencyCodeKey );
+						if ( containskey( stringsDict, implKey ) ){
+							implMethod = get( stringsDict, implKey );
+						}
+					//	productBasedPrice = numTransactions * numQty * listPrice;
+						tierPricingRecords = bmql("select pi, minTierQty, maxTierQty, price, implementationMethod from stdTierPricing where priceList = $priceList and currencyCode = $currencyCode and pi = $discountPi and implementationMethod = $implMethod");
+						//numericalTransactions = atoi( numTransactions );
+						for record in tierPricingRecords{
+							min = get( record, "minTierQty" );
+							max = get( record, "maxTierQty" );
+							minimumVal = atoi( min );
+							maximumVal = atoi(max );
+							if ( numTransactions <= maximumVal AND numTransactions >= minimumVal ){
+								productBasedPrice = atof(get( record, "price" ));
+								break;
+							}
+							
+						}
+							
+						
+						//productBasedPrice = numQty * listPrice;
+						productBasedPriceFound = true;
+						break;
+					}
+				}
+			}
+			index = index + 1;
+		}
+	}
+}
+if (debug) {
+	print(DEBUG_PREFIX + "\\                                                /");
+	print(DEBUG_PREFIX + " \\                                              /");
+	print(DEBUG_PREFIX + "  \\============================================/");
+}
+
+/* ======================================================================== */
+/* 	Populate a default value for the productBasedPrice, if none was found	*/
+/* ======================================================================== */
+if (debug) {
+	print("\n" + DEBUG_PREFIX + "====================================");
+	print(DEBUG_PREFIX + "productBasedPrice (BEFORE default calculation): " + string(productBasedPrice));
+}
+productBasedPriceKey = currentDocNum + piDelimiter + PRODUCT_BASED_PRICE;
+if (productBasedPriceFound == false) {
+	standardTierPriceKey = currentDocNum + piDelimiter + TIER_PRICE;
+	tierPrice = 0.0;
+	if (containskey(floatsDict, standardTierPriceKey)) {
+		tierPrice = get(floatsDict, standardTierPriceKey);
+	} else {
+		error = true;
+		errorMsg = errorMsg + "calculateProductBasedPricing(6): default productBasedPrice calculation - could not find tierPrice for docNum " + currentDocNum + "\n";
+		put(result, "error", errorMsg);
+		return result;
+	}
+	//If no productBasedPrice was found for this line item, give it the same value as the tierPrice
+	productBasedPrice = tierPrice;
+}
+
+if (debug) {
+	print(DEBUG_PREFIX + "productBasedPrice (AFTER default calculation section): " + string(productBasedPrice));
+}
+
+/* ======================================================================== */
+/* 								Return variables				 			*/
+/* ======================================================================== */
+put(floatsDict, productBasedPriceKey, productBasedPrice);
+
+put(result, "productBasedPricingUsed", string(productBasedPriceFound));
+if (error) {
+	put(result, "error", errorMsg);
+}
+
+if (debug) {
+	print("\n" + DEBUG_PREFIX + "====================================");
+	print(DEBUG_PREFIX + "floatsDict ");
+	print(floatsDict);
+	print("\n" + DEBUG_PREFIX + "====================================");
+	print(DEBUG_PREFIX + "result");
+	print(result);
+}
+
+return result;

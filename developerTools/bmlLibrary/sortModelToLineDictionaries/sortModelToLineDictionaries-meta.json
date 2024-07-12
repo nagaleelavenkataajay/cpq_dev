@@ -1,0 +1,21 @@
+{
+  "name" : "Sort Model to Line Dictionaries",
+  "variableName" : "sortModelToLineDictionaries",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "modelToLineDocNumsDictCustom",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "modelToLinePartNumsDictCustom",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "seqNumArray",
+    "type" : "Integer[]"
+  }, {
+    "name" : "seqNumAttributeMappingDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

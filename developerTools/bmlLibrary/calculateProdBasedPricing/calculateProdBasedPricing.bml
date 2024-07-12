@@ -1,0 +1,562 @@
+/*
+      BML Utility Library
+      calculateProdBasedPricing
+      ----------------------------
+      Params:
+            String[]Dict modelToLineDocNumsDict
+            String currentDocNum
+            StringDict stringsDict
+            IntegerDict integersDict
+            FloatDict floatsDict
+            String piDelimiter
+      Returns:
+            StringDict result
+                  productBasedDiscountUsed => true or false
+                  error => error message
+                  
+      Description and Usage:
+            This function is meant to be called once for each line item. For a
+            given line item, it calculates the productBasedPrice_line.
+*/
+//Meta control variables
+debug = false;
+DEBUG_PREFIX = "> > > > ";
+
+/* ======================================================================== */
+/*                                              CONSTANTS                                                   */
+/* ======================================================================== */
+//Constants for piBasedProductPricingDict array indexes
+COND_PI1 = 0;
+COND_PI2 = 1;
+DISC_PI = 2;
+DISC_VAL = 3;
+DISC_TYPE = 4;
+LISTPRICE_PI = 5;
+
+//Constants for qtyBasedProductPricingDict array indexes
+Q_PI = 0;
+Q_TRANS_BASED_PI = 1;
+Q_QTY_BASED_PI = 2;
+Q_LISTPRICE_PI = 3;
+Q_PRICING_TYPE = 4;
+
+//Constants for attribute names
+PART_NUM = "_part_number";
+PARENT_DOC_NUM = "_parent_doc_number";
+TIER_PRICE = "tierPrice_line";
+EXT_TIER_PRICE = "extTierPrice_line";
+PRODUCT_BASED_PRICE = "productBasedPrice_line";
+EXT_PRODUCT_BASED_PRICE = "extProductBasedPrice_line";
+PROD_BASED_PRICE_USD = "extProductBasedPriceUSD_line";
+TRANSACTIONS_LABEL = "numCommittedTransaction_line";
+QTY_LABEL = "_price_quantity";
+IS_GROUPED = "isPartOfPackage_line"; //This form field is checked if the user wishes to DYNAMICALLY GROUP this line item
+
+//Constants for part custom field names
+PI_ITEM_TYPE = "piItemType_line";
+PO_ID = "poId";
+UNIT_OR_FIXED = "unitOrFixed_line";
+QTY = "_price_quantity";
+TRANSACTIONS = "numCommittedTransaction_line";
+UOM_TYPE = "uomType_line";
+PRIMARY_BASE_FEE = "primaryBaseFee";
+RAMP_PLAN_OVERRIDE = "overrideDefaultRampPlan_line";
+
+//Constants for part custom field values
+PRE_PRODUCTION = "Pre-Prod Fee";
+BASE_FEE = "Base Fee";
+UNIT = "UNIT";
+FIXED = "FIXED";
+UOM_QTY = "QTY";
+DELIMITER = "@.@";
+ACTION_DELIMITER = "*@*";
+//Constants for BMQL tables
+FIXED_PRICE = "FIXED_PRICE";
+PRE_PROD_PERCENT = "preProdPercent";
+INCREMENTAL = "INCRE_FEE";
+BASE = "BASE_FEE";
+//Constants
+HUNDRED_PERCENT = 100.0;
+MAX_ARRAY_SIZE = 1000;
+MAX_ARRAY_SIZE_FLOAT = 1000.00;
+TRUE_STR = "true";
+FALSE_STR = "false";
+RAMP_DELIMITER = "-_**_-";
+IS_RAMP_SUBLINE = "false";
+IS_UNITBASED = "unitBasedTransaction";
+TILDE_DELIMITER = "~";
+if ( find( currentDocNum, RAMP_DELIMITER ) <> -1 ){
+      IS_RAMP_SUBLINE = "true";
+}
+NUMBER_RAMP_ENTRIES = "numRampEntries";
+/* ======================================================================== */
+/*                                              VARIABLES                                                   */
+/* ======================================================================== */
+//Result variables
+result = dict("string");
+error = false;
+errorMsg = "";
+productBasedPriceFound = false;
+productBasedPrice = 0.0;
+
+//Instance variables
+isPreProductionItem = false;
+
+
+
+/* ======================================================================== */
+/*                First, get the Model associated with this line item               */
+/* ======================================================================== */
+parentDocNumKey = currentDocNum + piDelimiter + PARENT_DOC_NUM;
+parentDocNum = "";
+
+if (containskey(stringsDict, parentDocNumKey)) {
+      parentDocNum = get(stringsDict, parentDocNumKey);
+} else {
+      //If no associated model is found for this line item, stop the script
+      error = true;
+      errorMsg = errorMsg + "calculateProductBasedPricing(1): could not find _parent_doc_number for docNum " + currentDocNum + "\n";
+      put(result, "error", errorMsg);
+      return result;
+}
+
+
+/* ======================================================================== */
+/*                Second, get the PI of this line item                                          */
+/* ======================================================================== */
+piKey = currentDocNum + piDelimiter + PART_NUM;
+pi = "";
+if (containskey(stringsDict, piKey)) {
+      pi = get(stringsDict, piKey);
+} else {
+      //If no PI is found for the current line item, stop the script
+      error = true;
+      errorMsg = errorMsg + "calculateProductBasedPricing(2): could not find PI (_part_num) for docNum " + currentDocNum + " with piKey " + piKey + "\n";
+      put(result, "error", errorMsg);
+      return result;
+}
+
+
+/* If this is a ramp item, find its index */
+rampIndex = "";
+//CSYS-86115 (KA. 10-16-2017):
+regulardocNum = "";
+
+if ( IS_RAMP_SUBLINE == "true" ){
+      rampIndexArr = split( currentDocNum, RAMP_DELIMITER );
+      rampIndex = rampIndexArr[1];
+
+      //CSYS-86115 (KA. 10-16-2017):
+      regularDocNum = rampIndexArr[0];
+}
+
+howManyRamps = util.getIntegerAttribute( integersDict, regularDocNum, piDelimiter, NUMBER_RAMP_ENTRIES );
+
+/* ======================================================================== */
+/*                Third, find out if it is a Pre-Production PI                            */
+/* ======================================================================== */
+/*piItemTypeKey = pi + piDelimiter + PI_ITEM_TYPE;
+piItemType = "";
+if (containskey(stringsDict, piItemTypeKey)) {
+      piItemType = get(stringsDict, piItemTypeKey);
+} else {
+      error = true;
+      errorMsg = errorMsg + "calculateProductBasedPricing(3): could not find PI Item Type (custom_field8) for docNum " + currentDocNum + "\n";
+      put(result, "error", errorMsg);
+      return result;
+}
+
+if (piItemType == PRE_PRODUCTION) {
+      isPreProductionItem = true;
+}
+
+*/
+/* ======================================================================== */
+/*          Third, get dicts of:
+                  - line item PIs
+                  - line item Tier Prices under this Model
+                  - line item quantities
+                  - line item numTransactions
+
+            If this line item is a Pre-Prod Fee, we also want to find the 
+            Base Fee line item for each PO ID.
+*/
+/* ======================================================================== */
+lineItemDocNums = string[];
+if (containskey(modelToLineDocNumsDict, parentDocNum)) {
+      lineItemDocNums = get(modelToLineDocNumsDict, parentDocNum);
+} else {
+      //If no child line item docNums are found for the current Model, stop the script
+      error = true;
+      errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find child docNums for parent docNum " + parentDocNum + " of docNum " + currentDocNum + "\n";
+      put(result, "error", errorMsg);
+      return result;
+}
+
+lineItemExtTierPriceDict = dict("float");
+lineItemTransactionsDict = dict("integer");
+lineItemQtyDict = dict("integer");
+poIdToBaseFeeLineItemDocNumDict = dict("string");
+
+for lineItemDocNum in lineItemDocNums {
+      
+      if ( find( lineItemDocNum, RAMP_DELIMITER ) <> -1 ){
+            continue;
+      }
+      /* -------------------------------------------------------------------- */
+      //Get the lineItemPi
+      /* -------------------------------------------------------------------- */
+      lineItemPiKey = lineItemDocNum + piDelimiter + PART_NUM;
+      lineItemPi = "";
+      if (containskey(stringsDict, lineItemPiKey)) {
+            lineItemPi = get(stringsDict, lineItemPiKey);
+      } else {
+            //If no child line item PIs are found for the current Model, stop the script
+            error = true;
+            errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find PI (_part_num) for childDocNum " + lineItemDocNum + "\n";
+            put(result, "error", errorMsg);
+            return result;
+      }
+      
+      /* -------------------------------------------------------------------- */
+      //Get the lineItemTierPrice
+      /* -------------------------------------------------------------------- */
+      lineItemExtTierPriceKey = lineItemDocNum + piDelimiter + EXT_TIER_PRICE;
+
+      rampExtTierPriceKey = "";
+      if ( rampIndex <> "" ){
+            rampExtTierPriceKey = lineItemDocNum + RAMP_DELIMITER + rampIndex + piDelimiter + EXT_TIER_PRICE;
+      }
+      
+      lineItemExtTierPrice = 0.0;
+      if (containskey(floatsDict, lineItemExtTierPriceKey)) {
+            lineItemExtTierPrice = get(floatsDict, lineItemExtTierPriceKey);
+      } else {
+            //If no child line item PI tier prices are found for the current Model, stop the script
+            error = true;
+            errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find tierPrice_line for childDocNum " + lineItemDocNum + "\n";
+            put(result, "error", errorMsg);
+            return result;
+      }
+      if ( containskey(floatsDict, rampExtTierPriceKey) ){
+            lineItemExtTierPrice = get(floatsDict, rampExtTierPriceKey );
+      }
+      put(lineItemExtTierPriceDict, lineItemPi, lineItemExtTierPrice);
+      
+      /* -------------------------------------------------------------------- */
+      //Get lineItemTransactions
+      /* -------------------------------------------------------------------- */
+      lineItemTransactionsKey = lineItemDocNum + piDelimiter + TRANSACTIONS_LABEL;
+      rampItemTransactionsKey = "";
+      if ( rampIndex <> "" ){
+            rampItemTransactionsKey = lineItemDocNum + RAMP_DELIMITER + rampIndex + piDelimiter + TRANSACTIONS_LABEL;
+      }
+      lineItemTransactions = 0;
+      if (containskey(integersDict, lineItemTransactionsKey)) {
+            lineItemTransactions = get(integersDict, lineItemTransactionsKey);
+      } else {
+            error = true;
+            errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find numCommittedTransactions_line for childDocNum " + lineItemDocNum + "\n";
+            put(result, "error", errorMsg);
+            return result;
+      }
+      if ( containskey(integersDict, rampItemTransactionsKey )){
+            lineItemTransactions = get(integersDict, rampItemTransactionsKey);
+      }
+      put(lineItemTransactionsDict, lineItemPi, lineItemTransactions);
+      
+      /* -------------------------------------------------------------------- */
+      //Get the lineItemQty
+      /* -------------------------------------------------------------------- */
+      /*lineItemQtyKey = lineItemDocNum + piDelimiter + QTY_LABEL;
+      lineItemQty = 0;
+      if (containskey(integersDict, lineItemQtyKey)) {
+            lineItemQty = get(integersDict, lineItemQtyKey);
+      } else {
+            error = true;
+            errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find _price_quantity for childDocNum " + lineItemDocNum + "\n";
+            put(result, "error", errorMsg);
+            return result;
+      }
+      put(lineItemQtyDict, lineItemPi, lineItemQty);*/
+      
+      /* -------------------------------------------------------------------- */
+      //Get the Base Fee docNum associated with this PO ID
+      /* -------------------------------------------------------------------- */
+      /*if (isPreProductionItem) {
+            //Get the PI Item Type of this line item 
+            piItemTypeKey = lineItemPi + piDelimiter + PI_ITEM_TYPE;
+            piItemType = "";
+            if (containskey(stringsDict, piItemTypeKey)) {
+                  piItemType = get(stringsDict, piItemTypeKey);
+                  
+                  if (piItemType == BASE_FEE) {
+                        //Get the PO ID associated with this line item
+                        poIdKey = lineItemPi + piDelimiter + PO_ID;
+                        poId = "";
+                        if (containskey(stringsDict, poIdKey)) {
+                              poId = get(stringsDict, poIdKey);
+                              if (containskey(poIdToBaseFeeLineItemDocNumDict, poId)) {
+                                    error = true;
+                                    errorMsg = errorMsg + "calculateProductBasedPricing(4): duplicate PO ID detected for multiple Base Fee items! childDocNum " + lineItemDocNum + "\n";
+                                    put(result, "error", errorMsg);
+                                    return result;
+                              }
+                              put(poIdToBaseFeeLineItemDocNumDict, poId, lineItemDocNum);
+                        } else {
+                              error = true;
+                              errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find PO ID for childDocNum " + lineItemDocNum + "\n";
+                              put(result, "error", errorMsg);
+                              return result;
+                        }
+                  }
+            } else {
+                  error = true;
+                  errorMsg = errorMsg + "calculateProductBasedPricing(4): could not find PI Item Type for childDocNum " + lineItemDocNum + "\n";
+                  put(result, "error", errorMsg);
+                  return result;
+            }
+      }*/
+}
+/* -------------------------------------------------------------------- */
+//           Find if the line item is dynamically grouped
+/* -------------------------------------------------------------------- */
+isGroupedKey = currentDocNum + piDelimiter + IS_GROUPED;
+isGrouped = "";
+if (containskey(stringsDict, isGroupedKey)) {
+      isGrouped = get(stringsDict, isGroupedKey);
+}
+
+dependentPIResSet = bmql("SELECT transactionBasedPI, listPricePI, pricingType, requiredGroup, businessUnit, upliftPercent FROM productDependentPIs WHERE pi=$pi");
+businessUnit = "";
+if ( containskey( stringsDict, "1" + DELIMITER + "ownerBU_quote" ) ){
+      businessUnit = get( stringsDict, "1" + DELIMITER + "ownerBU_quote" );
+}
+businessUnitFound = false;
+
+//CSYS-87125:
+stateAndLocalPackageId = "26";
+itemType = "";
+if(containsKey(stringsDict, pi + piDelimiter + PI_ITEM_TYPE)){
+      itemType = get(stringsDict, pi + piDelimiter + PI_ITEM_TYPE);
+}
+PACKAGE_ID = "package_line";
+packageId = "";
+if(containsKey(stringsDict, TILDE_DELIMITER + pi + TILDE_DELIMITER + piDelimiter + PACKAGE_ID)){
+      packageId = get(stringsDict, TILDE_DELIMITER + pi + TILDE_DELIMITER + piDelimiter + PACKAGE_ID);
+}
+
+piKey = currentDocNum + piDelimiter + PART_NUM;
+for dependentPIRes in dependentPIResSet {
+      listPrice = 0.0;
+      trxn = 0;
+      tmp = 0;
+      
+      //Bundle Incremental fix part 2 for CSYS-39318
+      trxnPI = "";
+      if (get(stringsDict, get(dependentPIRes, "transactionBasedPI") + ACTION_DELIMITER) <> "TERMINATE"){
+            trxnPI = get(dependentPIRes, "transactionBasedPI");
+      }
+      //End Bundle Incremental fix part 2
+      listPricePI = get(dependentPIRes, "listPricePI");
+      pricingType = get(dependentPIRes, "pricingType");
+      requiredGroup = get(dependentPIRes, "requiredGroup");
+      
+      /* SMB Uplift Variables */
+      tableBusinessUnit = get(dependentPIRes, "businessUnit" );
+      upliftPercent = get(dependentPIRes, "upliftPercent" );
+      upliftValue = 0.0;
+      if ( isnumber( upliftPercent ) ){
+            upliftValue = atof( upliftPercent );
+      }
+      upliftMultiplier = 1.0 + upliftValue/HUNDRED_PERCENT;
+      
+      if(((requiredGroup == "TRUE" AND isGrouped == TRUE_STR) OR requiredGroup == "FALSE") AND (businessUnit == tableBusinessUnit OR ( tableBusinessUnit == "" AND businessUnitFound == false))) {
+
+            if(containskey(lineItemExtTierPriceDict, listPricePI)) {
+                  listPrice = get(lineItemExtTierPriceDict, listPricePI);
+
+                  //CSYS-87125 (KA. 11-29-2017): Ensure Incremental list prices are zero for the State and Local Government package.
+                  /*
+                        Notes: conditionally zeroing out the list price in getStandardTierPricing is not enough for incrementals.
+                        We need to conditionally zero the price out here as well, or else it will take the Base list price 
+                        multiplied by the upliftMultiplier.
+                  */
+                  if(itemType == "Incremental" AND packageId == stateAndLocalPackageId){
+                        listPrice = 0.0;
+                  }
+
+            }
+            else{
+                  continue;
+            }
+            if(containskey(lineItemTransactionsDict, trxnPI)) {
+                  trxn = get(lineItemTransactionsDict, trxnPI);
+            }
+            else{
+                  continue;
+            }
+            if(pricingType == "BASE_FEE") {
+                  productBasedPrice = listPrice * trxn * upliftMultiplier;
+      
+            } else {
+                  if(trxn > 0) {
+						//IESCNQRCPQ-864(OK. 7/7/2023) Commented out below line and added round() to avoid the price difference for Incremental list price
+                        //productBasedPrice = (listPrice / trxn) * upliftMultiplier;
+						productBasedPrice = round(((listPrice / trxn) * upliftMultiplier), 2);
+                  
+                  }
+            }
+      //    if(containskey(lineItemExtTierPriceDict, listPricePI) AND containskey(lineItemTransactionsDict, trxnPI)) {
+                  productBasedPriceFound = true;
+                  if ( businessUnit == tableBusinessUnit ){
+                        businessUnitFound = true;
+                  }
+            //}
+      }
+}
+
+/* ======================================================================== */
+/*  Calculate Product Based Price   */
+/* ======================================================================== */
+
+/* ======================================================================== */
+/*    Populate a default value for the productBasedPrice, if none was found   */
+/* ======================================================================== */
+
+productBasedPriceKey = currentDocNum + piDelimiter + PRODUCT_BASED_PRICE;
+
+extProductBasedPriceKey = currentDocNum + piDelimiter + EXT_PRODUCT_BASED_PRICE;
+extProductBasedPriceUSDKey = currentDocNum + piDelimiter + PROD_BASED_PRICE_USD;
+userExtProductBasedPriceKey = currentDocNum + piDelimiter + "userExtProductBasedPrice";
+userExtProductBasedPriceUSDKey = currentDocNum + piDelimiter + "userExtProductBasedPriceUSD";
+
+//CSYS-86115 (KA. 10-16-2017):
+userEnteredBaseFeeKey = currentDocNum + piDelimiter + "userBaseFeeNet";
+userEnteredIncFeeKey = currentDocNum + piDelimiter + "userIncFeeNet";
+userIncFeeNetKey = currentDocNum + piDelimiter + "incrementalFeeNet";
+userIncFeeNetUSDKey = currentDocNum + piDelimiter + "incrementalFeeNetUSD";
+
+if (productBasedPriceFound == false) {
+      standardTierPriceKey = currentDocNum + piDelimiter + TIER_PRICE;
+     
+      tierPrice = 0.0;
+      if (containskey(floatsDict, standardTierPriceKey)) {
+            tierPrice = get(floatsDict, standardTierPriceKey);
+      } else {
+            error = true;
+            errorMsg = errorMsg + "calculateProductBasedPricing(6): default productBasedPrice calculation - could not find tierPrice for docNum " + currentDocNum + "\n";
+            put(result, "error", errorMsg);
+            return result;
+      }
+      //If no productBasedPrice was found for this line item, give it the same value as the tierPrice
+      productBasedPrice = tierPrice;
+      
+}
+
+
+
+
+
+// Calculate Extended Product Based Prices
+/* ======================================================================== */
+/*                Find out if it is a Unit/Fixed PI                                 */
+/* ======================================================================== */
+unitOrFixedKey = pi + piDelimiter + UNIT_OR_FIXED;
+unitOrFixed = "";
+if (containskey(stringsDict, unitOrFixedKey)) {
+      unitOrFixed = get(stringsDict, unitOrFixedKey);
+}
+/* ------------------------------------------------------------------------ */
+/*          Obtain the UOM type of the current part                                 */
+/* ------------------------------------------------------------------------ */
+uomTypeKey = pi + piDelimiter + UOM_TYPE;
+uomType = "";
+
+if (containskey(stringsDict, uomTypeKey)) {
+      uomType = get(stringsDict, uomTypeKey);
+} 
+/* ------------------------------------------------------------------------ */
+/*          Obtain the correct multiplier (either Qty or Transactions) 
+            depending on the UOM type                                                                 */
+/* ------------------------------------------------------------------------ */
+multiplier = 0;
+key = currentDocNum + piDelimiter + TRANSACTIONS;
+if (uomType == UOM_QTY) {
+      key = currentDocNum + piDelimiter + QTY;
+}
+if (containskey(integersDict, key)) {
+      multiplier = get(integersDict, key);
+}
+if(unitOrFixed == FIXED) {
+      multiplier = 1;
+}
+/* ======================================================================== */
+/*                                              Return variables                                      */
+/* ======================================================================== */
+
+put(floatsDict, productBasedPriceKey, productBasedPrice);
+put(floatsDict, extProductBasedPriceKey, productBasedPrice * multiplier);
+put(floatsDict, extProductBasedPriceUSDKey, productBasedPrice * multiplier);
+
+//CSYS-86115 (ensure user entered Base Fee Net/Inc Fee Net values can be committed by the GetRampXMLStringArrayDict util. KA. 10-16-2017):
+overrideRampPrice = "";
+primaryBaseDocNum = "";
+coreRampOverride = "";
+regularRampOverride = "";
+isUnitBased = util.getStringAttribute(stringsDict, regularDocNum, DELIMITER, IS_UNITBASED);
+if(containskey( stringsDict, parentdocNum+DELIMITER+ PRIMARY_BASE_FEE )){
+      primaryBaseDocNum = get( stringsDict, parentdocNum+DELIMITER+ PRIMARY_BASE_FEE );
+}
+if(containskey(stringsDict, primaryBaseDocNum+DELIMITER+ RAMP_PLAN_OVERRIDE)) {
+      coreRampOverride = get(stringsDict, primaryBaseDocNum+DELIMITER+ RAMP_PLAN_OVERRIDE);
+}
+if(containskey(stringsDict, regularDocNum+DELIMITER+ RAMP_PLAN_OVERRIDE)) {
+      regularRampOverride = get(stringsDict, regularDocNum+DELIMITER+ RAMP_PLAN_OVERRIDE);
+}
+if(containskey(stringsDict, regularDocNum + DELIMITER + "overrideRampPrice")){
+      overrideRampPrice = get(stringsDict, regularDocNum + DELIMITER + "overrideRampPrice");
+}
+
+//CSYS-95500 (LN. 4-24-2019) Commenting out the 'isUnitBased' check here - we are now allowing Unit Based Products to undergo the Override Price functionality
+if(overrideRampPrice == TRUE_STR AND 
+(coreRampOverride == TRUE_STR OR (regularRampOverride == TRUE_STR /*AND isUnitBased <> TRUE_STR*/ AND isGrouped <> TRUE_STR)) AND 
+howManyRamps <> 0 AND rampIndex <> ""){
+    //make sure we're not dealing with the last ramp:
+    if(isnumber(rampIndex) AND atoi(rampIndex) < howManyRamps - 1){
+          if(containskey(floatsDict, userEnteredBaseFeeKey)){
+                userExtProductBasedPrice = get(floatsDict, userEnteredBaseFeeKey);
+          
+                //if user elected to overwrite the baseFeeNet, populate the dict key for getRampXMLStringArrayDict::
+                //put(floatsDict, extProductBasedPriceKey, userExtProductBasedPrice);
+                //put(floatsDict, extProductBasedPriceUSDKey, userExtProductBasedPrice);
+                put(floatsDict, userExtProductBasedPriceKey, userExtProductBasedPrice);
+                put(floatsDict, userExtProductBasedPriceUSDKey, userExtProductBasedPrice);    
+
+                if(find(currentDocNum, RAMP_DELIMITER) <> -1){
+                      put(stringsDict, currentDocNum + DELIMITER + "userEnteredRampPricing", TRUE_STR);
+                }
+    
+          }
+    
+          if(containskey(floatsDict, userEnteredIncFeeKey)){
+                userIncFeeNet = get(floatsDict, userEnteredIncFeeKey);
+    
+                //if user elected to overwrite the increFeeNet, populate the dict key for getRampXMLStringArrayDict:
+                put(floatsDict, userIncFeeNetKey, userIncFeeNet);
+                put(floatsDict, userIncFeeNetUSDKey, userIncFeeNet);
+                if(find(currentDocNum, RAMP_DELIMITER) <> -1){
+                     put(stringsDict, currentDocNum + DELIMITER + "userEnteredRampPricing", TRUE_STR);
+                }
+          }
+    }
+}
+
+put(result, "productBasedPricingUsed", string(productBasedPriceFound));
+if (error) {
+      put(result, "error", errorMsg);
+}
+
+
+
+return result;

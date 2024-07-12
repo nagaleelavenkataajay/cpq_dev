@@ -1,0 +1,120 @@
+/*
+  convertToNonScientificNotation
+  param:
+    inputValue  - String
+    dataType    - String : Integer, float
+    numDecimal  - Integer
+  return:
+    result      - String 
+*/
+result = inputValue  ;
+if ( dataType == "float" ) {
+  temp = atof(inputValue);
+  temp = round(temp, numDecimal);
+  result = string(temp);
+}
+
+value = lower(result);
+valueFloat = "";
+
+pos = find(value, "e");
+powerOf = 0;
+resultArray = string[];
+
+if ( pos <> -1 ) {
+  txt = substring(value, pos+1);
+  if ( isnumber(txt) ) {
+    powerOf = integer(atof(txt));
+  }
+  valueFloat = substring(value, 0, pos);
+  valueLen = len(valueFloat);
+  
+  // move the decimal point
+  decimalPos = find(valueFloat, ".");
+  if ( powerOf > 0 ) {
+    list = range(powerOf+2);
+    for item in list {
+      if ( item < len( valueFloat ) ) {
+        txt =  substring(valueFloat, item, item+1);
+        if ( txt <> "." ) {
+          append(resultArray, txt);
+        } 
+      }
+      else {
+        append(resultArray, "0");
+      } 
+    }
+    // Add the rest decimal to the array 
+    decimal = "";
+    if ( valueLen > powerOf+2 ) {
+      //append(resultArray, ".");
+      decimal = substring(valueFloat, powerOf+2);
+    } 
+    else {
+      decimal = "00";  
+    } 
+    if ( decimal <> "" ) {
+      append(resultArray, ".");
+      append(resultArray, decimal);
+    }
+  }
+  elif ( powerOf < 0 ) {
+    list = range(integer(fabs(powerOf*1.0))-1);
+    resultArray = string[]{"0", "."};
+    decimalPos = find(valueFloat, ".");
+    for item in list {
+      append( resultArray, "0");
+    } 
+    list = range(len(valueFloat));  // ignore the decimal place 
+    for item in list {
+      txt = substring(valueFloat, item, item+1);
+      if ( txt <> "." ) {
+        append(resultArray, txt);
+      } 
+    }
+  } 
+}
+else {
+  list = range(len(value));
+  for item in list {
+    txt =  substring(value, item, item+1);
+    append(resultArray, txt);
+  }
+} 
+
+newArray = String[];
+index = sizeofarray(resultArray) - 1;
+thousandCount = 0;
+decimalFound = false;
+if ( findinarray(resultArray, ".") == -1 ) {
+  decimalFound = true;  
+} 
+for item in resultArray {
+  val = resultArray[index];
+  append(newArray, val);
+  if ( decimalFound ) {
+    thousandCount = thousandCount + 1;
+    if ( thousandCount == 3 ) {
+      if ( index <> 0 ) {
+        append(newArray, ",");
+      }
+      thousandCount = 0;
+    } 
+  }
+  if ( val == "." ) {
+    decimalFound = true;
+  }
+  index = index - 1;
+}
+newArray = reverse(newArray);
+result = join(newArray, "");
+
+if ( dataType == "integer" ) {
+  pos = find(result, ".");
+  if ( pos <> -1 ) {
+    result = substring(result, 0, pos);
+  }
+} 
+result = replace(result, ",", "");
+
+return result;

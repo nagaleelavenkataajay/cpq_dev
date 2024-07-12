@@ -1,0 +1,21 @@
+{
+  "name" : "getStringAttribute",
+  "variableName" : "getStringAttribute",
+  "description" : "Obtains the value of a String attribute.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "delimiter",
+    "type" : "String"
+  }, {
+    "name" : "commerceField",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

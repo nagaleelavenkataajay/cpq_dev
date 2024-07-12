@@ -1,0 +1,12 @@
+{
+  "name" : "Set Date to Last Day of Month",
+  "variableName" : "setDateToLastDayOfMonth",
+  "description" : "Set the string date passed in, to the last day of the month. Used for CSYS-37214.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "inputDate",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

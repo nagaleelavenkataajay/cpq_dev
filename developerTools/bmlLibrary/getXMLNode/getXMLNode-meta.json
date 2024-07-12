@@ -1,0 +1,15 @@
+{
+  "name" : "getXMLNode",
+  "variableName" : "getXMLNode",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "xmlString",
+    "type" : "String"
+  }, {
+    "name" : "xmlNodeName",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,27 @@
+{
+  "name" : "Set XML Attribute",
+  "variableName" : "setXMLAttribute",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "elementArr",
+    "type" : "String[]"
+  }, {
+    "name" : "attributeArr",
+    "type" : "String[]"
+  }, {
+    "name" : "DELIMITER",
+    "type" : "String"
+  }, {
+    "name" : "attributeValueDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "numberOfIndices",
+    "type" : "Integer"
+  }, {
+    "name" : "originalXMLString",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

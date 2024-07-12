@@ -1,0 +1,484 @@
+/* SYSTEMATIZED CONTRACTS PHASE 5 UTIL LIBRARY
+	*****ALLOW CONTRACTS TO BE SYSTEMATIZED IF THERE ARE TERMINATED LINE ITEMS*****
+	This library:
+		1. Feeds the appropriate attribute mapping to the document engine to generate the correct SOF verbage
+		2. Builds out Termination Notes to be sent back to the opportunity
+		
+*/
+
+DOCNUM_DELIM = "$*$";
+QUOTE_DOCNUM = "1";
+TRUE_STR = "true";
+FALSE_STR = "false";
+BASE_FEE = "Base";
+CORE_SERVICE = "Core Service";
+EXTENDED_SERVICE = "Extended Service";
+NONE_ACTION = "NONE";
+MODIFY_ACTION = "MODIFY";
+CREATE_ACTION = "CREATE";
+TERMINATE_ACTION = "TERMINATE";
+BLANK = "";
+TERMINATED_CORE_MAPPING = "terminatedCoreMapping_line";
+terminationNotes = "";
+
+coreTerminatesDict = dict("string"); //for CSYS-40346 part 1
+terminateCoreDescDict = dict("string"); //for CSYS-40346 part 1
+coreCreatesDict = dict("string"); //for CSYS-40346 part 1
+coreNonePlusModifyDict = dict("string"); //for CSYS-46907 part 1
+
+familyNoneModifyDict = dict("string");
+familyCreateDict = dict("string");
+familyTerminateDict = dict("string");
+
+hasTripLinkCore = false;
+hasRiskMessagingCore = false;
+
+//CSYS-72296 (KA. 2-8-2016): Initialize list of all Expense core PO's:
+expensePoList = string[]{"1045", "1111860", "1423564", "784051", "36924", "36569", "36791", "405", "421", "437", "4972", "784047", "784055", "784059", "4809790", "4810410"};
+
+//CSYS-72296 (KA. 2-8-2016): Initialize list of all Travel & Expense core PO's:
+tePoList = string[]{"1423583", "784067", "36817", "36350", "36801", "4906", "784063", "784071", "784075", "893", "914", "944", "4810469", "4810443"};
+
+//CSYS-72296 (KA. 2-8-2016): Initialize list of all TripLink core PO's:
+tlCoreList = string[]{"1423583", "784067", "784063", "784071", "784075", "1423564", "784051", "784047", "784055", "784059", "1423564", "4809790", "4810469"};
+
+//CSYS-81051 : Managed Reporting Extended Service PO's:
+managedReportingList = string[]{"596", "866", "873", "459964"};
+consultativeIntelligenceList = string[]{"203744", "329165", "346220"};
+reportingServicesList = string[]{"3159556"};
+tripLinkOrTripitMisc = string[]{"462659", "811", "818", "973", "36957", "37039", "1079", "1086", "1093"};
+//CSYS-91596
+usdList = string[]{"832", "36687", "440590", "2467532", "4110778", "5341771", "5341784"};
+
+noManagedReportingNotes = false;
+hasTripLinkExtendedService = false;
+hasConsultativeIntell = false;
+hasNonConsultativeIntell = false;
+hasHipmunkExtendedService = false;
+hasDetectExtendedService = false;
+
+expenseCreated = false;
+teTerminated = false;
+teToExpense = false;
+
+//IESCNQRCPQ-802 (OK. 7-14-2023) Start
+hasPSETerminate = "";
+hasPSECreate = "";
+needTerminationNotes = "";
+PSE_PoIdArray = string[]{"36309", "9106104", "9106114"};
+extServPoIdArray = string[]{"3649565", "3534654", "3159532", "4722310", "7218533", "7218555", "7218583", "7218602", "8023153", "9106091", "9430218", "9469017", "7220546", "203481", "399797"};
+//IESCNQRCPQ-802 - End
+
+//CSYS-102163 (SV. 23/03/2021) Start
+productNameDict = dict("string");
+productNoneModifyDict = dict("string");
+productCreateDict = dict("string");
+productTerminateDict = dict("string");
+recSet = bmql("SELECT part_number,productName from sysTerminations where productName IS NOT NULL");
+for rec in recSet{
+	pi = get(rec, "part_number");
+	prodName = get(rec, "productName");
+	put(productNameDict, pi, prodName);
+}
+//CSYS-102163 End
+
+for line in line_process {
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	poCategory = line._part_custom_field20;
+	assetAction = line.assetAction_line;
+	familyName = line._part_custom_field23;
+	//CSYS-95625
+	marketingName = line._part_custom_field25;
+	lineDesc = line.lineDescription_line;
+	poID = line._part_custom_field1;
+	isCoreChanged = get(isCoreChangedDict, parentDocNum);
+	isEditionChanged = get(isEditionChangedDict, parentDocNum);
+	coreOfferingLine = line.coreOffering_line;
+	//CSYS-102163 (SV. 23/03/2021) Start
+	piId = line._part_number;	
+	productName = get(productNameDict, piId);
+	//CSYS-102163 End
+	
+	if (poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION AND (isCoreChanged == TRUE_STR OR isEditionChanged == TRUE_STR)){
+		put(coreTerminatesDict, parentDocNum, TERMINATE_ACTION); //core has TERMINATE's and CREATE's. original core is getting replaced with another since there's a core/edition change.
+		//CSYS-95625
+		if (NOT(editionlessUniversal_quote) AND NOT(editionlessContract_quote)){
+			put(terminateCoreDescDict, parentDocNum, lineDesc);
+		}
+		else{
+			put(terminateCoreDescDict, parentDocNum, marketingName);	
+		}
+	}
+	if (poCategory == CORE_SERVICE AND assetAction == CREATE_ACTION){
+		put(coreCreatesDict, parentDocNum, CREATE_ACTION); //core has CREATE's
+	}
+	if (poCategory == CORE_SERVICE AND (assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION)){ //CSYS-46907 part 2
+		put(coreNonePlusModifyDict, parentDocNum, TRUE_STR); //core has NONE/MODIFY lines, obviously no terminated lines
+	}
+	if (isnull(get(coreTerminatesDict, parentDocNum))){
+		put(coreTerminatesDict, parentDocNum, "BLANK");
+	}
+	/*
+	if (isnull(get(terminateCoreDescDict, parentDocNum))){
+		put(terminateCoreDescDict, parentDocNum, "BLANK");
+	}
+	*/
+	//for SC P5 Step 7:
+	if (assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION){ //if we run into a NONE or MODIFY line
+		put(familyNoneModifyDict, familyName, assetAction); //family has NONEs
+		put(productNoneModifyDict, productName, assetAction); //CSYS-102163 (SV. 23/03/2021) Product has NONEs OR MODIFYs
+	}
+	
+	if (assetAction == CREATE_ACTION){ //if we run into a CREATE line
+		put(familyCreateDict, familyName, assetAction); //family has CREATEs
+		put(productCreateDict, productName, assetAction); //CSYS-102163 (SV. 23/03/2021) Product has CREATEs
+	}
+	
+	if (assetAction == TERMINATE_ACTION){ //if we run into a TERMINATE line
+		put(familyTerminateDict, familyName, assetAction); //Family has TERMINATEs
+		put(productTerminateDict, productName, assetAction); //CSYS-102163 (SV. 23/03/2021) Product has TERMINATEs
+	}
+	
+	if (assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND findinarray(tlCoreList, poID) <> -1){ 
+		hasTripLinkCore = true;
+	}
+	
+	if (assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND find(lineDesc, "Risk Messaging") <> -1){ 
+		hasRiskMessagingCore = true;
+	}
+	
+	if (assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND findinarray(expensePoList, poID) <> -1){ //Expense core
+		expenseCreated = true;
+	}
+	
+	if (assetAction == TERMINATE_ACTION AND poCategory == CORE_SERVICE AND findinarray(tePoList, poID) <> -1){ //Travel & Expense core
+		teTerminated = true;
+	}
+	//CSYS-81051 
+	if (assetAction == CREATE_ACTION AND poCategory == EXTENDED_SERVICE AND (findinarray(managedReportingList, poID) <> -1 OR findinarray(consultativeIntelligenceList, poID) <> -1 OR findinarray(reportingServicesList, poID) <> -1)){
+		noManagedReportingNotes = true;
+	}
+	
+	if (assetAction <> TERMINATE_ACTION AND poCategory == EXTENDED_SERVICE){
+		if (find(lineDesc, "TripLink") <> -1){
+			hasTripLinkExtendedService = true;
+		}
+		//CSYS-95516
+		if (find(lineDesc, "Hipmunk") <> -1){
+			hasHipmunkExtendedService = true;
+		}
+		//CSYS-90075
+		if (find(lineDesc, "Concur Detect") <> -1){
+			hasDetectExtendedService = true;
+		}	
+	}
+	//CSYS-87164
+	if (findinarray(consultativeIntelligenceList, poID) <> -1 AND assetAction <> TERMINATE_ACTION){
+		hasConsultativeIntell = true;
+	}
+	if (find(familyName, "Intelligence") <> -1 AND findinarray(consultativeIntelligenceList, poID) == -1 AND assetAction <> TERMINATE_ACTION){
+		hasNonConsultativeIntell = true;
+	}
+	
+	//IESCNQRCPQ-802 (OK. 7-14-2023) Start: Product Family Change Impacts to Termination Notes
+	if (findinarray(PSE_PoIdArray, poID) <> -1 AND assetAction == TERMINATE_ACTION) {
+		hasPSETerminate = "true";
+	}
+	if (findinarray(PSE_PoIdArray, poID) <> -1 AND assetAction == CREATE_ACTION) {
+		hasPSECreate = "true";
+	}
+	//IESCNQRCPQ-802 - End
+}
+
+//IESCNQRCPQ-802 (OK. 7-14-2023)Product Family Change Impacts to Termination Notes		
+if (hasPSETerminate == "true" AND hasPSECreate <> "true") {
+	needTerminationNotes = "true";
+}
+
+if (expenseCreated AND teTerminated){
+	teToExpense = true;
+}
+
+skipDict1 = dict("string"); //only 1 of the core service create lines will get written to (prevent doc engine from printing multiple paragraphs). 
+skipDict2 = dict("string"); //only 1 of the core service terminate lines will get written to (prevent doc engine from printing multiple paragraphs)
+skipDict3 = dict("string");
+
+customIntellArray = string[]{"459964", "596", "866", "873", "596", "866", "873", "307", "279", "657"};
+
+//loop for edition/core change mapping, as well as a completely terminated core. This loop also builds termination notes
+for line in line_process {	
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	lineDesc = line.lineDescription_line;
+	familyName = line._part_custom_field23;
+	poCategory = line._part_custom_field20;
+	assetAction = line.assetAction_line;
+	piItemType = line._part_custom_field8;
+	poID = line._part_custom_field1;
+	pi = line._part_number;
+	coreOfferingLine = line.coreOffering_line; 
+	productName = get(productNameDict, pi); //CSYS-102163 (SV. 23/03/2021)
+	
+	if (poCategory == CORE_SERVICE AND assetAction == CREATE_ACTION){
+		if (get(coreTerminatesDict, parentDocNum) == TERMINATE_ACTION AND get(skipDict1, parentDocNum) <> TRUE_STR){ //3. core is being replaced with another (has edition or core change)
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, get(terminateCoreDescDict, parentDocNum));
+			put(skipDict1, parentDocNum, TRUE_STR);
+		}
+		else {
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, BLANK);
+		}
+	}
+	
+	if (poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION AND piItemType == BASE_FEE AND get(coreCreatesDict, parentDocNum) <> CREATE_ACTION){ //2. line is a terminated core. core contains no creates. it's being terminated completely.
+		if (get(skipDict2, parentDocNum) <> TRUE_STR){ 
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, "NOMATCH");
+			put(skipDict2, parentDocNum, TRUE_STR);
+		}
+		else {
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, BLANK);
+		}
+	}
+	
+	if (poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION AND piItemType == BASE_FEE AND get(coreCreatesDict, parentDocNum) == CREATE_ACTION){ //3. Line is a terminated core base, and there's an edition/core change
+		if (get(skipDict3, parentDocNum) <> TRUE_STR){ 
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, "TERMINATEDCOREBASE");
+			put(skipDict3, parentDocNum, TRUE_STR);
+		}
+		else{
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, BLANK);
+		}
+	}
+	
+	if (get(coreNonePlusModifyDict, parentDocNum) == TRUE_STR){ //CSYS-46907 part 3
+		utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, BLANK); //Since the core doesn't have any core service terminated lines, make sure all terminated core mappings in that core get set back to blank
+	}
+	
+	//SC P5 Step 7 continued:
+	//Core services:
+	if (poCategory == CORE_SERVICE){
+		if (get(familyCreateDict, familyName) <> CREATE_ACTION AND 
+			get(familyTerminateDict, familyName) == TERMINATE_ACTION AND 
+			poID <> "5905"){ //family contains terminates and no creates, exclude TripIt Pro - User Based Pricing
+			
+			if (assetAction == TERMINATE_ACTION AND find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		
+		}
+		
+		if (poID == "5905" AND //TripIt Pro = User Based Pricing
+			assetAction == TERMINATE_ACTION AND NOT hasTripLinkExtendedService){
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+	}
+	
+	//TE to Expense Scenario:
+	if (poCategory == CORE_SERVICE){
+		if (get(familyCreateDict, familyName) == CREATE_ACTION AND 
+			get(familyTerminateDict, familyName) == TERMINATE_ACTION AND 
+			poID <> "5905"){ //Exclude TripIt Pro - User Based Pricing
+			if (teToExpense){
+				if (find(terminationNotes, "TRAVEL") == -1){
+					terminationNotes = terminationNotes + "TRAVEL" + "; ";
+				}
+			}
+		}
+
+		//CSYS-85913 (LN. 11/10/2017) Migrating TL to and from an Ext. Service or a bunlded Core Service, need to populate Termination Notes accordingly
+		if(find(lineDesc, "TripLink") <> -1 AND assetAction == TERMINATE_ACTION AND NOT hasTripLinkExtendedService AND NOT hasTripLinkCore){
+			if (find(terminationNotes, "TripLink") == -1){
+				terminationNotes = terminationNotes + "TripLink" + "; ";
+			}
+		}
+
+	}
+
+
+	
+	//Extended services:
+	if (poCategory == EXTENDED_SERVICE){
+		//CSYS-81051 
+		//CSYS-103018 (SV. 14/07/2021) commented out the below if clause
+		/*
+		if (findinarray(managedReportingList, poID) <> -1 AND noManagedReportingNotes AND assetAction == TERMINATE_ACTION){
+			continue;
+		}*/
+		
+		if (findinarray(tripLinkOrTripitMisc, poID) <> -1 AND hasTripLinkExtendedService AND assetAction == TERMINATE_ACTION){
+			continue;
+		}
+		
+		//IESCNQRCPQ-802 (OK. 7-14-2023) Start: Product Family Change Impacts to Termination Notes
+		addedTermNotes = "";
+		if ((findinarray(extServPoIdArray, poID) <> -1 AND assetAction == TERMINATE_ACTION) OR (findinarray(PSE_PoIdArray, poID) <> -1 AND needTerminationNotes == "true")) {
+			if (find(terminationNotes, lineDesc) == -1) {
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+			addedTermNotes = "true";
+		}
+		//IESCNQRCPQ-802 - End
+		
+		//CSYS-102703 (SV. 19/05/2021) modified the if condtion below to excleude Audit Services as well so as to handle it in a separate loop
+		//CSYS-102213 (SV. 23/03/2021) modified the if condtion below to excleude SErvice administration as well so as to handle it in a separate loop
+		//IESCNQRCPQ-802 (OK. 7-14-2023) Updated below if condition with "addedTermNotes" flag
+		if ( (get(familyCreateDict, familyName) <> CREATE_ACTION AND 
+			get(familyTerminateDict, familyName) == TERMINATE_ACTION AND 
+			poID <> "36374" AND find(lineDesc, "Risk Management") == -1 AND 
+			find(lineDesc, "TripLink") == -1 AND 
+			find(lineDesc, "Hipmunk") == -1 AND //CSYS-95516
+			find(lineDesc, "TripIt Pro") == -1 AND 
+			find(lineDesc, "TripIt for Teams") == -1 AND 
+			find(familyName, "Intelligence") == -1 AND 
+			find(familyName, "Service Administration") == -1 AND
+			find(familyName, "Audit Services") == -1 AND
+			find(lineDesc, "Concur Detect") == -1 AND //CSYS-90075
+			poID <> "1055" AND addedTermNotes <> "true") //family contains terminates and no creates. Exclude Total Advantage, Risk Management, TripIt, Intelligence, Triplink, and Concur Connector for Salesforce extended services (we'll handle these below)
+			OR findinarray(usdList, poID) <> -1 ){ //CSYS-91596
+				if (assetAction == TERMINATE_ACTION AND find(terminationNotes, lineDesc) == -1){
+					terminationNotes = terminationNotes + lineDesc + "; ";
+				}
+		}	
+		
+		//CSYS-102213 (SV. 23/03/2021) Adding logic for Service Adminstation Start
+		//CSYS-102375 (SV. 12/04/2021) Adding logic to include product family Connectors and Web Services
+		//CSYS-102703 (SV. 19/05/2021) Adding logic to include product family Audit Services
+		if ((find(familyName, "Service Administration") <> -1 OR find(familyName, "Connectors and Web Services") <> -1 OR find(familyName, "Audit Services") <> -1)AND 
+			assetAction == TERMINATE_ACTION AND get(productNoneModifyDict, productName) <> NONE_ACTION AND get(productNoneModifyDict, productName) <> MODIFY_ACTION AND get(productCreateDict, productName) <> CREATE_ACTION){ //Total Advantage terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				//CSYS-100742 start adding term date for Concur Detect by AppZen
+				//CSYS-105450 (SV. 14-02-2022) replace terminatedDate_quote wiht terminationdate_quote in the below condition
+				//CSYS-105719 (SV. 23-02-2022) Added substring fucntionality to terminationDate_quote avoid issue with time int he condition below
+				//CSYS-106050 (OK. 4-25-2022) Add "detectMigrateToIntelligentAuditAdvanced_quote" to the below if condition
+				//CSYS-106157 (OK. 5-06-2022) Add "detectMigrateToIntelligentAuditEssential_quote" to the below if condition
+				//CSYS-106158 (OK. 5-06-2022) Add "detectMigrateToVerify_quote" to the below if condition
+				if((detectByAppzenTerminate_quote OR detectMigrateToIntelligentAuditAdvanced_quote == "true" OR detectMigrateToIntelligentAuditEssential_quote == "true" OR detectMigrateToVerify_quote == "true") AND (billingCycle_quote == "Monthly" OR billingCycle_quote == "Quarterly") AND find("*3780125*7507717*", "*"+poID+"*") > -1 AND assetAction == TERMINATE_ACTION AND line.termDate_line<>"" AND substring(line.termDate_line,0,10)<>substring(terminationDate_quote,0,10)){ //CSYS-104595 NP 10/26/2021 Removed condition for Quarterly CSYS-104596 NP 11-09-2021
+					terminationNotes = terminationNotes + lineDesc + " Term Date: "+ substring(line.termDate_line,0,10) +"; ";
+				}
+				else{
+					terminationNotes = terminationNotes + lineDesc + "; ";
+				}
+				//CSYS-100742 End
+			}
+		}
+		//CSYS-102213 End
+		
+		//CSYS-102375 (SV. 12/04/2021) Adding logic for Connectors and Web Services Start
+		/*
+		if (find(familyName, "Connectors and Web Services") <> -1 AND 
+			assetAction == TERMINATE_ACTION AND get(productNoneModifyDict, productName) <> NONE_ACTION AND get(productNoneModifyDict, productName) <> MODIFY_ACTION AND get(productCreateDict, productName) <> CREATE_ACTION){ //Total Advantage terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+		*/
+		//CSYS-102375 End
+	
+		if (find(lineDesc, "Total Advantage") <> -1 AND 
+			assetAction == TERMINATE_ACTION){ //Total Advantage terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+	
+		if (find(lineDesc, "Risk Management") <> -1 AND 
+			assetAction == TERMINATE_ACTION AND NOT 
+			hasRiskMessagingCore AND 
+			get(familyCreateDict, familyName) <> CREATE_ACTION AND //CSYS-95206 (LN. 3-11-2019) Updates to the Risk Management SKU Termiination Logic, it should NOT generate termination language when there is a CREATE/TERMINATE in the same product family.
+			get(familyTerminateDict, familyName) == TERMINATE_ACTION){ //Risk Management terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+		
+		if (assetAction == TERMINATE_ACTION){	
+			//CSYS-95516	
+			if (find(lineDesc, "Hipmunk") <> -1 AND NOT hasHipmunkExtendedService){
+				if (find(terminationNotes, "Concur Hipmunk") == -1){
+						terminationNotes = terminationNotes + "Concur Hipmunk" + "; ";
+				}
+			}
+			if (find(lineDesc, "TripLink") <> -1 AND 
+				NOT hasTripLinkCore AND 
+				NOT hasTripLinkExtendedService ){ //CSYS-95516
+				if ( (find(lineDesc, "Hipmunk") == -1 AND get(familyCreateDict, familyName) <> CREATE_ACTION AND get(familyTerminateDict, familyName) == TERMINATE_ACTION) OR find(lineDesc, "Hipmunk") <> -1){//TripLink terminations: no TripLink core, family contains Terminates but no creates
+					if (find(terminationNotes, "TripLink") == -1){//CSYS-85913 No longer using lineDesc, but just TripLink
+						terminationNotes = terminationNotes + "TripLink" + "; ";//CSYS-85913 (LN. 11/15/2017) Updating to just display TripLink
+					}
+				}
+			}
+			//CSYS-90075
+			/*if (find(lineDesc, "Concur Detect") <> -1 AND NOT hasDetectExtendedService){
+				if (find(terminationNotes, "Concur Detect") == -1){
+						terminationNotes = terminationNotes + "Concur Detect" + "; ";
+				}
+			}*/
+		}
+		
+		if ((find(lineDesc, "TripIt Pro") <> -1 OR 
+			find(lineDesc, "TripIt for Teams") <> -1) AND 
+			assetAction == TERMINATE_ACTION){ //TripIt terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+		
+		if (poID == "1055" AND assetAction == TERMINATE_ACTION){ //Concur Connector for Salesforce terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}	
+		}
+		
+		//CSYS-87164
+		//CSYS-102163 Modified the below condition
+		//CSYS-102163 (SV. 23/03/2021) Modifed the condition to include productName instead of Family name
+		if (assetAction == TERMINATE_ACTION AND findinarray(consultativeIntelligenceList, poID) <> -1 AND piItemType == BASE_FEE AND get(productNoneModifyDict, productName) <> NONE_ACTION AND get(productNoneModifyDict, productName) <> MODIFY_ACTION AND get(productCreateDict, productName) <> CREATE_ACTION){
+			if (NOT isnull(get(terminateCoreDescDict, parentDocNum)) AND get(terminateCoreDescDict, parentDocNum) <> ""){
+				coreOfferingLine = get(terminateCoreDescDict, parentDocNum);
+			}
+			if (find(terminationNotes, "Consultative Intelligence for " + coreOfferingLine) == -1){
+				terminationNotes = terminationNotes + "Consultative Intelligence for " + coreOfferingLine + "; ";
+			}
+			if (hasConsultativeIntell == false AND hasNonConsultativeIntell == false){
+				terminationNotes = terminationNotes + "Intelligence for " + coreOfferingLine + "; ";
+			}
+		}
+		
+		//CSYS-102163 (SV. 23/03/2021) Modifed the condition to include productName instead of Family name
+		if (get(productTerminateDict, productName) == TERMINATE_ACTION AND 
+			get(productNoneModifyDict, productName) <> NONE_ACTION AND 
+			get(productNoneModifyDict, productName) <> MODIFY_ACTION AND 
+			get(productCreateDict, productName) <> CREATE_ACTION AND 
+			find(familyName, "Intelligence") <> -1 AND findinarray(consultativeIntelligenceList, poID) == -1){ //Intelligence family has Terminates but doesn't have Create's or None's or Modify's. OR one of the *related* intelligence products is being terminated (CSYS-46753 KA 6-29-2015)
+			if (assetAction == TERMINATE_ACTION AND piItemType == BASE_FEE){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}	
+		}
+
+	} //end Extended Services check
+}
+
+terminationNotes2 = "";
+if (terminationNotes <> ""){
+	terminationNotes2 = "BMI: " + terminationNotes;
+}
+
+terminationNotes3 = "";
+if (terminationNotes2 <> ""){
+	terminationNotes3 = substring(terminationNotes2,0,-2); //trim the semi-colon
+}
+
+if (terminationNotes3 == ""){ //if we don't have notes, blank out the terminated date
+	//CSYS-105450 (SV. 14-02-2022) commented the below line and Added new attribute	
+	//utilResultString = util.formAttrValueStr(attributesDict, "terminatedDate_quote", QUOTE_DOCNUM, "");
+	utilResultString = util.formAttrValueStr(attributesDict, "terminationDate_quote", QUOTE_DOCNUM, "");
+	
+	//CSYS-104349 (OK. 10-22-2021) New field "systemTerminatedDate_quote" will store the system calculated terminated date value
+	utilResultString = util.formAttrValueStr(attributesDict, "systemTerminatedDate_quote", QUOTE_DOCNUM, "");
+}
+
+utilResultString = util.formAttrValueStr(attributesDict, "terminationNotes_quote", QUOTE_DOCNUM, terminationNotes3);
+
+return "";

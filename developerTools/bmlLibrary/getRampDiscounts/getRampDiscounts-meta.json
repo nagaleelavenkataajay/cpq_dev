@@ -1,0 +1,12 @@
+{
+  "name" : "Get Ramp Discounts",
+  "variableName" : "getRampDiscounts",
+  "description" : "CSYS-87914 (KA. 12-5-2017): get ramp discounts.",
+  "libraryFunctions" : [ "util.getXMLNodeValues" ],
+  "returnType" : "String[] Dictionary",
+  "parameters" : [ {
+    "name" : "lineItemRampPlan",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

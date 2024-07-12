@@ -1,0 +1,54 @@
+// Moving code for CSYS-106812 from Execute Approval History
+//CSYS-106812 LBN 14-07-2022 Start
+result = "";
+
+	if(_system_current_step_var == "approved_process") {
+		//IESCNQRCPQ-1596- LIK-02-27-2024- As part of this we are setting to check if the order form is already generated.
+		if(lastApproverReq_quote <> "" AND (autoGenerateContractText_quote_c == "simplifiedOrder" OR autoGenerateContractText_quote_c == "orderForm") AND (contractAutomation_quote == "Systematized") AND /*executeApprovalHistory_quote=="true" AND*/ NOT(autoGenerateContractSelected_quote_c)){
+			//Creating header
+			headers = dict("string");
+			//fetching user credentials from Properties Data table
+			companyName = lower(_system_supplier_company_name);
+			/*
+			username = "";
+			userSecret = "";
+			resultSet = bmql("select UserName, Password from Properties WHERE Environment=$companyName");
+			for rec in resultSet{       
+				username = trim(get(rec,"UserName"));
+				userSecret = trim(get(rec,"Password"));
+			}
+			credentials = username + ":" + userSecret;
+			encodeCredential = encodebase64(credentials);
+			authString = "Basic " + encodeCredential;
+			put(headers, "Authorization", authString);
+			*/
+			put(headers, "Content-Type", "application/json");
+
+			//Setting endpoint URL
+			endPointURLOF="";
+			if(autoGenerateContractText_quote_c == "orderForm"){
+				endPointURLOF= "https://"+companyName+".bigmachines.com/rest/v15/commerceDocumentsQuickstart_commerce_processQuote_process/{id}/actions/generateSMNOrderForm";
+			}
+			if(autoGenerateContractText_quote_c == "simplifiedOrder"){
+				endPointURLOF= "https://"+companyName+".bigmachines.com/rest/v15/commerceDocumentsQuickstart_commerce_processQuote_process/{id}/actions/generateQuotation";
+			}
+			
+			//Replacing transactionID with dynamic value
+			transactionID = transactionID_quote;
+			url2 = replace(endPointURLOF, "{id}", transactionID);
+			
+			//Invoking urldata function to trigger Generate contract action
+			LineRequest = urldata(url2, "POST", headers);
+			print "Response = "; 
+			print LineRequest;
+			print(get(LineRequest, "Status-Code")); // print the status code
+			print(get(LineRequest, "Message-Body")); // print the message body
+			
+			//IESCNQRCPQ-1596- LIK-02-27-2024- As part of this we are setting to check if the order form is already generated.
+			result = result + "1" + "~autoGenerateContractSelected_quote_c~" + string(true) + "|";
+			result = result + "1" + "~autoGenerateContractText_quote_c~" + "nA" + "|";
+		}
+
+	}//CSYS-106812 LBN 14-07-2022 End
+	
+return result;

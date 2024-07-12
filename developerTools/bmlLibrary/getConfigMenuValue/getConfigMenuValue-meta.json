@@ -1,0 +1,9 @@
+{
+  "name" : "getConfigMenuValue",
+  "variableName" : "getConfigMenuValue",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,18 @@
+{
+  "name" : "printDebug",
+  "variableName" : "printDebug",
+  "description" : "Returns a TITLE and a VALUE in the format \"TITLE: VALUE\"",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "title",
+    "type" : "String"
+  }, {
+    "name" : "value",
+    "type" : "String"
+  }, {
+    "name" : "tabs",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

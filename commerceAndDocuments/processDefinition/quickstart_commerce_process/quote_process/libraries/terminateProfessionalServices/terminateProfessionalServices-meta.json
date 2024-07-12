@@ -1,0 +1,14 @@
+{
+  "name" : "Terminate Professional Services",
+  "variableName" : "terminateProfessionalServices",
+  "description" : "CSYS-99878, BS. 09/10/2020, Used to flip action code to \"Terminate\" for professional services when \"Terminate Setup Fee\" flag is checked and New Save is clicked.",
+  "libraryFunctions" : [ "commerce.setAttributes", "util.formAttrValueStr" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_part_number", "assetAction_line", "terminateSetupFee_line" ],
+  "mainDocAttributes" : [ "isProfessionalServicesImport_quote", "quoteType_quote" ],
+  "systemAttributes" : [ ]
+}

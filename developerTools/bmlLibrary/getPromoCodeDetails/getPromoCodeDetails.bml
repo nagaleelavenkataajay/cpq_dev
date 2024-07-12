@@ -1,0 +1,109 @@
+/* Util -> getPromoCodeDetails
+
+promoCodeAppliedArr - String[]
+applicablePromosArr - String[]
+internalPromoDescDict - String Dictionary
+externalPromoDescDict - String Dictionary
+customerFriendlyPromoDescDict - String Dictionary
+legalPromoDescDict - String Dictionary
+
+*/
+promoCodeDescAndDetailsDict = dict("string");
+promoCodeDetails = "<promoDesc>";
+for promo in applicablePromosArr {
+	internalDesc = "";
+	externalDesc = "";
+	customerFriendlyDesc = "";
+	legalDesc = "";
+	internalDescOrder = 1;
+	externalDescOrder = 1;
+	customerFriendlyDescOrder = 1;
+	legalDescOrder = 1;
+	// Get Promo Code Description
+	promoCodeDescResSet = bmql("SELECT description, descriptionType, orderNum FROM PromoMessage WHERE promotionCode=$promo");
+	for resSet in promoCodeDescResSet {
+		descType = get(resSet, "descriptionType");
+		if(descType == "INTERNAL_NAME" AND get(resSet, "orderNum") == string(internalDescOrder)) {
+			internalDesc = internalDesc + get(resSet, "description");
+			internalDescOrder = internalDescOrder + 1;
+		}
+		if(descType == "INTERNAL_DESC" AND get(resSet, "orderNum") == string(externalDescOrder)) {
+			externalDesc = externalDesc + get(resSet, "description");
+			externalDescOrder = externalDescOrder + 1;
+		}
+		if(descType == "CUSTOMER_FRIENDLY" AND get(resSet, "orderNum") == string(customerFriendlyDescOrder)) {
+			customerFriendlyDesc = customerFriendlyDesc + get(resSet, "description");
+			customerFriendlyDescOrder = customerFriendlyDescOrder + 1;
+		}
+		if(descType == "LEGAL" AND get(resSet, "orderNum") == string(legalDescOrder)) {
+			legalDesc = legalDesc + get(resSet, "description");
+			legalDescOrder = legalDescOrder + 1;
+		}
+		if(len(internalDesc) > 0) {
+			put(internalPromoDescDict, promo, internalDesc);
+		}
+		if(len(externalDesc) > 0) {
+			put(externalPromoDescDict, promo, externalDesc);
+		}
+		if(len(customerFriendlyDesc) > 0) {
+			put(customerFriendlyPromoDescDict, promo, customerFriendlyDesc);
+		}
+		if(len(legalDesc) > 0) {
+			put(legalPromoDescDict, promo, legalDesc);	
+		}
+	}
+}
+for promo in applicablePromosArr {
+	internalDesc = "";
+	externalDesc = "";
+	customerFriendlyDesc = "";
+	legalDesc = "";
+	startDate = "";
+	endDate = "";
+	promotionCategory = "";
+	if(containskey(internalPromoDescDict, promo))  {
+		internalDesc = get(internalPromoDescDict, promo);
+	}
+	if(containskey(externalPromoDescDict, promo))  {
+		externalDesc = get(externalPromoDescDict, promo);
+	}
+	if(containskey(customerFriendlyPromoDescDict, promo))  {
+		customerFriendlyDesc = get(customerFriendlyPromoDescDict, promo);
+	}
+	if(containskey(legalPromoDescDict, promo))  {
+		legalDesc = get(legalPromoDescDict, promo);
+	}
+	// Get the start and end date for the promo to display in the quote
+	promoDatesResSet = bmql("SELECT promotionCategory, startDate, endDate FROM PromoCodeDetails WHERE promotionCode = $promo");
+	for promoDatesRes in promoDatesResSet {
+	  promotionCategory = get(promoDatesRes, "promotionCategory");
+	  startDate = get(promoDatesRes, "startDate");
+	  endDate = get(promoDatesRes, "endDate");
+	}
+	
+	if(len(promo) > 0) {
+		promoCodeDetails = promoCodeDetails + "<code>" + "<id>" + promo + "</id>" + "<startDate>" + startDate + "</startDate>" + "<endDate>" + endDate + "</endDate>" + "<applied>";
+		if(findinarray(promoCodeAppliedArr, promo)  <> -1) {
+			promoCodeDetails = promoCodeDetails + "TRUE";
+		} else {
+			promoCodeDetails = promoCodeDetails + "FALSE";
+		}
+		promoCodeDetails = promoCodeDetails + "</applied>" + "<promoCat>" + promotionCategory + "</promoCat>";
+		if(len(internalDesc) > 0) {
+			promoCodeDetails = promoCodeDetails + "<INTERNAL_NAME>" + internalDesc + "</INTERNAL_NAME>";
+		}
+		if(len(externalDesc) > 0) {
+			promoCodeDetails = promoCodeDetails + "<INTERNAL_DESC>" + externalDesc + "</INTERNAL_DESC>";
+		}
+		if(len(customerFriendlyDesc) > 0) {
+			promoCodeDetails = promoCodeDetails + "<CUSTOMER_FRIENDLY>" + customerFriendlyDesc + "</CUSTOMER_FRIENDLY>";
+		}
+		if(len(legalDesc) > 0) {
+			promoCodeDetails = promoCodeDetails + "<LEGAL>" + legalDesc + "</LEGAL>";
+		}
+		promoCodeDetails = promoCodeDetails + "</code>";
+	}
+}
+promoCodeDetails = promoCodeDetails + "</promoDesc>";
+put(promoCodeDescAndDetailsDict, "promoCodeDetails", promoCodeDetails); 
+return promoCodeDescAndDetailsDict;

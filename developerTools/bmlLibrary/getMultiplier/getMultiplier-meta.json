@@ -1,0 +1,24 @@
+{
+  "name" : "getMultiplier",
+  "variableName" : "getMultiplier",
+  "description" : "Returns the value of the correct multiplier for the given line item.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Integer",
+  "parameters" : [ {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "piDelimiter",
+    "type" : "String"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  } ],
+  "attributes" : [ ]
+}

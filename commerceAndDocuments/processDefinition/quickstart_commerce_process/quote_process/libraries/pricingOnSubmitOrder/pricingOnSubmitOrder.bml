@@ -1,0 +1,150 @@
+result = "";
+lineResArr = string[];
+quoteResArr = string[];
+
+EXT_NET_PRICE = "extendedNetPrice_line";
+PRICING_CHANGED_BY_REVOPS = "pricingChangedByRevOps_line";
+PCF_YES = "Y";
+INCREMENTAL_FEE = "Incremental Fee";
+RAMP_FLAG_MULTIPLIER = 12;
+UNIT = "UNIT";
+FIXED = "FIXED";
+ASSET_DELIMITER = "@@";
+ASSET_NEXT_BILLING_DATE = 15;
+ASSET_PID = 0;
+INTERNAL_DELIMITER = "$$";
+TRUE_STR = "true";
+TERMINATE_ACTION = "TERMINATE";//CSYS-87864 (LN 12/4/2017)
+CREATE_ACTION = "CREATE";
+MODIFY_ACTION = "MODIFY";
+CORE_SERVICE = "Core Service";
+SETUP_FEE = "Setup";
+coreNBDDict = dict("string");
+
+totalArrNet = 0.0;
+totalOneTimeFeeNet = 0.0;
+totalExtendedNetPrice = 0.0;
+quoteDocNum = "1";
+pricingChanged = "false";
+//CSYS-95436
+assetCoreNBDDict = dict("string");
+
+// Break apart quote level asset string in order to find the updated data
+quoteAssetArr = split( assetsString_quote, ASSET_DELIMITER );
+assetBillingDict = dict("string");
+for quoteAsset in quoteAssetArr{
+	splitAsset = split( quoteAsset, INTERNAL_DELIMITER );
+	assetPID = splitAsset[ASSET_PID];
+	assetBillingDate = splitAsset[ASSET_NEXT_BILLING_DATE];
+	
+	put( assetBillingDict, assetPID, assetBillingDate );
+}
+
+//CSYS-87864 (LN. 12/4/2017) Store the Next Bill Date for the Core Service to be used on our CREATE/MODIFY's
+//CSYS-95436
+for item in line_process{
+	docNum = item._document_number;
+	parentDocNum = item._parent_doc_number;
+	assetString = item.assetString_line;
+	assetAction = item.assetAction_line;
+	poCat = item.poCategory_line;
+	pid = item._part_number;
+
+	if(assetString <> ""){ 
+		if ( containskey( assetBillingDict, pid ) AND poCat == CORE_SERVICE){
+			nextBillingDate = get( assetBillingDict, pid );
+			if(assetAction == TERMINATE_ACTION){
+				put(coreNBDDict, parentDocNum, nextBillingDate); 
+			}
+			else{
+				put(assetCoreNBDDict, parentDocNum, nextBillingDate);
+			}
+		}
+	}
+
+}
+
+
+for item in line_process {
+	docNum = item._document_number;
+	numTrx = item.numCommittedTransaction_line;
+	netEach = item.netPriceEach_line;
+	origNetEach = item.origNetPriceEa_line;
+	rampFlag = item.rampFlag_line;
+	piItemType = item.piItemType_line;
+	unitOrFixed = item.unitOrFixed_line;
+	pid = item._part_number;
+	extendedNetPrice = netEach;
+	arrNet = item.arrNet_line;
+	parentDocNum = item._parent_doc_number;
+	assetAction = item.assetAction_line;
+	/* Removed by Nick Helpdesk Case 00127607
+	if(unitOrFixed == FIXED) {
+		extendedNetPrice = netEach;
+	} else {
+		extendedNetPrice = netEach * numTrx;
+	}*/
+	//Jim Vey CSYS-15598, 00136159 //append(lineResArr, util.makeReturnString(docNum, EXT_NET_PRICE, string(extendedNetPrice)));
+	if(netEach <> origNetEach) {
+		append(lineResArr, util.makeReturnString(docNum, PRICING_CHANGED_BY_REVOPS, "true"));
+		pricingChanged = "true";
+	} else {
+		append(lineResArr, util.makeReturnString(docNum, PRICING_CHANGED_BY_REVOPS, "false"));
+	}
+	if (rampFlag == PCF_YES AND piItemType <> INCREMENTAL_FEE) {
+		totalArrNet = totalArrNet + arrNet;
+	} elif( piItemType <> INCREMENTAL_FEE) {
+		totalOneTimeFeeNet = totalOneTimeFeeNet + extendedNetPrice; 
+	}
+	if ( piItemType <> INCREMENTAL_FEE ){
+		totalExtendedNetPrice = totalExtendedNetPrice + extendedNetPrice;
+	}
+	
+	// Reset the Next billing date to the updated asset string
+	/*assetArr = split(item.assetString_line, ASSET_DELIMITER );
+	assetString = "";
+	if ( sizeofarray(assetArr)>1){
+		assetString = assetArr[2];
+	}*/
+	assetString = item.assetString_line;
+	nextBillingDate = item.nextBillingDate_line;
+
+
+	if(assetString <> ""){ 
+		if ( containskey( assetBillingDict, pid )){
+			nextBillingDate = get( assetBillingDict, pid );
+		}
+	}
+
+	//CSYS-87864 (LN. 12/4/2017)
+	//CSYS-95436
+	if (piItemType <> SETUP_FEE){
+		if ( containskey(coreNBDDict, parentDocNum) AND assetAction <> TERMINATE_ACTION){
+			nextBillingDate = get(coreNBDDict, parentDocNum);
+		}
+		elif (containskey(assetCoreNBDDict, parentDocNum) AND assetAction == TERMINATE_ACTION){
+			nextBillingDate = get(assetCoreNBDDict, parentDocNum);
+		}
+	}
+	else{
+		nextBillingDate = "";
+	}
+
+
+	append(lineResArr, util.makeReturnString(docNum, "nextBillingDate_line", nextBillingDate ));
+
+}
+append(quoteResArr, util.makeReturnString(quoteDocNum, "totalArrNet_quote", string(totalArrNet)));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "totalOneTimeNetFee_quote", string(totalOneTimeFeeNet)));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "totalNetPrice_quote", string(totalExtendedNetPrice)));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "total_quote", string(totalExtendedNetPrice)));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "pricingChangedByRevOps_quote", pricingChanged));
+append(quoteResArr, util.makeReturnString(quoteDocNum, "submitOrderExecuted_quote", TRUE_STR)); //CSYS-81281
+
+if (sizeofarray(lineResArr) > 0) {
+	result = join(lineResArr, "");
+}
+if (sizeofarray(quoteResArr) > 0) {
+	result = result + join(quoteResArr, "");
+}
+return result;

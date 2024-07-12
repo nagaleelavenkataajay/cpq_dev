@@ -1,0 +1,14 @@
+{
+  "name" : "Call Auto Generate SEPA Contract Rest Service",
+  "variableName" : "callAutoGenerateSEPAContractRestService_c",
+  "description" : "IESCNQRCPQ-1721",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "SEPAOrderForm",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "ownerTheater_quote", "paymentMethod_quote", "transactionID_quote" ],
+  "systemAttributes" : [ "_system_current_step_var", "_system_supplier_company_name" ]
+}

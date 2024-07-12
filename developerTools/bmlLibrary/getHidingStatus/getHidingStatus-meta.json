@@ -1,0 +1,30 @@
+{
+  "name" : "Get Hiding Status",
+  "variableName" : "getHidingStatus",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "coreOffering",
+    "type" : "String"
+  }, {
+    "name" : "implementationMethod",
+    "type" : "String"
+  }, {
+    "name" : "serviceAttr",
+    "type" : "String"
+  }, {
+    "name" : "ownerBusinessUnit",
+    "type" : "String"
+  }, {
+    "name" : "ownerMarket",
+    "type" : "String"
+  }, {
+    "name" : "ownerTheater",
+    "type" : "String"
+  }, {
+    "name" : "quoteType",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

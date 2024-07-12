@@ -1,0 +1,14 @@
+{
+  "name" : "runPricingValidations",
+  "variableName" : "runPricingValidations",
+  "description" : "Runs all validations on all line items. 1) Dynamic Grouping bundle flag validation. 2) Model line discount type validation.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "params",
+    "type" : "String Dictionary"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_part_number", "_part_desc", "_sequence_number", "isPartOfPackage_line", "discountType_line", "_model_name", "modelHasGrouping_line", "discount_line", "addlDiscDisallowed_line", "_line_item_comment" ],
+  "mainDocAttributes" : [ ],
+  "systemAttributes" : [ ]
+}

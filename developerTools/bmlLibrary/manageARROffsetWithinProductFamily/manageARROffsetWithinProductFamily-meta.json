@@ -1,0 +1,39 @@
+{
+  "name" : "manageARROffsetWithinProductFamily",
+  "variableName" : "manageARROffsetWithinProductFamily",
+  "description" : "",
+  "libraryFunctions" : [ "util.getIntegerAttribute", "util.getStringAttribute", "util.putIntegerAttribute", "util.putStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "docNumList",
+    "type" : "String[]"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "piDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "PRODUCT_FAMILY_DICT",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "PRODUCT_FAMILY_CREATE_TIER_COUNT_DICT",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "PRODUCT_FAMILY_TERMINATE_TIER_COUNT_DICT",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "PRODUCT_FAMILY_MODIFY_TIER_COUNT_DICT",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "PROD_FAM_TIER_DECREASE_OCCURRED_DICT",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

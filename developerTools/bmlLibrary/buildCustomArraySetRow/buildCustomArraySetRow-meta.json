@@ -1,0 +1,21 @@
+{
+  "name" : "buildCustomArraySetRow",
+  "variableName" : "buildCustomArraySetRow",
+  "description" : "NOT USED.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "from",
+    "type" : "String"
+  }, {
+    "name" : "to",
+    "type" : "String"
+  }, {
+    "name" : "transactions",
+    "type" : "String"
+  }, {
+    "name" : "undeletable",
+    "type" : "Boolean"
+  } ],
+  "attributes" : [ ]
+}

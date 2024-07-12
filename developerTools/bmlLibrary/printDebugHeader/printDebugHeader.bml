@@ -1,0 +1,10 @@
+/* util -> printDebugHeader 
+
+title - String
+*/
+
+result = "================================================================\n";
+result = result + title + "\n";
+result = result + "================================================================\n";
+
+return result;

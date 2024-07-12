@@ -1,0 +1,5 @@
+//util.isDigitalCommerceTransaction(String)
+if (userName == "hybris"){
+	return true;
+}
+return false;

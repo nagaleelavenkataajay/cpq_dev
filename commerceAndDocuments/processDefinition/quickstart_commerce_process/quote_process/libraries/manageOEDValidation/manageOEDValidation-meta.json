@@ -1,0 +1,11 @@
+{
+  "name" : "Manage OED Validation",
+  "variableName" : "manageOEDValidation",
+  "description" : "CSYS-79840\nDate logic to check if OED is not more than 2 days in the future",
+  "libraryFunctions" : [ "util.getUserTimeZone" ],
+  "returnType" : "Boolean",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "aRRInvolvedFlag_quote", "setupOnlyFlag_quote", "orderEffectiveDate_quote", "sAPSellsConcur_quote" ],
+  "systemAttributes" : [ ]
+}

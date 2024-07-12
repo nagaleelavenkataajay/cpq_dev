@@ -1,0 +1,15 @@
+{
+  "name" : "initIntList",
+  "variableName" : "initIntList",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "Integer[]",
+  "parameters" : [ {
+    "name" : "numElement",
+    "type" : "Integer"
+  }, {
+    "name" : "defaultValue",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

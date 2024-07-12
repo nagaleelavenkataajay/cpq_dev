@@ -1,0 +1,27 @@
+{
+  "name" : "getPromoCodeDetails",
+  "variableName" : "getPromoCodeDetails",
+  "description" : "Gets Promo Description",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "promoCodeAppliedArr",
+    "type" : "String[]"
+  }, {
+    "name" : "applicablePromosArr",
+    "type" : "String[]"
+  }, {
+    "name" : "internalPromoDescDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "externalPromoDescDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "customerFriendlyPromoDescDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "legalPromoDescDict",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

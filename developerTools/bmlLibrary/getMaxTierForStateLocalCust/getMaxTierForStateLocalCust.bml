@@ -1,0 +1,25 @@
+/* util -> getMaxTierForStateLocalCust
+
+numTransactions - Integer
+*/
+maxTier = 0;
+
+if (numTransactions >= 0){
+	if (numTransactions > 0 AND numTransactions <= 50){
+		maxTier = 50;
+	}
+	else{
+		if (fmod(numTransactions,100) <> 0){
+			maxTier = (Integer(numTransactions/100) + 1)*100;
+		}
+		else{
+			maxTier = Integer(numTransactions/100)*100;
+		}
+		if (maxTier > 400)
+		{
+			maxTier = 400;
+		}
+	}
+}
+
+return maxTier;

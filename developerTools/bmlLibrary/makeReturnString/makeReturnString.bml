@@ -1,0 +1,10 @@
+/* util -> makeReturnString
+
+docNum - String
+attributeName - String
+value - String
+*/
+DELIM = "~";
+ITEM_DELIM = "|";
+
+return docNum + DELIM + attributeName + DELIM + value + ITEM_DELIM;

@@ -1,0 +1,2449 @@
+//CSYS-61156: build soft validations. KA. 6-2-2016.
+result = "";
+TRUE_STR = "true";
+FALSE_STR = "false";//CSYS-96150, SN. 06-2019
+MINIMUM_TERM_NUM_MONTHS = "MINIMUM";//CSYS-90047 (LN. 4-5-2018) Setting up constants for Enhanced Promotion functionality
+TERMINATE_ACTION = "TERMINATE";//Establishing Constants (CSYS-91394 LN. 6-4-2018)
+NONE_ACTION = "NONE";
+CREATE_ACTION = "CREATE";
+MODIFY_ACTION = "MODIFY";//CSYS-96150, SN. 06-2019
+WEBSERVICESPOC18 = "WEBSERVICESPOC18";
+BUDGETINSIGHTMIGRATE100 = "BUDGETINSIGHTMIGRATE100";//CSYS-92597 (LN. 8-8-2018);
+BUDGETINSIGHTFOREXPENSEORTE_PO = "203481";
+BUDGET_PO = "3649565";
+ADD_ON_BUSINESS = "Add-On Business";
+NEW_BUSINESS = "New Business";
+SMB_BU = "SMB BU";
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";//CSYS-96150, SN. 06-2019
+DELIMITER = "~";
+CUSTOM_CONSULTING_SERVICES_POID = "335";
+SETUP_FEE = "Setup";
+PRE_PRODUCTION = "Pre Prod";
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd";
+ENTINVOICEOFFER18 = "ENTINVOICEOFFER18";//CSYS-93041 (LN. 10-8-2018)
+UNITED_STATES = "United States";//CSYS-94350 (LN. 12-7-2018)
+CONCUR_FAVR_BASE_PI = "4722311";//CSYS-94166 (LN. 1-16-2019)
+CORE_SERVICE = "Core Service"; //CSYS-96150, SN. 06-2019
+INC_DOC_NUM_PO_MAP = "IncDocNumPOMapping";//CSYS-96150, SN. 07-2019
+sAPSellsConcur = sAPSellsConcur_quote; //CSYS-99100, SV. 14-05-2020
+														  
+																			  
+shadowAddOn = FALSE_STR;  // CSYS-100331 (OK. 8-31-2020)
+ProfServOnlyArray = Boolean[]; //(CSYS-100128 S.V 10-08-2020)
+hasAdditionalPremiumSupportArray = Boolean[]; //(CSYS-100128 S.V 10-08-2020)
+nonProfServCreate = false; //(CSYS-100128 S.V 10-08-2020)
+hasAdditionalMultiCountryExpenseConfiguration = false;
+hasCorporateSubsidiaryBilling = false;
+hasAdditionalMultiCountryDeploymentTandM = false;
+hasAdditionalPremiumSupport = false;
+hasArrearsBilling = false;
+extractServiceExist = false;//IESCNQRCPQ-177
+hasSAPIntegrationInvoice = false; //IESCNQRCPQ-1122												   
+hasSAPIntegration = false; //IESCNQRCPQ-1098 (OK. 9-25-2023)
+hasAdditionalPremSupport = false; //IESCNQRCPQ-1098 (OK. 9-25-2023)
+// IESCNQRCPQ-1176 (LBN. 10/09/2023)
+hasInvoiceCheckPaymentsSKUs = false;
+hasInvoicePaymentManager = false;
+//IESCNQRCPQ-1176 END
+hasExpensePayRelatedSKUs = expensePaymentManager_quote; //IESCNQRCPQ-1139 VK
+hasSAPIntegrationForFGManagement = sAPIntegrationForFundsAndGrantsManagement_quote; //IESCNQRCPQ-1174 VK																	
+																										
+//CSYS-105008 start
+hasWalkMe = false; 
+hasWalkMeSetupandImp = false; 
+walkMePartnerDelivered = false; 
+partnerAuthorizedArray = split(accountServicePartnerAuthorizationsTA_quote, ";"); 
+if (anyPartnerDeliveredServices_quote == true AND (findinarray(partnerAuthorizedArray, "User Assistant by WalkMe") <> -1)) {
+   walkMePartnerDelivered = true;
+}
+hasESAS = false;
+TMFlag = false;
+//CSYS-105008 end
+softValidationDict = dict("string");
+stringsDict = dict("string");//CSYS-96150, SN. 07-2019
+createCoreInAddon = ""; //CSYS-101253 (OK. 12-3-2020)
+tierDecreaseOnLine = false; //CSYS-104327 NP 10-18-2021
+promotionCodeOnLine = false; //CSYS-104327 NP 10-18-2021
+hasCreateInvoiceCore = false; //CSYS-104327 NP 10-18-2021
+// list of products for Legacy Expense Pay
+PreventLegacyExpensePayArray = split("466,478,1040,1268804,1010",","); //CSYS-103279 - DWC - 20210614, CSYS-103366 NP 06/23/2021 modified the array.
+// flag used to show that Legacy Expense Pay products exist with action "CREATE"
+PreventLegacyExpensePayBool = false; //CSYS-103279 - DWC - 20210614
+orderEffectiveDateText = replace(substring(orderEffectiveDate_quote, 0, 10),"-","/");//CSYS-103279 - DWC - 20210614
+orderEffectiveDateText_YEAR = substring(orderEffectiveDate_quote, 0, 4);
+orderEffectiveDateText_MONTH = substring(orderEffectiveDate_quote, 5, 7);
+orderEffectiveDateText_DAY = substring(orderEffectiveDate_quote, 8, 10);
+orderEffectiveDateText = orderEffectiveDateText_MONTH + "/" + orderEffectiveDateText_DAY + "/" +orderEffectiveDateText_YEAR;
+expenseGlobalNone = false; //CSYS-103366 NP 06/23/2021 
+assetOrgExtNetPrice = 0.0;
+assetOrgExtIntNetPrice = false; // CSYS-105298 LIN 03-02-2022
+assetOrgExtIntNetPriceValue = 0; // CSYS-105298 LIN 03-02-2022
+coreNBDDict = dict("string"); //IESCNQRCPQ-727
+Message = ""; // CSYS-105298 LIN 03-02-2022	
+//CSYS-98426 (MJ 2-13-2020, transactions need to be over 10 unless incremental fee or otherwise allowed)
+minimum10TransactionsExclusions = String[];
+exclusions = bmql("SELECT poID FROM minimum10TrxnExclude");
+for entry in exclusions {
+	poid = get(entry, "poID");
+	append(minimum10TransactionsExclusions, poid);
+}
+
+allowedSMBProductsArr = String[];//CSYS-94167
+notAllowedSMBProductArr = String[];//CSYS-94167
+
+//CSYS-90721, PhilS, 09/23/2019, convert Annually,Quarterly,Monthly to numeric
+//KW adding Phil's changes as code coordinates with CSYS-98095
+currentBillingCycle_num = 0;
+if (currentBillingCycle_quote == "Annually" ){currentBillingCycle_num = 12;}
+if (currentBillingCycle_quote == "Semi-Annually" ){currentBillingCycle_num = 6;}
+if (currentBillingCycle_quote == "Quarterly" ){currentBillingCycle_num = 3;}
+if (currentBillingCycle_quote == "Monthly" ){currentBillingCycle_num = 1;}
+billingCycle_num = 0;
+if (billingCycle_quote == "Annually" ){billingCycle_num = 12;}
+if (billingCycle_quote == "Semi-Annually" ){billingCycle_num = 6;}
+if (billingCycle_quote == "Quarterly" ){billingCycle_num = 3;}
+if (billingCycle_quote == "Monthly" ){billingCycle_num = 1;}
+//end of CSYS-90721, PhilS, 09/23/2019, convert Annually,Quarterly,Monthly to numeric
+
+/*
+//CSYS-94167 (LN. 11-28-2018) - For all New Business, SMB BU Quotes query the SMBAllowedProducts table and create an array with all allowed poID's; CSYS-94350 (LN. 12-7-2018)
+if(quoteType_quote == NEW_BUSINESS AND ownerBU_quote == SMB_BU AND ownerMarket_quote == UNITED_STATES){
+
+	allowedProductRes = BMQL("SELECT poID FROM SMBAllowedProducts");
+
+	for entry in allowedProductRes {
+		poID = get(entry, "poID");
+		append(allowedSMBProductsArr, poID);
+	}
+}
+*/
+
+//IESCNQRCPQ-1849 (OK. 6-3-2024) Format the contractEffectiveDate
+contractEffectiveDate = getdate();
+if (contractEffectiveDate_quote <> "") {
+	contractEffectiveDate = util.getDateFromString(contractEffectiveDate_quote);
+}
+
+//CSYS-96847 SN. 12-2019
+numDecimals = 2;
+conversionRate = 1.0;
+currency_symbol = "";
+coreExpense = false; //CSYS-104578
+pSEInvoicePro = false; //CSYS-104578
+//CSYS-99451 SN. Adding minEffectivePrice
+rez = bmql("SELECT ownerTheatre, ownermarket, restrictAvailability, minExtNetPrice, pi, minEffectivePrice FROM extNetPriceFloor");
+piFromTable = "";
+floorExtNetPrice = 0.0;
+floorEffectiveNetPrice = 0.0;//CSYS-99451
+for entry in rez {
+	for line in line_process {
+		ownerTheater = get(entry, "ownerTheatre");
+		ownerMarket = get(entry, "ownermarket");
+		restrictAvailability = get(entry, "restrictAvailability");
+		minExtNetPrice = get(entry, "minExtNetPrice");
+		minEffectivePrice = get(entry, "minEffectivePrice");//CSYS-99451
+		tablepi = get(entry, "pi");
+		pi = line._part_number;
+
+		if((ownerTheater == ownerTheater_quote OR ownerTheater == "") AND (((ownerMarket == ownerMarket_quote OR ownerMarket == "") AND restrictAvailability <> "TRUE") OR (ownerMarket <> ownerMarket_quote AND restrictAvailability == "TRUE"))  AND pi == tablepi){
+			floorEffectiveNetPrice = atof(minEffectivePrice);//CSYS-99451
+			floorExtNetPrice = atof(minExtNetPrice);
+			piFromTable = tablepi;
+		}
+	}
+}
+
+currencyInformationDict = util.getCurrencyData( quoteCurrency_quote );
+
+if ( containskey( currencyInformationDict, "error" ) <> true ){
+    numDecimals = util.customAtoi(get( currencyInformationDict, "numDecimals" ), 0);
+    currency_symbol = get( currencyInformationDict, "currencySymbol" );
+    conversionRate = atof(get( currencyInformationDict, "conversionRate" ));
+}
+
+if ( conversionRate == 0.0 ){
+    conversionRate = 1.0;
+}
+conversionResult  = floorEffectiveNetPrice;//CSYS-99451
+conversionResultUI = floorExtNetPrice;//CSYS-99451
+if(quoteCurrency_quote <> "USD"){
+    conversionResult = floorEffectiveNetPrice * conversionRate;//CSYS-99451
+    conversionResult = round(conversionResult, numDecimals);
+    conversionResultUI = floorExtNetPrice * conversionRate;//CSYS-99451
+    conversionResultUI = round(conversionResultUI, numDecimals);//CSYS-99451
+} 
+
+//CSYS-104774 - LIN - 12-01-2021- remove the decimal and ONE zero. 
+intConversionResultUI = integer(conversionResultUI);
+VATparentdocNum = ""; //CSYS-106942 SV. 30-08-2022 Added new attribute
+overrideHardStop = overrideHardStop_quote; //CSYS-106942 SV. 30-08-2022 Added new attribute 
+for line in line_process {
+	pi = line._part_number;
+	extNetPrice = line.extNetPriceNonUnified_line;
+	listPrice = line.listPriceNonUnified_line;
+	poID = line._part_custom_field1; //CSYS-98426 (MJ 2-13-2020)
+	trxns = line.numCommittedTransaction_line; //CSYS-98426 (MJ 2-13-2020)
+	piItemType = line._part_custom_field8; //CSYS-98426 (MJ 2-13-2020)
+	partNumber = line._part_number;
+	parentDocNum = line._parent_doc_number;	//IESCNQRCPQ-727
+	nextBillingDate = substring(line.nextBillingDate_line,0,10);//IESCNQRCPQ-727
+	poCategory = line.poCategory_line;//IESCNQRCPQ-727
+	itemType = line.piItemType_line;//IESCNQRCPQ-727
+	bundledCIP = line.isPartOfPackage_line;//IESCNQRCPQ-884
+	cipCategory = line._part_custom_field20;//IESCNQRCPQ-884
+	cipPi = "";//IESCNQRCPQ-884
+	//IESCNQRCPQ-884 - LIK- 07-18-2023 - Start - Setting CIPBundle flag when professional service is bundled with CIP for Japan
+	cipRez = BMQL("SELECT partNumber FROM cipSetupFees WHERE partNumber = $pi AND IncludeJapan = 'YES'");
+	for entry in cipRez {
+		cipPi = get(entry, "partNumber");
+	}
+
+	if (ownerMarket_quote == "Japan" AND NOT(overrideHardStop) AND (cipCategory == "Professional Service") AND bundledCIP == true AND (cipPi == "" OR isnull(cipPi))){
+		put(softValidationDict, "CIPProfessionBundle", TRUE_STR);
+	}
+	//IESCNQRCPQ-884 - End
+ 
+	//IESCNQRCPQ-1218 (PG 20-10-2023) Start
+	if((pi == "7218534" or pi == "9430219") AND line.assetAction_line == "CREATE" AND trxns < 100 AND NOT(overrideHardStop) AND itemType == BASE_FEE){
+		put(softValidationDict, "ReportMinimumAssuranceSKUs", TRUE_STR);
+	}
+	//IESCNQRCPQ-1218 (PG 20-10-2023) End									
+																																				   
+	//IESCNQRCPQ-727 (06-07-2023) Create new dict to store core NBD value
+	if (poCategory == CORE_SERVICE AND line.assetAction_line<>"TERMINATE" AND nextBillingDate <> "" AND itemType == BASE_FEE AND NOT(containskey(coreNBDDict, parentDocNum))) {
+		put(coreNBDDict, parentDocNum, nextBillingDate);
+	}
+	
+	//CSYS-103366 NP 06/23/2021 Start
+	if(line.poId_line == "2653360" AND line.assetAction_line<>"TERMINATE"){
+		expenseGlobalNone=true;
+	}
+	//CSYS-103366 End
+	//IESCNQRCPQ-177- Start - LIN-03-08-2023 - check if extract service is available on quote
+	if(line.poId_line == "3722373" AND line.assetAction_line<>"TERMINATE" AND quoteType_quote == ADD_ON_BUSINESS){
+		extractServiceExist=true;
+	}
+	//IESCNQRCPQ-177 - End
+	//CSYS-105298 - Commenting the below code.
+	/*
+	//CSYS-104767 (LBN 12/09/2021) Added dynamic softValidation message for PSE for extNetPrice
+	if(listPrice <> 0.00 AND pi == "36312" AND extNetPrice < line.assetOriginalExtendedNetPrice_list AND quoteType_quote == "Add-On Business" AND termNumMonths_quote <> "" AND line.assetAction_line <> "TERMINATE"){
+		put(softValidationDict, "ProdSanboxEnviExtendedNetPriceBelowThreshold", TRUE_STR);
+	}
+	//CSYS-104767 End
+	*/
+	
+	if (piFromTable == pi){
+		
+		//CSYS-101244 (BS, 12/07/20), Added below check to hard floor limit for Advanced Care for Expense and Advanced Care for Travel & Expense for CREATE lines only, to grandfather any existing prices.
+		//CSYS-103712 (LIN, 08/10/2021), Updating the or condition to include Advanced Care for Invoice Processing (6583499) for CREATE lines only, to grandfather any existing prices.
+		if(pi == "6583099" or pi == "6891737" or pi == "6583499"){
+			if (listPrice <> 0.00 AND extNetPrice < conversionResult AND line.assetAction_line == "CREATE"){
+				put(softValidationDict, "AdvanceCareExtendedNetPriceBelowThreshold", TRUE_STR);
+			}
+		}
+		//End CSYS-101244
+		
+		//CSYS-104339 (LIN 10/26/2021), Added below check to hard floor limit for Premium Assistant - Expense and Premium Assistant- Travel & Expense and Premium Assistant-Invoice Processing for CREATE lines only, to grandfather any existing prices.
+		elif(pi == "8602401" OR pi == "8602414" OR pi == "8602424"){
+		//IESCNQRCPQ-1598- LIN 05-15-2024- Updated condition to include action code MODIFY
+			if (listPrice <> 0.00 AND extNetPrice < conversionResult AND (line.assetAction_line == "CREATE" OR line.assetAction_line == "MODIFY")){
+				put(softValidationDict, "PremiumAssistantExtendedNetPriceBelowThreshold", TRUE_STR);
+			}
+		}
+		//CSYS-104339 (LIN 10/26/2021), Added below check to hard floor limit for Premium Assistant - Expense and Premium Assistant- Travel & Expense and Premium Assistant-Invoice Processing for CREATE lines only, to grandfather any existing prices.
+		//CSYS-104778 (LIN 1/19/2022), Added below check to hard floor limit for Essential Care - Expense and Premium Assistant- Travel & Expense and Premium Assistant-Invoice Processing for CREATE lines only, to grandfather any existing prices.
+		elif(pi == "8806669" OR pi == "8806709" OR pi == "8806740"){
+			if (listPrice <> 0.00 AND extNetPrice < conversionResult AND line.assetAction_line == "CREATE"){
+				put(softValidationDict, "EssentialCareExtendedNetPriceBelowThreshold", TRUE_STR);
+			}
+		}
+		//CSYS-104778 - End
+		// Updated Pi conditions as it should not show soft validation for these SKU's
+		else{
+			if (listPrice <> 0.00 AND extNetPrice < conversionResult AND (line.assetAction_line == "CREATE" OR line.assetAction_line == "MODIFY") AND (pi <> "8602401" AND pi <> "8602414" AND pi <> "8602424")){
+				put(softValidationDict, "extendedNetPriceBelowThreshold", TRUE_STR);
+			}
+		}
+	}
+	//CSYS-98426 (MJ 2-13-2020, transactions need to be over 10 unless an incremental fee(can be <10) or not allowed exception)
+	//CSYS-102156 TJG 06142021
+	if(purchasedFromPartnerSFDC_quote <> "" AND purchasedFromPartnerCategorySFDC_quote == "BPO"){
+		minTrans = 5; }
+	else { minTrans = 10; }
+	//if(partNumber <> "" AND trxns < 10 AND piItemType <> INCREMENTAL_FEE AND findinarray(minimum10TransactionsExclusions, poID) == -1){
+	if(partNumber <> "" AND trxns <> 0 AND trxns < minTrans AND piItemType <> INCREMENTAL_FEE AND findinarray(minimum10TransactionsExclusions, poID) == -1){
+		put(softValidationDict, "minimum10Transactions", TRUE_STR);
+	}
+	//CSYS-106942 SV. 24-08-2022 Start
+	if (line._part_number == "7218534" AND line.assetAction_line <> "TERMINATE"){
+		VATparentdocNum = line._parent_doc_number;
+		VATBox_numtrax = line.numCommittedTransaction_line;	
+	}
+	//CSYS-106942 End
+}//end of CSYS-96847 SN. 12-2019
+
+//CSYS-99477 SN. 05/20/2020
+DATE_FORMAT_PREFERENCE_HYPHEN = "yyyy-MM-dd"; 
+DATE_FORMAT_PREFERENCE_SLASH = "MM/dd/yyyy";
+//Ensure integrity of date to avoid runtime error:
+currentDateText = substring(datetostr(getdate()), 0, 10);
+createdDate = getdate();
+if(createdDate_quote <> ""){
+currentDateText = substring(createdDate_quote, 0, 10);
+}
+if(find(currentDateText, "/") <> -1) {
+	createdDate = strtojavadate(currentDateText, DATE_FORMAT_PREFERENCE_SLASH); 
+} else {
+	createdDate = strtojavadate(currentDateText, DATE_FORMAT_PREFERENCE_HYPHEN);
+}
+
+// CSYS-100331 (OK. 8-31-2020) Start: Remove approvals for Shadow Harmony Add on quotes
+if (SAPSellsConcurFromAccount_quote == "Shadow Harmony Quote" AND quoteType_quote == "Add-On Business") {
+	shadowAddOn = TRUE_STR;
+}
+//CSYS-100331 -End
+
+// Soft validations that only apply during pending status:
+if(_system_current_step_var == "pending_process"){
+//Soft validations agnostic of Contract Automation:
+	//CSYS-83096 (LN. 8/4/2017) Adding criteria for Custom Pricing on Partner Billing/Partner Services flag
+	if(advantageServicesFlag_quote == "Pending" OR learningServicesFlag_quote == "Pending"){ // OR partnerServicesFlag_quote == "Pending"){
+		put(softValidationDict, "customPricingFlag", TRUE_STR);
+	}
+	
+	/*CSYS-93247 (LN. 9-12-2018)
+	  If auditTransactionsDefaulted_quote is true (set to true in Pricing), run the 'auditAndDetectTransactionValidation()' script to determine if the transactions for Policy Audit/Audit Elite have been defaulted (30% of the Core's Trxn amount) - if they have been defaulted, render the soft validation message.
+	*/
+ 
+	//CSYS-107507 (SV. 01-12-2002) Start
+	if(accountLevelT4C_quote == "Public Sector Non-Appropriation of Funds" AND purchasedFromPartnerCategorySFDC_quote <> "VAR" AND contractAutomation_quote <> "Non-Systematized"){
+		put(softValidationDict, "t4CPublicSectorValidation", TRUE_STR);
+	}
+	//CYS-107507 End
+	//CSYS-107912 (SV. 01-12-2002) Start
+	totalArrNetUSD = getcurrencyvalue(totalArrNetUSD_quote, "USD");
+	if (ownerBU_quote == "SMB BU" AND isT4CTrue_quote == true AND totalArrNetUSD < 200000) {
+	    	put(softValidationDict, "netArrLessThan200K", TRUE_STR);
+	}
+	//CSYS-107912 End
+	
+	if(auditTransactionsDefaulted_quote){
+		auditDefault = commerce.auditAndDetectTransactionValidation();
+		if( findinarray(auditDefault, "triggerAuditDefaultSoftValidation") <> -1 ){
+			put(softValidationDict, "auditDefaulted", TRUE_STR);
+		}
+	}
+
+	/*CSYS-93247 (LN. 9-12-2018)
+	  For Add-On quotes where Policy Audit/Audit Elite is present and there has been a tier change on the Core Service and the Audit #TRXN's no longer match that of the Core, render a soft validation message.
+	*/
+	if(quoteType_quote == ADD_ON_BUSINESS){
+		auditTierChange = commerce.auditAndDetectTransactionValidation();
+		if( findinarray(auditTierChange, "triggerAuditTierChangeSoftValidation") <> -1 ){
+			put(softValidationDict, "auditTierChange", TRUE_STR);
+		}
+	}
+	
+	//CSYS-102897 (LIN 09/15/2021) Start 
+	if(quoteType_quote == ADD_ON_BUSINESS AND customerType_quote == "Former Customer"){
+		put(softValidationDict, "formerCustomerFlag", TRUE_STR);
+	} 
+	//CSYS-102897 End		
+	
+	//CSYS-99708 (SV. 25-06-2020) Start	
+	totalArrNetUSD = getcurrencyvalue(totalArrNetUSD_quote, "USD");
+	if (SAP_MAR_ID_quote <> "" AND totalArrNetUSD < 50000) {
+	    	put(softValidationDict, "netArrLessThan50K", TRUE_STR);
+	}
+	termNumMonths = util.customAtoi(termNumMonths_quote, 0);
+	if (SAP_MAR_ID_quote <> "" AND termNumMonths < 24 AND quoteType_quote == NEW_BUSINESS) {
+	        put(softValidationDict, "termNoOfMonthsLessThan24", TRUE_STR);
+	}
+	//CSYS-99708 End
+	
+	//CSYS-100991 (SV. 12/11/2020) Start
+	termNotice = termNotice_quote;
+	accTermNotice = termNoticeAcc_quote;
+	orderEffectiveDateHDS = orderEffectiveDateHDS_quote;
+	if(termNotice <> accTermNotice AND orderEffectiveDateHDS <> ""){
+		put(softValidationDict, "isHDSCreate", TRUE_STR);
+	}
+	//CSYS-100991 End	
+	
+	//CSYS-99508 (OK. 6-25-2020) Display validation message when the Credit status is Disapproved
+	//CSYS-100478 (OK. 9-11-2020) Updated the condition to support new field values of Credit Status
+	//if(quoteType_quote == ADD_ON_BUSINESS AND creditStatus_quote == "Disapproved"){
+	if (quoteType_quote == ADD_ON_BUSINESS AND find("*Disapproved - Level 2*Disapproved - Level 3*Disapproved - Level 4*", "*"+creditStatus_quote+"*") <> -1) {	
+		put(softValidationDict, "bADCreditStatusCheck", TRUE_STR);
+	}
+	
+	//CSYS-105960 (OK. 3-29-2022) Start - New Business require Contract Automation to be Non-Systematized when the Contracting Entity and the Service or Billing Address Country mismatch
+	countryISOCode = "*CA*US*MX*";
+	iSOCodeCheck = false;
+	if (quoteType_quote == NEW_BUSINESS AND contractAutomation_quote <> "Non-Systematized") { 
+		if ((find(countryISOCode, "*"+billTo_countryISOCode_quote+"*") == -1) OR find(countryISOCode, "*"+service_countryISOCode_quote+"*") == -1) {
+			iSOCodeCheck = true;
+		}
+		
+		if ((contractingEntity_quote == "Concur Technologies Inc." AND iSOCodeCheck == true) OR (contractingEntity_quote == "Concur Holdings (Netherlands) B.V." AND iSOCodeCheck == false))  {
+			put(softValidationDict, "countryISOCodeCheck", TRUE_STR);
+		}
+	}
+	//CSYS-105960 - End
+
+	//IESCNQRCPQ-364 (PG 03-02-2023) Start - When RESELL Opportunity=TRUE in Japan, require Contract Automation = Non-Systematized
+	if (resellOpportunity_quote == true AND ownerMarket_quote == "Japan" AND contractAutomation_quote <> "Non-Systematized"){
+		put(softValidationDict, "resellOppCheckJapan", TRUE_STR);
+	}
+	//IESCNQRCPQ-364 (PG 03-02-2023) End
+	
+	/*(OK. 5-25-2023) Legal requested to display the soft valiadtion message always. so commented below code  
+	//IESCNQRCPQ-506 (OK. 4-3-2023) Start: Display DPA clause only in pending status. 
+	//CSYS-106054 (OK. 4-11-2022) Start - Comment out below if condition and add one if condition to use the DPA value with Version
+	//if(quoteType_quote == ADD_ON_BUSINESS AND dataProcessingAgreementFromAccountText_quote <> "DPA Signed" AND dataProcessingAgreementMenu_quote=="dPASigned" AND NOT(partnerBillingQuote_quote)){ //CSYS-103174 Adding Soft Validation for Sales Rep CSYS-104419 NP 10/11/2021 Exculding for service partner quotes
+	//CSYS-107440 (OK. 10-25-2022) Comment out below condition and add one if condition to add the UK DPA value
+	//if(quoteType_quote == ADD_ON_BUSINESS AND accountWithOldDPAFlagValue_quote == TRUE_STR AND dataProcessingAgreementMenu_quote == "DPA Signed 2021" AND NOT(partnerBillingQuote_quote)){
+	if(quoteType_quote == ADD_ON_BUSINESS AND ((accountWithOldDPAFlagValue_quote == TRUE_STR AND dataProcessingAgreementMenu_quote == "DPA Signed 2021") OR updateDPAFlagWithUK_quote == TRUE_STR) AND NOT(partnerBillingQuote_quote)){
+		put(softValidationDict, "DPAflagSet", TRUE_STR);
+	}
+	//CSYS-106054 - End
+	//IESCNQRCPQ-506 - End
+	*/
+	
+	monthlyOffsetIsProd = false;//IESCNQRCPQ-624 - VK
+	//CSYS-77504
+	for line in line_process {
+		docNum = line._document_number;//CSYS-96150, SN. 07-2019
+		partNumber = line._part_number;
+		poID = line._part_custom_field1;
+		assetAction = line.assetAction_line;
+		piItemType = line._part_custom_field8;
+		trxns = line.numCommittedTransaction_line;
+		extNetPriceExpense = line.extendedNetPrice_line;															disc = line.discount_line; //CSYS-97101 SN. 09-2019
+		poCategory = line._part_custom_field20; //CSYS-101253 (OK. 12-3-2020)
+        TMFlag = line.timeMaterialsFlag_line; //CSYS-104956
+		parentDocNum = line._parent_doc_number;	//IESCNQRCPQ-727
+		//IESCNQRCPQ-624 - VK - Start
+		THEATER = ownerTheater_quote;
+		BUSINESS_UNIT = ownerBU_quote;
+		MARKET = ownerMarket_quote;
+		CORE_SERVICE = "Core Service";
+		coreOffering = line.coreOffering_line;	
+		edition = line.implementationMethod_line;	
+		months = "";
+		//IESCNQRCPQ-624 - VK-End
+
+                //CSYS-105008
+                if(poID == "8602376" AND assetAction == "CREATE") { 
+                    hasWalkMe = true;
+                }
+                if(partNumber == "8602394" AND assetAction == "CREATE"){ 
+                    hasWalkMeSetupandImp = true;
+                 }
+                 //CSYS-104956 (TJG. 11-29-2021)
+                 if(poID == "228" AND TMFlag == true AND assetAction == "CREATE"){ 
+                    hasESAS = true;
+                  }
+
+		//CSYS-99477 Quote Create date is before 5/14/2020 and FAVR on Pending status	
+		if(poID == "4722310" AND assetAction == CREATE_ACTION AND comparedates(createdDate, strtojavadate("5/14/2020", "MM/dd/yyyy")) < 0 AND NOT(saveAfterFAVR_quote)){ 
+			put(softValidationDict, "promptToSaveFAVR", TRUE_STR);
+		}
+		
+		//IESCNQRCPQ-727 (06-06-2023) Start: Delay Billing of Specific Service Offerings
+		//IESCNQRCPQ-932 (OK. 8-7-2023) Remove Production Sandbox Environment and Service Assistant POIDs from below array and add Client web services
+		skuPoidArray = string[] {"8602400", "8602413", "8602423", "849", "570781", "2272155"};
+		coreNBDValue = "";
+		if (containskey(coreNBDDict, parentDocNum)) {
+			coreNBDValue = get(coreNBDDict, parentDocNum);
+		}
+		if (findinarray(skuPoidArray, poID) <> -1 AND OwnerBU_quote == "SMB BU" AND assetAction == CREATE_ACTION AND (billingCycle_quote == "Quarterly") AND quoteType_quote == ADD_ON_BUSINESS AND coreNBDValue <> "") {
+			put(softValidationDict, "delayBilledQuaterlyFlag", TRUE_STR);
+		}
+		//IESCNQRCPQ-727 - End
+		
+		//CSYS-103218 (LBN, 18-06-2021) Start -> Concur Detect by AppZen product is no longer to be sold
+		if (poID == "7507717" AND assetAction == CREATE_ACTION AND comparedates(strtojavadate(orderEffectiveDateText,DATE_FORMAT_PREFERENCE_SLASH),strtojavadate("06/30/2021",DATE_FORMAT_PREFERENCE_SLASH)) == 1) {
+			put(softValidationDict, "NolongerConcurDetectbyAppZen", TRUE_STR);
+		}
+		//CSYS-103218 (LBN, 18-06-2021) End
+		
+		//CSYS-105333 (AP, 24-01-2022) Start -> Service Admin Elite SKU - Notification to migrate on renewal
+		//CSYS-106405 - LIN -05-25-2022- Updated the condition to exclude terminate condition
+		if ((poID == "35303" OR poID == "35313" OR poID == "35323") AND quoteType_quote == ADD_ON_BUSINESS and termNumMonths_quote <> "" AND assetAction <> TERMINATE_ACTION) {
+			put(softValidationDict, "ServiceAdminEliteSKU", TRUE_STR);
+		}
+		//CSYS-105333 (AP, 24-01-2022) End
+		
+		//CSYS-105439 (AP, 08-02-2022) Start -> Service Admin SKUs - Notification to Migrate to Essential Care/Service Assistant on Renewal
+		//CSYS-106405 - LIN -05-25-2022- Updated the condition to exclude terminate condition
+		if ((poID == "699" OR poID == "440562" OR poID == "706" OR poID == "8896") AND quoteType_quote == ADD_ON_BUSINESS and termNumMonths_quote <> "" AND assetAction <> TERMINATE_ACTION) {
+			put(softValidationDict, "ServiceAdminSKUs", TRUE_STR);
+		}
+		//CSYS-105439 (AP, 08-02-2022) End
+		
+		//IESCNQRCPQ-508 VK-start
+		if(partNumber == "455668" AND assetAction == "CREATE" AND disc <> 0.0 AND ownerBU_quote == "SMB BU" AND  ownerTheater_quote == "APAC"){
+			put(softValidationDict, "discountOnSiteReviewAPAC", TRUE_STR);
+		}
+		//IESCNQRCPQ-508 VK-End
+		
+		//IESCNQRCPQ-548 VK-Start(06/08/23)
+		if(poID == "9451097" AND assetAction == "CREATE" AND disc > 25.0 AND (ownerTheater_quote == "APAC" OR ownerTheater_quote == "EMEA" OR ownerTheater_quote == "Americas")){
+			put(softValidationDict, "discountGreaterthan25forConfigServices", TRUE_STR);
+		}
+		//IESCNQRCPQ-548 VK-End
+		
+		//IESCNQRCPQ-1601 (OK. 2-16-2024) Add message when the transaction count is less than 400 for ADP
+		if (ownerBU_quote == "SMB BU" AND quoteType_quote == ADD_ON_BUSINESS AND trxns < 400 AND partNumber == "5793981" AND assetAction == "CREATE") {
+			put(softValidationDict, "tranxCountLessThan400forADP", TRUE_STR);
+		}
+
+		
+		//IESCNQRCPQ-624 -VK - Start
+		if(preproductionWaive_quote <> ""){
+
+			
+			if( poCategory == CORE_SERVICE AND assetAction == "CREATE" AND piItemType == BASE_FEE){
+			
+				lineOffset = bmql("select monthlyOffset from newProductStartDate where bu = $BUSINESS_UNIT and theater = $THEATER and coreProduct = $coreOffering and edition = $edition and (market = $MARKET or market is null or market = '')");
+			
+				for offset in lineOffset {
+					months = get(offset, "monthlyOffset");
+				}
+			
+				
+				if(months == "prod"){
+					monthlyOffsetIsProd = true;
+				}
+			}
+		}
+//IESCNQRCPQ-624 -VK - End
+		
+		//CSYS-105842 (AP, 10-03-2022) BMI: Create Concur France SAS Contracting Entity
+		if (contractingEntity_quote == "Concur France SAS" AND contractAutomation_quote <> "Non-Systematized") { 
+			
+			put(softValidationDict, "ConcurFranceSAS", TRUE_STR);
+		}
+		//CSYS-105842 - End
+		
+		//CSYS-105708 (AP, 10-03-2022) BMI - Quote Expiration Date must be within the current month
+		if (includeExpirationDateOnContract_quote == TRUE) 
+		{
+			currentDate = getdate();
+			curdatestr = datetostr(currentDate);
+			splitcurdate = split(curdatestr, " ");
+			splitslashdate = split(splitcurdate[0], "/");
+			finalcurdatestr = splitslashdate[2] + "-" + splitslashdate[0] + "-" + splitslashdate[1];
+			lastdaycurmon = util.setDateToLastDayOfMonth(finalcurdatestr);
+			firstdaycurmon = util.setDateToFirstDayOfMonth(finalcurdatestr);
+			print "last date";
+			//expstrtodate = strtojavadate(expirationDate_quote, "MM/dd/yyyy");
+			if((util.getDateFromString(expirationDate_quote) < util.getDateFromString(firstdaycurmon)) OR (util.getDateFromString(expirationDate_quote) > util.getDateFromString(lastdaycurmon)))
+			{
+				print "QuoteExpirationDateCurrMon";
+				print util.getDateFromString(expirationDate_quote);
+				print util.getDateFromString(firstdaycurmon);
+				print util.getDateFromString(lastdaycurmon);
+				put(softValidationDict, "QuoteExpirationDateCurrMon", TRUE_STR);
+			}
+		}
+		//CSYS-105708 (AP, 10-03-2022) End
+		
+		
+		//CSYS-105958 (AP, 09-05-2022) Start -> BMI: Add Validation of Billing, Service, Notice State when country is USA
+		if (quoteType_quote == NEW_BUSINESS AND (_quote_process_billing_country == "USA" AND  _quote_process_serviceAddress_country == "USA"
+		AND _quote_process_noticeAddress_country == "USA"))
+		{
+			stateabbr = "";
+			stateCodeArray = String[];
+			stateCodeSet = bmql("SELECT StateAbbreviation FROM StateCodeList");
+			for stateCode in stateCodeSet {
+			  stateabbr = get(stateCode, "StateAbbreviation");
+			  append(stateCodeArray,stateabbr);
+			}
+		
+			if(findinarray(stateCodeArray, _quote_process_billing_state) == -1 
+			OR findinarray(stateCodeArray, _quote_process_serviceAddress_state) == -1
+			OR findinarray(stateCodeArray, _quote_process_noticeAddress_state) == -1)
+			{
+			print "STATECODEUSA";
+			put(softValidationDict, "StateCodeUSA", TRUE_STR);
+			}
+		}
+		//CSYS-105958 (AP, 09-05-2022) End
+		
+		//CSYS-106923 (AP, 22-08-2022) Start -> BMI:  FAVR requires MISC approval
+		if (poID == "4722310" AND assetAction == CREATE_ACTION) {
+			put(softValidationDict, "ConcurFAVRCreate", TRUE_STR);
+		}
+		//CSYS-106923 (AP, 22-08-2022) End
+		
+		//CSYS-104116 LIN 09-07-2021 - Start - Extended Net BASE/INC for Expense Pay Classic (NA, EMEA, APA, Japan) 
+		if((partNumber == "480" OR partNumber == "466" OR partNumber == "478" OR partNumber == "1040" OR partNumber == "36994" OR partNumber == "36995" OR partNumber == "1268813" OR partNumber == "1268804") AND extNetPriceExpense > 0.0){
+			put(softValidationDict, "extNetPriceForExpensePayClassic", TRUE_STR);
+		}
+		//CSYS-104116 - End
+		//CSYS-104391 (LIN 10-21-2021) - BMI - New Rules for Permanent Test Environment
+		//Case 1: For renewals, the new Quote Extended Net Price can’t be less than the Asset Extended Net Price
+		//CSYS-104767 (LBN 12-09-2021) Removed condition Ext net price is less than the Asset Extended Net Price and added the hard stop to $998 to handle rounding on non-USD quotes
+		//CSYS-105785 & CSYS-105786 - Adding PSE2 and PSE3 in the condition
+		if((partNumber == "36312" OR partNumber == "9106105" OR partNumber == "9106115") AND quoteType_quote == ADD_ON_BUSINESS AND termNumMonths_quote <> "" AND assetAction <> TERMINATE_ACTION){
+			if((quoteCurrency_quote <> "USD" AND line.extNetPriceNonUnifiedUSD_line < 998) OR (quoteCurrency_quote == "USD" AND line.extNetPriceNonUnifiedUSD_line < 1000)){
+			put(softValidationDict, "extNetPriceForPTEAsset", TRUE_STR);
+			}
+			//CSYS-105298 (LIN 03-02-2022) - Start
+			if(line.extNetPriceNonUnified_line < line.assetOriginalExtendedNetPrice_list){
+			put(softValidationDict, "ProdSanboxEnviExtendedNetPriceBelowThreshold", TRUE_STR);
+			
+			assetOrgExtNetPrice = line.assetOriginalExtendedNetPrice_list;
+			assetOrgExtIntNetPriceValue = integer(assetOrgExtNetPrice);
+				if(assetOrgExtIntNetPriceValue == assetOrgExtNetPrice){
+					assetOrgExtIntNetPrice = true;
+				}
+			}// End - CSYS-105298
+		}
+		//Case 2:For renewals, the discount on Production Sandbox Environment can’t be more than 50% or this requires CFO Approval
+		if((partNumber == "36312" OR partNumber == "9106105" OR partNumber == "9106115") AND (assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION) AND quoteType_quote == ADD_ON_BUSINESS AND line.discount_line > 50 AND termNumMonths_quote <> ""){
+			put(softValidationDict, "extNetPriceForPTEDiscount", TRUE_STR);
+		}
+		//Case 3:New orders of Production Sandbox Environment must be sold at less than 50% discount or requires CFO Approval
+		if(assetAction == CREATE_ACTION AND (partNumber == "36312" OR partNumber == "9106105" OR partNumber == "9106115") AND (((line.discount_line > 50 AND line.discount_line <= 55) AND quoteType_quote == NEW_BUSINESS) OR (line.discount_line > 50 AND quoteType_quote == ADD_ON_BUSINESS))){
+			put(softValidationDict, "extNetPriceForPTENewBusiness", TRUE_STR);
+		}
+		//CSYS-104391 - End																											  																										 
+		//CSYS-103279 - DWC - 20210614 - start
+		// check if Legacy Expense Pay products exist with CREATE action
+		//CSYS-103366 NP 06/23/2021 Added condition for part#: 513139
+		if(
+			(findinarray(PreventLegacyExpensePayArray, partNumber) > -1 OR (line._part_number=="513139" AND NOT(expenseGlobalNone)))
+			AND line.assetAction_line == "CREATE"
+			AND
+			(
+				customerRegion_quote == "North America"
+				OR customerRegion_quote == "APA"
+				OR customerRegion_quote == "EMEA"
+			)
+		)
+		{
+			//setting flag if Legacy Expense Pay products exist with CREATE action
+			PreventLegacyExpensePayBool = true;
+		}
+		//CSYS-103279 - DWC - 20210614 - end
+		
+		//CSYS-96150, SN. 07-2019
+    	if(piItemType == INCREMENTAL_FEE){
+			put(stringsDict, poID + DELIMITER + INC_DOC_NUM_PO_MAP, docNum);
+    	}
+
+		if(assetAction == CREATE_ACTION AND ownerBU_quote == "Enterprise BU"){//CSYS-81751 LN. 6/30/2017 Only flag if Expense Pay North America is a CREATE action
+			if(poID == "471"){ //Expense Pay - North America
+				put(softValidationDict, "expensePayNorthAmericaFlag", TRUE_STR);
+				//break;
+			}
+		}
+
+		//UNCOMMENTING OUT CSYS-97101 SN. 09-2019 adding SMB BU as constraint
+		//CSYS-93607 (LN. 10-15-2018) If Permanent Test Environment is on the Quote, trigger a soft validation message:
+		//COMMENTING OUT (LN. 12-21-2018)
+		//CSYS-99100, SV. 04-05-2020 Added sAPSellsConcur to the condition below
+		//COMMENTING OUT CSYS-99541 SN. 06/2020
+		//CSYS-99100, SV. 30-04-2020 Added sAPSellsConcur to the below condition
+		/*if(poID == "36309" AND assetAction == CREATE_ACTION AND ownerBU_quote == SMB_BU AND trxns < 1000 AND sAPSellsConcur <> "Shadow Harmony Quote"){
+			put(softValidationDict, "permanentTestEnvironment", TRUE_STR);
+		}*/
+		//CSYS-97101 SN. 09-2019
+		//CSYS-99100, SV. 14-05-2020 Added sAPSellsConcur to the condition below
+		// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+		//CSYS-104391 (LIN 10-29-2021) -Case4/Point 4 - BMI - New Rules for Permanent Test Environment
+		/*
+		if(poID == "36309" AND assetAction == CREATE_ACTION AND disc > 20 AND disc <> partnerDiscount_quote AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+			put(softValidationDict, "permanentTestEnvironmentDiscountConstraint", TRUE_STR);
+		}*/
+
+		//CSYS-94167 (LN. 11-28-2018) - For New Biz, SMB BU quotes where unallowed products have 20 or less transactions, populate the notAllowedSMBProductArr to be evaluated to trigger approvals; CSYS-94350 (LN. 12-7-2018)
+		if(partNumber <> "" AND quoteType_quote == NEW_BUSINESS AND ownerBU_quote == SMB_BU AND ownerMarket_quote == UNITED_STATES){
+			if(piItemType <> INCREMENTAL_FEE AND findinarray(allowedSMBProductsArr, poID) == -1 AND trxns <= 20 AND trxns <> 0){
+				append(notAllowedSMBProductArr, poID);
+			}
+		}
+		//CSYS-98981 SN. 04/2020
+		//CSYS-99100, SV. 14-05-2020 Added sAPSellsConcur to the condition below
+		// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+	        if(editionlessUniversal_quote AND ownerBU_quote == "SMB BU" AND quoteType_quote <> "New Business" AND poID == "36309" AND assetAction == CREATE_ACTION AND implementationPlatform_quote == "Standard" AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+	        	put(softValidationDict, "permanentTestEnvironmentPlatformChange", TRUE_STR);
+	        }
+	        
+	        //CSYS-99671 (OK. 7-23-2020) START.
+	        /* For Implementation Partner disallow below Professional services selection
+	        POID for professtion services:
+	        Additional Single-Country Expense Configuration  - 235
+	        Additional Multi-Country Expense Configuration  - 214
+	        Additional Policy Creation  - 221
+	        Custom Consulting Services  - 335
+	        Additional Supported Corporate Card Feed  - 242
+	        Additional VAT Configuration  - 249
+	        Additional Workflow Creation  - 256
+	        Add Cash Advance - 158        
+	        */ 
+	        //CSYS-100558 (OK. 9-14-2020) Per CSYS-100558, Additional Supported Corporate Card Feed is allowed for Implementation Partner. so modifing the below condition
+	        //if (implementationPartner_quote <> "" AND (find("*235*214*221*335*242*249*256*158*", "*"+poID+"*") > -1) AND assetAction == CREATE_ACTION) {
+	        if (implementationPartner_quote <> "" AND (find("*235*214*221*335*249*256*158*", "*"+poID+"*") > -1) AND assetAction == CREATE_ACTION) {
+	           	put(softValidationDict, "implementationPartnerProductCheck", TRUE_STR);
+	        }
+	        // CSYS-99671 END
+	        
+	        //CSYS-100819 (OK. 10-12-2020) Start: Prevent discount for Concur Tax Assurance by VATBox Setup fee.
+		if (poID == "7218533" AND assetAction == CREATE_ACTION AND piItemType == SETUP_FEE AND disc > 0) {
+			put(softValidationDict, "VATBoxSetupFeeDiscountCheck", TRUE_STR);
+		}
+        //CSYS-100819 End
+		
+		//CSYS-100361 (OK. 10-12-2020) Start: Limit the discount value for below SKUs.
+		/*  
+		Concur Tax Assurance by VATBox - POID - 7218533
+		Add-on Reclaim and Optimization - POID - 7218555
+		Add-on Historical Tax Reclaim - POID - 7218583
+		*/
+		if ((find("*7218533*7218555*7218583*", "*"+poID+"*") <> -1) AND (assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND (piItemType == BASE_FEE OR piItemType == INCREMENTAL_FEE) AND disc > 30) 
+		{
+			put(softValidationDict, "discountLimitCheck", TRUE_STR);
+		}
+        //CSYS-100361 End 
+		
+		//CSYS-105851 (OK. 3-21-2022) Start - Contract Automation must be Non-Systematized for HDS with Non Monthly Billing Cycle
+		//Historical Data Services - poId - 6969985
+		if (poID == "6969985" AND assetAction == CREATE_ACTION AND billingCycle_quote <> "Monthly" AND contractAutomation_quote <> "Non-Systematized") {
+			put(softValidationDict, "hDSBillingCycleCheck", TRUE_STR);
+		}
+		//CSYS-105851 - End
+		
+		//CSYS-102820 (OK. 5-24-2021) Start: Display softvalidation message when discount limits specifted for new SKUs.
+		discountTable = bmql("SELECT pO, pI, discountAllowed, startDate, endDate, softValidationName FROM DiscountLimit WHERE pI = $partNumber");
+
+		for entry in discountTable {
+			skuPO = get(entry, "pO");
+			skuPI = get(entry, "pI");
+			discountAllowed = getfloat(entry, "discountAllowed");
+			discountStartDate = get(entry, "startDate");
+			discountEndDate = get(entry, "endDate");
+			softValidationName = get(entry, "softValidationName");
+			
+			if((comparedates(createdDate, strtojavadate(discountStartDate, DATE_FORMAT_PREFERENCE_HYPHEN)) >= 0) AND (comparedates(createdDate, strtojavadate(discountEndDate, DATE_FORMAT_PREFERENCE_HYPHEN)) <= 0)) {	
+				if(skuPI == partNumber AND disc > discountAllowed AND (assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND softValidationName <> "") {
+					put(softValidationDict, softValidationName, TRUE_STR);
+				}
+			}	
+		}
+        //CSYS-102820 End
+		
+        //CSYS-102931 (NT. 19-5-2021)
+        if(externalPromotion_quote == "ENTNEWAMPLIFYWAIVER")
+		{		
+		res = bmql("SELECT promoPI FROM PromoCodeDetails WHERE promotionCode = 'ENTNEWAMPLIFYWAIVER'");
+		for entry in res 
+			{	
+				PromoPI = get(entry, "promoPI");
+				if(PromoPI == partNumber)
+				{	
+				if ((assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND (piItemType == BASE_FEE OR piItemType == INCREMENTAL_FEE)) 
+				{
+					if(preproductionWaive_quote <> "3 months")
+					{
+					put(softValidationDict, "ENTNEWAMPLIFYWAIVER", TRUE_STR);
+					}
+					if(disc >20)
+					{
+					put(softValidationDict, "ENTNEWAMPLIFYWAIVER2", TRUE_STR);//CSYS-103073 (NT 01-06-2021)
+					}
+				}
+				elif((assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND piItemType == SETUP_FEE) 
+				{
+					if(preproductionWaive_quote <> "3 months")
+					{
+					put(softValidationDict, "ENTNEWAMPLIFYWAIVER", TRUE_STR);
+					}
+					if(disc >25)
+					{
+					put(softValidationDict, "ENTNEWAMPLIFYWAIVER2", TRUE_STR);//CSYS-103073 (NT 01-06-2021)
+					}
+				}
+				}
+			}
+		}
+        //CSYS-102931 END
+		
+		//CSYS-103168 (NT. 09-06-2021)
+        if(externalPromotion_quote == "ENTNEWAMPLIFYAPA")
+		{		
+		res = bmql("SELECT promoPI FROM PromoCodeDetails WHERE promotionCode = 'ENTNEWAMPLIFYAPA'");
+		for entry in res 
+			{	
+				PromoPI = get(entry, "promoPI");
+				if(PromoPI == partNumber)
+				{	
+				if ((assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND (piItemType == BASE_FEE OR piItemType == INCREMENTAL_FEE)) 
+				{
+					if(disc >20)
+					{
+					put(softValidationDict, "ENTNEWAMPLIFYAPA2", TRUE_STR);
+					}
+				}
+				elif((assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND piItemType == SETUP_FEE) 
+				{
+					if(disc >25)
+					{
+					put(softValidationDict, "ENTNEWAMPLIFYAPA2", TRUE_STR);
+					}
+				}
+				}
+			}
+		}
+        //CSYS-103168 END
+        
+	/* CSYS-107888 (LBN. 12-01-2023) - Commenting the below code snippet
+        //CSYS-105476 (PG. 07-02-2022) - Base Line Items
+        if(externalPromotion_quote == "ENTNEWBASEWAIVER")
+		{		
+		res = bmql("SELECT promoPI FROM PromoCodeDetails WHERE promotionCode = 'ENTNEWBASEWAIVER'");
+		for entry in res 
+			{	
+				PromoPI = get(entry, "promoPI");
+				if(PromoPI == partNumber)
+				{	
+				if ((assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND (piItemType == BASE_FEE)) 
+				{
+					if(disc >35)
+					{
+					put(softValidationDict, "ENTNEWBASEWAIVER2", TRUE_STR);
+					}
+				}
+				}
+			}
+			}
+        	//CSYS-105476 END
+		*/
+        
+        //CSYS-105476 (PG. 07-02-2022) - Pre Prod Line Item 
+		if(appliedPromotion_quote == "ENTNEWBASEWAIVER")
+		{
+			if ((assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND (piItemType == PRE_PRODUCTION)) 
+				{
+					if(disc >0)
+					{
+					put(softValidationDict, "ENTNEWBASEWAIVER2", TRUE_STR);
+					}
+				}
+		}
+		
+		//CSYS-106587 (PG. 27-06-2022) - Monthly Waiver and Pre-Prod Waiver 
+		if(appliedPromotion_quote == "ENTNEWBASEWAIVER")
+		{
+			if (monthlyWaivePeriod_quote <> "" OR preproductionWaive_quote <> "") 
+				{
+					put(softValidationDict, "ENTNEWBASEWAIVER2", TRUE_STR);
+				}
+		}
+		//CSYS-106587 END
+		
+ 	//CSYS-105476 END
+        
+        //CSYS-101253 (OK. 12-3-2020) - Start: Check if Add-On quote is have New Core Service with Create action
+		if (quoteType_quote == ADD_ON_BUSINESS) {
+			if (poCategory == "Core Service" AND piItemType == BASE_FEE AND assetAction == "CREATE") {
+				createCoreInAddon = "true";
+			}
+		}
+		//CSYS-101253 - End
+		
+		//IESCNQRCPQ-1122 LBN. 25-09-2023 Adding softvalidation for SAP integration for Invoice - Start 
+		if(OwnerBU_quote == "Enterprise BU" AND (quoteType_quote == "Add-On Business" OR (quoteType_quote == "New Business" AND edition == "Premium"))){
+			if(poID == "11096798" AND assetAction == CREATE_ACTION) {
+				hasSAPIntegrationInvoice = true;
+			}
+			if(poID == "6382" AND assetAction <> TERMINATE_ACTION) { 
+				hasAdditionalPremiumSupport = true;
+			}
+		}
+		//IESCNQRCPQ-1122 END																						  
+  
+																							  
+																			  
+									  
+   
+															
+								   
+   
+					   
+  
+		//CSYS-104327 NP 10-18-2021 Start
+		if(line.originalNumCommittedTransaction_line>line.numCommittedTransaction_line AND piItemType == BASE_FEE AND poCategory == "Core Service"){
+			tierDecreaseOnLine=true;
+		}
+		if((find("*573*8718*193457*2490985*4810507*", "*"+poID+"*") <> -1) AND assetAction == CREATE_ACTION AND piItemType == BASE_FEE){
+			hasCreateInvoiceCore=true; //searching for Invoice Processing with create action
+		}
+		if(line.promotionCode_line<>""){
+			promotionCodeOnLine=true;
+		}
+		
+		//CSYS-104327 End
+		
+		//IESCNQRCPQ-1176 LBN. 09-10-2023 Adding soft validation for Invoice payment manager - start
+		if((poID == "416635" OR poID == "566") AND assetAction <> TERMINATE_ACTION){
+			hasInvoiceCheckPaymentsSKUs = true;
+		}
+		if(poID == "10653478" AND assetAction == CREATE_ACTION) { 
+			hasInvoicePaymentManager = true;
+		}
+		//IESCNQRCPQ-1176 END
+		
+		//CSYS-102880 (LBN, 18-06-2021) Start Displaying softValidation message for New Business on BASE line item with more than 55%
+		//CSYS-104506 (TJG 10-28-2021) Exclude Service Partner Program Fee & Production Sandbox Environment from rule
+		//CSYS-104537 (LIN 02-15-2021) - BMI - Add Production Sandbox Environment back to the 55% rule - Removed the part number condition
+		if((find("*3221929*", "*"+poID+"*") == -1) AND quoteType_quote == NEW_BUSINESS AND piItemType == BASE_FEE AND disc > 55){
+			put(softValidationDict, "NBdiscountLimitforAnyBase", TRUE_STR);
+		}
+		// CSYS-102880 (LBN 06-16-2021) End
+		//CSYS-106942 SV. 24-08-2022 Start
+		if(VATparentdocNum==line._parent_doc_number AND line._part_custom_field20 == "Core Service" AND line._part_custom_field8 == "Base" AND VATBox_numtrax > line.numCommittedTransaction_line AND overrideHardStop == false AND line.assetAction_line <> "TERMINATE"){
+			put(softValidationDict, "ConcurVatAssuranceByBlueDotExceeds100PCLimit", TRUE_STR);
+		}
+		//CSYS-106942 End
+		
+		/* Rolled back the changes as requested (OK. 11-2-2023)
+		//IESCNQRCPQ-1098 (OK. 9-25-2023) Start - Check the SKU selection
+		if (OwnerBU_quote == "Enterprise BU" AND (quoteType_quote == ADD_ON_BUSINESS OR (quoteType_quote == NEW_BUSINESS AND implementationMethods_quote == "Premium"))) {
+			if (poID == "2538763" AND assetAction == CREATE_ACTION) {
+				hasSAPIntegration = true;
+			}		
+			if (poID == "6382" AND assetAction <> TERMINATE_ACTION) {
+				hasAdditionalPremSupport = true;
+			}
+		}
+		//IESCNQRCPQ-1098 - End
+		*/
+  
+		//IESCNQRCPQ-1524 (OK. 2-2-2024) Adding soft validation message when Intelligence only in single core
+		if (poID == "512" OR poID == "522" OR poID == "532") {
+			intelligenceOnlyInSingleCore = commerce.crossModelValidation("businessIntelligenceSSM_concur");
+			if (intelligenceOnlyInSingleCore == true) {
+				put(softValidationDict, "intelligenceOnlyInSingleCore", TRUE_STR);
+			}
+		}
+		
+		//IESCNQRCPQ-1652 (OK. 03-18-2024) Adding soft validation message when Data center only in single core
+		if (poID == "11663752" OR poID == "11663768") {
+			dataCenterOnlyInSingleCore = commerce.crossModelValidation("dataCenterForJapan_concur");
+			if (dataCenterOnlyInSingleCore == true) {
+				put(softValidationDict, "dataCenterOnlyInSingleCore", TRUE_STR);
+			}
+		}
+	}
+	
+	/* Rolled back the changes as requested (OK. 11-2-2023)
+	//IESCNQRCPQ-1098 (OK. 9-25-2023) Add softvalidation for SAP integration
+	if (hasSAPIntegration == true AND hasAdditionalPremSupport <> true) {
+		put(softValidationDict, "sAPIntegrationMessage", TRUE_STR);
+	}
+	*/
+	
+	//IESCNQRCPQ-1060 - VK start
+		if(advancedConfigurationTrainingConcurRequest_quote == true){
+			put(softValidationDict, "advConfigTraining", TRUE_STR);
+		}
+	//IESCNQRCPQ-1060 - VK End
+  
+	//IESCNQRCPQ-1174 VK
+		if(quoteType_quote == "New Business" AND hasSAPIntegrationForFGManagement == true){
+			put(softValidationDict, "sAPIntegrationFGMessage", TRUE_STR);
+		}
+	
+	//IESCNQRCPQ-1139 VK 
+		if(hasExpensePayRelatedSKUs){
+			put(softValidationDict, "expensePayRelatedSKUs", TRUE_STR);
+		}
+																					 
+																
+   
+	
+					  
+							   
+															  
+   
+  
+	//IESCNQRCPQ-624 - VK -Start
+	if(preproductionWaive_quote <> "" AND NOT(monthlyOffsetIsProd)){
+		put(softValidationDict, "coreServiceNotInPreProd", TRUE_STR);
+	}
+	//IESCNQRCPQ-624 - VK- End
+	
+	//IESCNQRCPQ-1122 (LBN. 25-9-2023) Adding softvalidation for SAP integration for invoice
+	if(hasAdditionalPremiumSupport == false AND hasSAPIntegrationInvoice == true) { 
+		put(softValidationDict, "sAPIntegrationInvoiceMessage", TRUE_STR);
+	}																			 														   
+ 
+														   
+																			   
+																	
+  
+ 
+	//Prevent CREATE Legacy Expense Pay products  - CSYS-103279 - dwc 20210614 - start
+	// Check conditions to set soft validation flag
+	if(
+		
+		comparedates(strtojavadate(orderEffectiveDateText,DATE_FORMAT_PREFERENCE_SLASH),strtojavadate("6/1/2021",DATE_FORMAT_PREFERENCE_SLASH)) > -1
+		AND PreventLegacyExpensePayBool
+	)
+	{
+		put(softValidationDict, "PreventLegacyExpensePay", TRUE_STR);
+	}
+	//Prevent CREATE Legacy Expense Pay products  - CSYS-103279 - dwc 20210614 - end
+	
+	//rule#9: Contract Must Be Non-Systematized For Governing Country Law Exception	
+		governingCountry = "";
+		if(_quote_process_serviceAddress_country <> ""){
+			
+			serviceCountryResSet = bmql("SELECT governingCountryLaw FROM governingLawMapping WHERE svcAddressCountry = $_quote_process_serviceAddress_country");
+			for serviceCountryRes in serviceCountryResSet {
+		 		governingCountry = get(serviceCountryRes, "governingCountryLaw");
+			}
+		}
+		
+		//IESCNQRCPQ-1793 Fire only for New Business
+		if (governingCountry == "" AND quoteType_quote == "New Business"){
+			//put(softValidationDict, "governingCountryLawFlag", TRUE_STR);
+			put(softValidationDict, "governingCountryLawFlag2", TRUE_STR); //CSYS-103239 NT 050821
+		}				
+	
+	//CSYS-101253 (OK. 12-3-2020) -  Start: Add soft validation message when the Contract Source is changed to SAP GTC when the Contract Source is Concur Paper in Account level
+	if (quoteType_quote == ADD_ON_BUSINESS) {
+		if (accountContractSource_quote == "Concur Paper") {
+			//CSYS-101732 (OK. 1-20-2021) Updated the condition to support SMB BU
+			//IESCNQRCPQ-1849 (OK. 6-3-2024) Comment out below line and updated the condition with contractEffectiveDate check
+			//if ((ownerBU_quote == "Enterprise BU" OR ownerBU_quote == "SMB BU") AND (termNumMonths_quote <> "" OR createCoreInAddon == "true") AND contractSource_quote == "SAP GTC") 
+			if ((ownerBU_quote == "Enterprise BU" OR ownerBU_quote == "SMB BU") AND (termNumMonths_quote <> "" OR createCoreInAddon == "true" OR comparedates(contractEffectiveDate, strtojavadate("8/1/2021", "MM/dd/yyyy")) == -1) AND contractSource_quote == "SAP GTC") {
+				put(softValidationDict, "UpdateContractSourceToSAPGTC", TRUE_STR);
+				if (governingCountry == ""){	
+					put(softValidationDict, "governingCountryLawFlag2", TRUE_STR); 
+				}		
+			}
+			
+		}
+	}
+	
+	//CSYS-101253 - End
+	
+	//IESCNQRCPQ-1176 (LBN. 09-10-2023)softvalidtaion condtion
+	if(hasInvoiceCheckPaymentsSKUs <> false AND hasInvoicePaymentManager == true){
+		put(softValidationDict, "invoicePaymentManagerMessage", TRUE_STR);
+	}
+	
+	//CSYS-104327 NP 10-18-2021 Start Checking for Add-on quotes with Tier decrease and promotion added
+	if(tierDecreaseOnLine == true and promotionCodeOnLine==true and quoteType_quote == ADD_ON_BUSINESS)
+	{
+		if (ownerBU_quote == "Enterprise BU") {
+			put(softValidationDict, "noPromoOnCoreTierDecrease", TRUE_STR);
+		}
+		elif(ownerBU_quote == "SMB BU" AND NOT (hasCreateInvoiceCore)){
+			put(softValidationDict, "noPromoOnCoreTierDecrease", TRUE_STR);
+		}
+	}
+	
+	//CSYS-104327 End
+	
+	//CSYS-101279 (OK. 12-3-2020) - Start: when the not Allowed SMB Prime Products present, display Soft validation message
+	notAllowedSMBPrimeProductsPresent = commerce.sMBPrimeProductsApprovalCheck();
+	if (notAllowedSMBPrimeProductsPresent == "true") {
+		put(softValidationDict, "notAllowedSMBPrimeProducts", TRUE_STR);
+	}
+	//CSYS-101279 - End
+	
+	//CSYS-101131 (OK. 11-17-2020) When Termination for Convenience is selected add Soft validation message
+	if (productsForTerminationForConvenience_quote <> "" AND terminationForConvenienceMonths_quote <> "") {
+		put(softValidationDict, "terminationForConvenienceCheck", TRUE_STR);
+	}
+
+	//CSYS-97748 SN. 12-2019 Commenting out Prime Approvals
+	//CSYS-94167 (LN. 11-28-2018) - If the notAllowedSMBProductArr has products present, trigger approvals
+	/*
+	if(sizeofarray(notAllowedSMBProductArr) > 0){
+		put(softValidationDict, "notAllowedSMBProductsPresent", TRUE_STR);
+	}
+	*/
+
+	/*Per CSYS-91394 A new Quote-Level validation rule to check two scenarios when the WEBSERVICESPOC18 Promo is applied: 
+	a) Does the Custom Consulting Service Product exist? (if no, throw an error) and 
+	b) if the Consulting Services Product exists does it's Quantity/Hours equal exactly 15? (if no, throw an error)*/
+	if( NOT(isnull(externalPromotion_quote)) AND externalPromotion_quote <> "" ){
+		
+		promosSelected = split(externalPromotion_quote, DELIMITER);
+		customConsultingExists = false;
+		quantity = 0;
+
+		if( findinarray(promosSelected, WEBSERVICESPOC18) <> -1 ){//If the WEBSERVICESPOC18 has been applied to the quote, progress
+
+			for line in line_process {
+				poId = line.poId_line;
+
+				//First loop the grid to determine if the Custom Consulting Services Product has been applied; if yes, capture the current Quantity
+				if( poId == CUSTOM_CONSULTING_SERVICES_POID ){
+					customConsultingExists = true;
+					quantity = line._price_quantity;
+					break;
+				} 
+			}
+			/*If the WEBSERVICESPOC18 Promotion has been applied AND Custom Consulting Services has not been applied to the quote
+			 OR CCS is applied to the quote but the quantity isn't exactly 15 fire the rule.*/
+			if(NOT(customConsultingExists) OR quantity <> 15){
+				put(softValidationDict, WEBSERVICESPOC18, TRUE_STR);
+			}
+		}
+
+		/* CSYS-92597 (LN. 8-8-2018)
+		If the BUDGETINSIGHTMIGRATE100 promo has been selected on the quote, 
+		loop over the line item grid to determine if there is an existing Budget Insight on the grid, 
+		if not, and a user is adding Budget fire the soft validation */
+		if(quoteType_quote == ADD_ON_BUSINESS){
+
+			if( findinarray(promosSelected, BUDGETINSIGHTMIGRATE100) <> -1 ){
+
+				//First assess if there is an existing Budget Insight asset 
+				budgetForExpenseTravelExpenseExists = false;
+
+				for line in line_process {
+					poId = line.poId_line;
+
+					if( poId == BUDGETINSIGHTFOREXPENSEORTE_PO ){
+						budgetForExpenseTravelExpenseExists = true;
+						break;
+					}
+				}
+
+				//Second, evaluate if Budget has been applied to the quote without an existing asset
+				for line in line_process {
+					poId = line.poId_line;
+
+					//Budget is present without an existing Budget Insight asset -> Promo is not allowed, fire the soft validation message
+					if( poId == BUDGET_PO AND NOT(budgetForExpenseTravelExpenseExists) ){
+							put(softValidationDict, BUDGETINSIGHTMIGRATE100, TRUE_STR);
+					}
+				}
+
+			}
+
+		}		
+
+	}
+
+	//CSYS-93618 (LN. 10-8-2018) A soft validation message for all SMB BU, United States, New Business customers who have Professional Edition
+	impMethods = split(listOfImplementationMethods_quote, "$$");
+	
+	//CSYS-99100, SV. 04-05-2020 Added sAPSellsConcur to the condition below
+	// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+	if(quoteType_quote == "New Business" AND ownerBU_quote == "SMB BU" AND ownerMarket_quote == "United States" AND findinarray(impMethods, "Professional") <> -1 AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+		put(softValidationDict, "smbUnitedStatesProfessionalEdition", TRUE_STR);
+	}
+	//CSYS-98419 SN. 02/2020
+	/*
+	//CSYS-99100, SV. 14-05-2020 Added sAPSellsConcur to the condition below
+	// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+	if(quoteType_quote == "New Business" AND revisionNumber_quote == 1 AND ownerDivision_quote == "US Ent New Business" AND ownerTeam_quote == "US ENT Digital NB" AND findinarray(impMethods, "Professional") <> -1 AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+		put(softValidationDict, "professionalEditionforNewBusiness", TRUE_STR);
+	}*/
+	
+	//CSYS-99283 SN. 05/2020
+	rez = bmql("SELECT currencyCode, conversionRate FROM currencyData WHERE currencyCode = $quoteCurrency_quote");
+	convertedArrNet = 0.0;
+
+	for entry in rez {
+		rate = get(entry, "conversionRate");
+		convertedArrNet = totalArrNet_quote/atof(rate);
+	}
+
+	//CSYS-98591 SN. 02/2020
+	//CSYS-99100, SV. 04-05-2020 Added sAPSellsConcur to the condition below
+	// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+	//CSYS-106163 & CSYS-106286 TJG 04/2022
+							
+	if(quoteType_quote == "New Business" AND ownerBU_quote == "Enterprise BU" AND findinarray(impMethods, "Premium") == -1 AND (implementationPartner_quote == "" OR isnull(implementationPartner_quote)) AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR) { 
+	  	 
+	  
+	      if(convertedArrNet > 350000 AND ownerTheater_quote == "Americas" AND ( ownerMarket_quote == "United States" OR ownerMarket_quote == "Canada" OR ownerMarket_quote == "US Government" ) ) 
+	           { put(softValidationDict, "dealSizeRequiresPremiumEdition", TRUE_STR); }
+	      
+	      if(convertedArrNet > 250000 AND ownerTheater_quote == "EMEA") 
+	           { put(softValidationDict, "EMEAdealSizeRequiresPremiumEdition", TRUE_STR); }
+ 	      
+ 	      //IESCNQRCPQ-372 TJG  3/2/2023
+ 	      if(convertedArrNet > 100000 AND ownerTheater_quote == "APAC" AND ownerMarket_quote <> "Japan")
+ 	      //if(convertedArrNet > 100000 AND ownerTheater_quote == "APAC")
+ 	           { put(softValidationDict, "APACdealSizeRequiresPremiumEdition", TRUE_STR); }
+	}
+
+	
+	//CSYS-79840
+	//Soft validations related to OED
+	if(commerce.manageOEDBillingException() == "validation trigger"){
+		if (aRRInvolvedFlag_quote == true){
+			put(softValidationDict, "oedBillingExceptionARRFlag", TRUE_STR);
+		}
+		else{
+			put(softValidationDict, "oedBillingExceptionNoARRFlag", TRUE_STR);
+		}
+	}
+	if (commerce.manageOEDValidation()){
+		put(softValidationDict, "oedValidationFlag", TRUE_STR);
+	}
+	
+	//CSYS-89642 (LN. 3-29-2018)
+	if(quoteType_quote == ADD_ON_BUSINESS){
+
+		if(commerce.expenseItAutoSwitch() == "Add ExpenseIt for Travel & Expense"){
+			put(softValidationDict, "addExpenseItForTravelAndExpense", TRUE_STR);
+		}
+
+		if(commerce.expenseItAutoSwitch() == "Add ExpenseIt for Expense"){
+			put(softValidationDict, "addExpenseItForExpense", TRUE_STR);
+		}
+		//CSYS-95752 SN. 08-2019
+		if(commerce.expenseItAutoSwitch() == "Add ExpenseIt"){
+			put(softValidationDict, "addExpenseIt", TRUE_STR);
+		}
+	}
+	
+	//DocuSign
+	//IESCNQRCPQ-1793 Non-Systematized not required & Added changing payment type to CC or DD
+		//rule#21: Contract Automation must be Non-Systematized when Docusign is not used. //CSYS-67974
+	if((quoteType_quote == "New Business" OR currentPaymentMethod_quote <> PaymentMethod_quote) AND customerAgreesToUseDocusign_quote == false AND (paymentMethod_quote == "Credit Card" OR paymentMethod_quote == "Direct Debit") AND (quoteCurrency_quote == "USD" OR quoteCurrency_quote == "CAD") ){
+		put(softValidationDict, "docuSignFlag", TRUE_STR);
+	}
+
+	
+	//CSYS-82644 LN. 6/12/2017
+	//Soft Validation related to CIP
+	if(anyPartnerDeliveredServices_quote == true AND (implementationPartner_quote == "" OR isnull(implementationPartner_quote))){
+		put(softValidationDict, "notAnyPartnerDeliveredServices", TRUE_STR);
+	}
+
+	if(anyPartnerDeliveredServices_quote == false AND (implementationPartner_quote <> "" AND NOT(isnull(implementationPartner_quote)))){
+		put(softValidationDict, "anyPartnerDeliveredServices", TRUE_STR);
+	}
+	
+	//CSYS-97861
+	if(aRRAdjustmentAlert_quote == true){ 
+		put(softValidationDict, "displayARRAdjustmentAlert", string(aRRAdjustmentAlert_quote));
+	}
+	
+	
+	
+	//CSYS-90047 (LN. 4-5-2018) Revamping the Enhance Promotion Functionality, leveraging the new EnforcePromoAttr table (Promotions Folder)
+	/****************************************************************************************************************************************  
+	Validate the Promotions applied to the quote to ensure that the Term (no. of Months) attribute is set accordingly for the given promotion.
+	Validate the Promotions applied to the quote to ensure that the Billing Cycle attribute is set accordingly for the given promotion.
+
+	If either of the criteria on the quote is not met, show the corresponding soft validation message.
+	*****************************************************************************************************************************************/
+	if( externalPromotion_quote <> "" AND NOT(isnull( externalPromotion_quote )) ){
+
+		selectedPromos = split( externalPromotion_quote, DELIMITER );
+		termNumMonths = util.customAtoi( termNumMonths_quote, 0 );
+		quoteTotalArrNet = totalArrNet_quote;//Currency type field
+
+		enforcePromoAttrValidation = BMQL("SELECT promotion, termMinimum, termNumberMonths, billingCycle, arrNet FROM EnforcePromoAttr");
+		promotionAlertMessage = BMQL("SELECT promoCode FROM PromoAlertMessage");//CSYS-95226 (LN. 3-28-2019)
+
+		for eachPromo in selectedPromos {
+
+			/* 
+				CSYS-95226 (LN. 3-28-2019) 
+				For those promos applied to the Quote that are also found in the PromoAlertMessage, display the corresponding alert message to the user.
+			*/
+			for entry in promotionAlertMessage {
+
+				promoCode = get( entry, "promoCode" );
+				
+				if(eachPromo == promoCode){
+					put(softValidationDict, promoCode + "alert", TRUE_STR);
+				}
+			}
+			
+			/* CSYS-107674 (LBN. 1-5-2023) - Commenting below lines of code 
+			//CSYS-101374 (OK. 12-11-2020) - Start: Set the Term(no. of months) logic for New promos SMB60DAYSFREE & SMB90DAYSFREE CSYS-104847 remove for SMB90DAYSFREE
+			selectedCoreServicesArray = String[];
+			if (eachPromo == "SMB60DAYSFREE"){ //  OR eachPromo == "SMB90DAYSFREE"){
+				if(ownerBU_quote == "SMB BU"){
+					if(quoteType_quote == NEW_BUSINESS){		
+						selectedCoreServicesArray = split(listOfCoreOffering_quote, "$$");			
+						if (findinarray(selectedCoreServicesArray, "Invoice Processing") == -1 AND (findinarray(selectedCoreServicesArray, "Expense") <> -1 OR findinarray(selectedCoreServicesArray, "Travel & Expense") <> -1 OR findinarray(selectedCoreServicesArray, "Expense with TripLink") <> -1 OR findinarray(selectedCoreServicesArray, "Travel & Expense with TripLink") <> -1)) {
+							eachPromo = eachPromo+"_6month";
+						}
+						else {
+							eachPromo = eachPromo+"_12month";
+						}
+					}
+					
+					if(quoteType_quote == ADD_ON_BUSINESS){
+						eachPromo = eachPromo+"_6month";
+					}
+				}
+			}
+			//CSYS-101374 - End
+			*/
+			
+			//CSYS_100539 (TT. 9/22/2020)
+	    		if (eachPromo == "SMNCUSTCLOSER" or eachPromo == "TESTOFFER60"){
+				if(quoteType_quote == NEW_BUSINESS){
+					if(ownerBU_quote == "SMB BU"){
+						//2 or more cores on quote and quote includes Concur Request - Standalone
+						if(find(listOfCoreOffering_quote, "$$") <> -1 and find(listOfCoreOffering_quote, "Concur Request - Standalone") <> -1
+				     		    and (find(listOfCoreOffering_quote, "Expense")<>-1 or find(listOfCoreOffering_quote, "Travel & Expense")<>-1
+				     		    or find(listOfCoreOffering_quote, "Expense with TripLink")<>-1 or find(listOfCoreOffering_quote, "Travel & Expense with TripLink")<>-1)){
+							eachPromo = eachPromo+"_6month";
+						}
+						//If quote includes Expense/T&E Core Service, require Term (no of mo) to be greater than or equal to 6
+						elif(listOfCoreOffering_quote == "Expense" or listOfCoreOffering_quote == "Travel & Expense"
+						     or listOfCoreOffering_quote == "Expense with TripLink" or listOfCoreOffering_quote == "Travel & Expense with TripLink"){
+							eachPromo = eachPromo+"_6month";
+						}
+						else{
+							eachPromo = eachPromo+"_12month";
+						}
+					}
+				}
+	    		}		
+	    		//End CSYS-100539
+	    		
+	    		//CSYS_100538 (TT. 9/25/2020)
+	    		if (eachPromo == "ADDONWAIVER90DAYS"){
+	    			if(ownerBU_quote == "SMB BU"){
+	    				eachPromo = eachPromo+"_6month";
+	    			}
+	    			else{
+	    				eachPromo = eachPromo+"_12month";
+	    			}
+	    		} //End CSYS-100538
+
+			for entry in enforcePromoAttrValidation {
+
+				promoEntryName = get( entry, "promotion" );
+				promoEntryTermNumMonthsMinMaxEqual = get ( entry, "termMinimum" );
+				promoEntryTermNumMonthsInt = util.customAtoi( get( entry, "termNumberMonths" ), 0 );
+				promoEntryBillingCycle = get( entry, "billingCycle" );
+				promoEntryArrNet = get( entry, "arrNet" );//CSYS-90913 Newest column/data point added to the EnforcePromoAttr Table
+
+				//If the promotion on the quote is found in the table, continue; ensure the correct attributes are being enforced
+				if( eachPromo == promoEntryName ){
+
+					//Ensure that there is a valid entry in the table and ensure that termNumMonths didn't return a 0 out of the util (invalid parameter was passed in, returns a 0)
+					if(quoteType_quote == "New Business"){
+						if( termNumMonths == 0 OR (promoEntryTermNumMonthsInt <> 0 AND termNumMonths <> 0 AND promoEntryTermNumMonthsMinMaxEqual <> "" AND promoEntryTermNumMonthsMinMaxEqual == MINIMUM_TERM_NUM_MONTHS AND termNumMonths < promoEntryTermNumMonthsInt) ){
+
+							//If the termNumMonths is under the threshold allowed for the term, throw a soft validation
+							put(softValidationDict, promoEntryName, TRUE_STR);
+						}
+					}
+					else {
+
+						//Grab only the date, no need for a timestamp
+						orderEffectiveDateStr = substring(orderEffectiveDate_quote, 0, 10);
+						contractRenewalDateStr = substring(contractRenewalDate_quote, 0, 10);
+
+						//If the table returned a value that needs to be adhered to by the Term (no. of Months), continue
+						if(promoEntryTermNumMonthsInt <> 0 AND promoEntryTermNumMonthsMinMaxEqual <> "" AND promoEntryTermNumMonthsMinMaxEqual == MINIMUM_TERM_NUM_MONTHS){
+
+							//Take the current OED and add the Term (no. of Months) to it as required by the Promotion in question
+							updatedOrderEffectiveDateStr = util.addMonthsToDate(orderEffectiveDateStr, string(promoEntryTermNumMonthsInt));
+
+							//Convert the strings back to dates to be used for comparison
+							futureOrderEffectiveDate = strtojavadate(updatedOrderEffectiveDateStr, DATE_FORMAT_PREFERENCE_HYPHEN);
+							contractRenewalDate = strtojavadate(contractRenewalDateStr, DATE_FORMAT_PREFERENCE_HYPHEN);
+
+							/* Compare the OED + Promo Term against the Contract Renewal Date, the CRN needs to either equal the OED + Promo Term or be greater, 
+							indicating that the remaing term is compatible for the Promotion*/
+							remainingTermDateComparison = comparedates(contractRenewalDate, futureOrderEffectiveDate);
+
+							//If the OED is greater than the CRN, and the Term (no. of months) is less than what the Promotion requires, throw a soft validation
+							if(remainingTermDateComparison <> 1){
+								put(softValidationDict, promoEntryName, TRUE_STR);
+							}
+						}
+					}
+					
+					//If there's an entry for the Billing Cycle that needs to be validated
+					if( promoEntryBillingCycle <> "" ){
+
+						//In the event that multiple billing cycles are allowed, but some need to be excluded - check for applicable billing cycles
+						promoEntryBillCycle = split(promoEntryBillingCycle, "~");
+
+						//If the billing cycle allowed for the promotion does not align with the billing cycle on the quote, throw a soft validation
+						if( findinarray(promoEntryBillCycle, billingCycle_quote) == -1 ){
+							put(softValidationDict, promoEntryName, TRUE_STR);
+						}
+						
+					}
+
+					//CSYS-90913 (LN. 5-31-2018) New column/criteria added to the EnforcePromoAttr Table to evaluate total ARR (net) is being met per promotion
+					if(promoEntryArrNet <> ""){
+
+						entryArrNetArray = split(promoEntryArrNet, "~");//promoEntryArrNet is a delimited string in the EnforcePromoAttr Table (Ex. >~100000 - the quoteTotalArrNet needs to be greater than 100,000)
+						operator = entryArrNetArray[0];//first index is the operator (greater than, less than, etc.)
+						entryArrNet = entryArrNetArray[1];//second index is the value to be compared against the current arr value on the quote
+						arrNet = util.customAtof( entryArrNet, 0 );//Ensure the value in the table is indeed an Float to evaluate mathmatically against a currency attribute
+
+						if( arrNet <> 0 ){ //Ensure the util didn't return a zero (fallback value), then compare the current quote Total ARR Net vs what is called out in the table.
+							if( (operator == ">" AND  arrNet > quoteTotalArrNet) 
+								OR (operator == "<" AND arrNet < quoteTotalArrNet) 
+								OR (operator == ">=" AND arrNet >= quoteTotalArrNet) 
+								OR (operator == "<=" AND arrNet <= quoteTotalArrNet) ){
+								put(softValidationDict, promoEntryName, TRUE_STR);
+							}	
+						}
+					}
+				}
+			}
+			
+			//CSYS-102011 (TT. 2-15-2021): ENTNEWSETUPDISC PreProd Waive Validation
+			if(eachPromo == "ENTNEWSETUPDISC" AND preproductionWaive_quote <> "6 months"){
+				put(softValidationDict, eachPromo, TRUE_STR);
+			}
+			
+			//CSYS-104927 (OK. 12-06-2021) Quarterly billing cycle not allowed for below promos.
+			//IESCNQRCPQ-138 (LIK 01-27-2023 - Removing ENTNEWBASEWAIVER promo)
+			if((find("*SMB120DAYSFREE*SMB150DAYSFREE*", "*"+eachPromo+"*") <> -1) AND billingCycle_quote == "Quarterly"){
+				put(softValidationDict, "promoBillingCycleCheck", TRUE_STR);
+			}
+			
+			//IESCNQRCPQ-677 (SV. 01-06-2023 - Added Japan promos)
+			if((find("*JPNWAIVER30DAYS*JPNWAIVER60DAYS*JPNWAIVER90DAYS*JPNWAIVER120DAYS*JPNWAIVER150DAYS*", "*"+eachPromo+"*") <> -1) AND billingCycle_quote <> "Annually"){
+				put(softValidationDict, "japanPromoBillingCycleCheck", TRUE_STR);
+			}
+			
+			//CSYS-107674 (LBN. 1-5-2023): ENTNEWMIDMARKET PreProduction Waive Validation
+			if(eachPromo == "ENTNEWMIDMARKET" AND preproductionWaive_quote <> "3 months"){
+				put(softValidationDict, "ENTNEWMIDMARKET2", TRUE_STR);
+			}
+
+			//CSYS-93041 (LN. 10-8-2018) The ENTINVOICEOFFER18 promotion requires a term (no of months) check ONLY when the total arr net is > 100K
+			if(eachPromo == ENTINVOICEOFFER18 AND quoteTotalArrNet > 100000){
+
+				if(quoteType_quote == "New Business"){
+					if(termNumMonths < 12){
+						put(softValidationDict, eachPromo, TRUE_STR);
+					}
+				}
+				else {
+					//Grab only the date, no need for a timestamp
+					orderEffectiveDateStr = substring(orderEffectiveDate_quote, 0, 10);
+					contractRenewalDateStr = substring(contractRenewalDate_quote, 0, 10);
+
+					//Take the current OED and add the Term (no. of Months) to it as required by the Promotion in question
+					updatedOrderEffectiveDateStr = util.addMonthsToDate(orderEffectiveDateStr, string(12));
+
+					//Convert the strings back to dates to be used for comparison
+					futureOrderEffectiveDate = strtojavadate(updatedOrderEffectiveDateStr, DATE_FORMAT_PREFERENCE_HYPHEN);
+					contractRenewalDate = strtojavadate(contractRenewalDateStr, DATE_FORMAT_PREFERENCE_HYPHEN);
+
+					/* Compare the OED + Promo Term against the Contract Renewal Date, the CRN needs to either equal the OED + Promo Term or be greater, 
+					indicating that the remaing term is compatible for the Promotion*/
+					remainingTermDateComparison = comparedates(contractRenewalDate, futureOrderEffectiveDate);
+
+					//If the OED is greater than the CRN, and the Term (no. of months) is less than what the Promotion requires, throw a soft validation
+					if(remainingTermDateComparison == -1){
+						put(softValidationDict, eachPromo, TRUE_STR);
+					}
+				}
+				
+			}
+		}
+	}
+	
+	for line in line_process{
+		partNumber = line._part_number;
+		disc = line.discount_line;
+		piItemType = line.piItemType_line;
+		assetAction = line.assetAction_line;
+		customPricingHasOccured = line.customPricingHasOccured_line;
+		trxns = line.numCommittedTransaction_line;//CSYS-94166 (LN. 1-21-2019)
+		assetOriginalDiscount = line.assetsOriginalDiscount_line;//CSYS-94166 (LN. 1-21-2019)
+		assetOriginalTransaction = line.originalNumCommittedTransaction_line;//CSYS-94166 (LN. 1-21-2019)
+		poCat = line.poCategory_line;// CSYS-96150, SN. 06-2019
+		overrideRampPrice = line.overrideRampPrice_line; //CSYS-96150, SN. 07-2019
+		rampPlanOverride = line.overrideDefaultRampPlan_line;//CSYS-96150, SN. 07-2019
+		lineItemRampPlan = line.rampPlanDetails_line;//CSYS-96150, SN. 07-2019
+		poID = line._part_custom_field1;//CSYS-96150, SN. 07-2019
+		poidStr = "*6406*8910*8917*8924*8931*5983963*"; //IESCNQRCPQ-493 (PG 28/3/2023)
+		poIdAdvSer = line.poId_line; //IESCNQRCPQ-493 (PG 28/3/2023)
+		bMICalculatedDiscount = line.bMICalculatedDiscount_line_c; //IESCNQRCPQ-1778 (OK. 4-23-2024)
+																						   
+		//IESCNQRCPQ-620 - Start - (LIN- 04-27-2023)
+		poFlag = false;
+		poIDArray = String[];
+		poIDArray = split(poidStr, "*");
+		if(findinarray(poIDArray, poIdAdvSer) <> -1){
+			poFlag = true;
+		}
+		//IESCNQRCPQ-620 - End
+																																	   
+																																																   
+																																									  
+																
+	
+   
+						  
+		//CSYS-92938 (LN. 8-29-2018) Display a soft validation if there are changes to the Partner Discount; CSYS-94859 (LN. 23-1-2019) Partner Discount Approvals should trigger at all times, when non TERMINATE
+		if(partNumber <> ""){//Exclude Models
+			//Exclude Pre-Prods/Setups from Partner Discount Approvals
+			if(NOT isnull(partnerDiscount_quote) AND partnerDiscount_quote <> 0 AND piItemType <> SETUP_FEE AND piItemType <> PRE_PRODUCTION){
+				//CSYS-99100, SV. 14-05-2020 Added sAPSellsConcur to the condition below
+				// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+				if(assetAction == CREATE_ACTION AND partnerDiscount_quote <> disc AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){//If the current line discount <> partner discount, trigger soft validation
+					put(softValidationDict, "partnerDiscountChange", TRUE_STR);
+				}
+			}
+
+            		//CSYS-99667: Implementation Partner required to add Partner Delivered Expansion
+            		//CSYS-100057 (OK. 7-30-2020) Display a soft validation when the Implementation Partner is not selected for Partner Implementation SKU
+            		//Partner Delivered Expansion SKU and Partner Implementation SKU maintains an action code of NONE for both New Business & Add-On Quotes.
+            		//CSYS-100057 - Modifing existing condition to support Partner Implementation SKU
+            		if (assetAction == NONE_ACTION AND implementationPartner_quote == "") {
+            			if (poID == "4459124") {                	    
+                	    		put(softValidationDict, "implementationPartnerRequired", TRUE_STR);
+                	    	}
+                	    	//CSYS-100057, Partner Implementation POID - 6845717
+                	    	if (poID == "6845717") {
+                	    		put(softValidationDict, "implementationPartnerForPI", TRUE_STR);
+                	    	}
+            		}
+					
+			//IESCNQRCPQ-493 (PG 28/3/2023) On Custom Pricing, if Action Code=NONE, and the price is changed, change Action Code to MODIFY
+			//IESCNQRCPQ-810/IESCNQRCPQ-984 (PG 28-07-2023) Prevent ANY discount from being entered prior to custom pricing.
+			if(poFlag AND customPricingHasOccured == false AND (assetAction == "MODIFY" OR (assetAction == "NONE" AND disc > 30))){
+				put(softValidationDict, "CustomPricingExists", TRUE_STR);
+			}
+			
+			//IESCNQRCPQ-810/IESCNQRCPQ-984 (PG 28-07-2023)
+            if(poFlag AND customPricingFlag_quote AND disc > 0){
+				put(softValidationDict, "OriginalCustomPricingExists", TRUE_STR);
+			}
+            		
+			/*CSYS-98985, Phil S 04/05/2020, block CSYS-94166
+			//CSYS-94166 (LN. 1-21-2019) If an existing Concur FAVR asset has had it's discount or transactions updated, trigger a soft validation message.
+			if(partNumber == CONCUR_FAVR_BASE_PI AND assetAction <> TERMINATE_ACTION AND assetAction <> CREATE_ACTION){
+
+				if( (assetOriginalDiscount <> disc) OR (assetOriginalTransaction <> trxns) ){
+					put(softValidationDict,"ConcurFAVRAssetUpdates", TRUE_STR);
+				}
+			}
+			*/
+			
+			//CSYS-97522 SN. 11-2019
+			/*	
+			//CSYS-99100, SV. 14-05-2020 Added sAPSellsConcur to the condition below
+			// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+    		if(quoteType_quote <> ADD_ON_BUSINESS AND NOT(isnull(appliedPromotion_quote)) AND appliedPromotion_quote <> ""  AND ownerBU_quote == SMB_BU AND disc < -50 AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+       			put(softValidationDict, "promoWithNegativeDiscSMN", TRUE_STR);
+    		}*/
+    		
+    		//CSYS-97627 and CSYS-97626 SN. 11-2019
+	    	if (quoteType_quote == "New Business" AND revisionNumber_quote == 1 AND ownerBU_quote == "SMB BU" AND ownerDivision_quote == "US Ent Public Sector"){
+	        	//CSYS-97627 SN. 11-2019
+				//CSYS-99100, SV. 04-05-2020 Added sAPSellsConcur to the condition below
+				// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+	        	if(find(listOfCoreOffering_quote, "Invoice") <> -1 AND find(listOfCoreOffering_quote, "Expense") <> -1 AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+	           		put(softValidationDict, "publicSectorMultipleCore", TRUE_STR);
+	        	}
+	        	//CSYS-97626 SN. 11-2019
+	        	termNoMonths = util.customAtoi(termNumMonths_quote, 0);
+				//CSYS-99100, SV. 14-05-2020 Added sAPSellsConcur to the condition below
+				// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+	        	if(termNoMonths < 12  AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+	            		put(softValidationDict, "publicSectorContractTermLess12", TRUE_STR);
+	        	}
+	    	}
+			//CSYS-96150, SN. 06-2019 ; Part 1, If on an Add-on quote the existing Core Service, asset Action = MODIFY with a discount greater than the existing asset discount on the Base line only, trigger approval to CFO
+			//CSYS-99100, SV. 04-05-2020 Added sAPSellsConcur to the condition below
+			// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+			//CSYS-103871 (OK. 8-6-2021) When the difference between the current discount and asset discount is greater than 5% then only trigger soft validation message
+																															   
+	    	//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below line and use bMICalculatedDiscount value instead of assetOriginalDiscount. Remove the 5% discount difference check
+			//if (assetAction == MODIFY_ACTION AND piItemType == BASE_FEE AND poCat == CORE_SERVICE AND disc > assetOriginalDiscount AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR AND (disc - assetOriginalDiscount) > 5.00){
+			if (assetAction == MODIFY_ACTION AND piItemType == BASE_FEE AND poCat == CORE_SERVICE AND disc > bMICalculatedDiscount AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+				put(softValidationDict,"increasingDiscountonExistingCore", TRUE_STR);
+			}
+
+			//CSYS-96150, SN. 07-2019
+			if(piItemType == BASE_FEE AND rampPlanOverride == TRUE_STR AND overrideRampPrice == TRUE_STR){
+					incrementalDocNum = get(stringsDict, poID + DELIMITER + INC_DOC_NUM_PO_MAP);
+					rampDiscountInfo = util.getRampDiscounts(lineItemRampPlan);
+
+					//get any ramp discounts for the base line item:
+					baseFeeRampDiscountArray = get(rampDiscountInfo, "baseFeeRampDiscountArray");
+					incFeeRampDiscountArray = get(rampDiscountInfo, "incFeeRampDiscountArray");
+
+					baseFeeRampDiscountFloatArray = float[];
+					incFeeRampDiscountFloatArray = float[];
+
+					//Convert to float arrays:
+					for val in baseFeeRampDiscountArray{
+							if(isnumber(val)){
+									append(baseFeeRampDiscountFloatArray, atof(val));
+									//CSYS-94311 SN. 10-2019
+									//CSYS-97991
+									/*
+	                				if(NOT isnull(partnerDiscount_quote) AND partnerDiscount_quote <> 0 AND assetAction == CREATE_ACTION AND partnerDiscount_quote <> atof(val)){
+										//If the current line discount <> partner discount, trigger soft validation
+										put(softValidationDict, "partnerDiscountChange", TRUE_STR);
+									}*/
+							}
+					}
+					for val in incFeeRampDiscountArray{
+							if(isnumber(val)){
+									append(incFeeRampDiscountFloatArray, atof(val));
+									//CSYS-94311 SN. 10-2019
+									//CSYS-97991
+									/*
+	                				if(NOT isnull(partnerDiscount_quote) AND partnerDiscount_quote <> 0 AND assetAction == CREATE_ACTION AND partnerDiscount_quote <> atof(val)){
+										//If the current line discount <> partner discount, trigger soft validation
+										put(softValidationDict, "partnerDiscountChange", TRUE_STR);
+									}*/
+							}
+					}
+
+			        //Get the highest value (discount) from each array:
+			        highestBaseFeeRampDiscount = 0.0;
+			        //lowestBaseFeeRampDiscount = 0.0;//CSYS-97522 SN. 11-2019
+			        highestIncFeeRampDiscount = 0.0;
+			        //lowestIncFeeRampDiscount = 0.0;//CSYS-97522 SN. 11-2019
+			        if(NOT isempty(baseFeeRampDiscountFloatArray)){
+			            highestBaseFeeRampDiscount = max(baseFeeRampDiscountFloatArray);
+			            //lowestBaseFeeRampDiscount = min(baseFeeRampDiscountFloatArray);//CSYS-97522 SN. 11-2019
+			        }
+			        if(NOT isempty(incFeeRampDiscountFloatArray)){
+			            highestIncFeeRampDiscount = max(incFeeRampDiscountFloatArray);
+			            //lowestIncFeeRampDiscount = min(incFeeRampDiscountFloatArray);//CSYS-97522 SN. 11-2019
+			        }
+
+					//Overwrite the lineDiscountPercent values in the triggerDict:
+					if(NOT(isnull(highestBaseFeeRampDiscount)) AND highestBaseFeeRampDiscount > 0){
+						//CSYS-96150, SN. 07-2019 ; Part 1, If on an Add-on quote the existing Core Service, asset Action = MODIFY with a discount greater than the existing asset discount on the overr   Base line only, trigger approval to CFO
+						//CSYS-99100, SV. 14-05-2020 Added sAPSellsConcur to the condition below
+						// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+						//CSYS-103871 (OK. 8-6-2021) When the difference between the current discount and asset discount is greater than 5% then only trigger soft validation message
+																																  
+						//IESCNQRCPQ-1778 (OK. 4-23-2024) Comment out the below line and use bMICalculatedDiscount value instead of assetOriginalDiscount. Remove the 5% discount difference check
+						//if (assetAction == MODIFY_ACTION AND poCat == CORE_SERVICE AND highestBaseFeeRampDiscount > assetOriginalDiscount AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR AND (highestBaseFeeRampDiscount - assetOriginalDiscount) > 5.00){
+						if (assetAction == MODIFY_ACTION AND poCat == CORE_SERVICE AND highestBaseFeeRampDiscount > bMICalculatedDiscount AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+							put(softValidationDict,"increasingDiscountonExistingCore", TRUE_STR);
+						}
+				 	}
+				 	
+				 	//CSYS-97522 SN. 11-2019
+				 	/*
+					//CSYS-99100, SV. 14-05-2020 Added sAPSellsConcur to the condition below
+					// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+			        if(quoteType_quote <> ADD_ON_BUSINESS AND NOT(isnull(lowestBaseFeeRampDiscount)) AND NOT(isnull(appliedPromotion_quote)) AND appliedPromotion_quote <> ""  AND ownerBU_quote == SMB_BU AND lowestBaseFeeRampDiscount < -50 AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+			                put(softValidationDict, "promoWithNegativeDiscSMN", TRUE_STR);
+			        }
+			        //CSYS-97522 SN. 11-2019
+					//CSYS-99100, SV. 04-05-2020 Added sAPSellsConcur to the condition below
+					// CSYS-100331 (OK. 8-31-2020) Remove approvals for Shadow Harmony Add on quotes
+			        if(quoteType_quote <> ADD_ON_BUSINESS AND NOT(isnull(lowestIncFeeRampDiscount)) AND NOT(isnull(appliedPromotion_quote)) AND appliedPromotion_quote <> ""  AND ownerBU_quote == SMB_BU AND lowestIncFeeRampDiscount < -50 AND sAPSellsConcur <> "Shadow Harmony Quote" AND shadowAddOn <> TRUE_STR){
+			                put(softValidationDict, "promoWithNegativeDiscSMN", TRUE_STR);
+			        }*/
+			        
+			}// end  CSYS-96150, SN. 07-2019
+			//(CSYS-100128 S.V 10-08-2020) Start
+	 		if(quoteType_quote == ADD_ON_BUSINESS){
+				if((poCat <> "Professional Service" AND assetAction == CREATE_ACTION) OR assetAction == MODIFY_ACTION OR assetAction == TERMINATE_ACTION){ 				
+					nonProfServCreate = true;
+				}        
+				if(poCat == "Professional Service" AND assetAction == CREATE_ACTION){
+					append(ProfServOnlyArray, true);				
+				}
+				if(poID == "6382"){
+					append(hasAdditionalPremiumSupportArray, true);
+				}
+	    		}
+	    		//(CSYS-100128 S.V 10-08-2020) End
+			//(CSYS-101176 TJG 01-08-2021) Start
+			if(assetAction <> NONE_ACTION){
+				if(partNumber == "217"){ //Additional Multi-Country Expense Configuration
+					hasAdditionalMultiCountryExpenseConfiguration = true;
+				}
+				if(partNumber == "203735" OR partNumber == "203658"){ //Corporate Subsidiary Billing
+					hasCorporateSubsidiaryBilling = true;
+				}
+				if(partNumber == "2274925"){ //Additional Multi-Country Deployment T and M
+					hasAdditionalMultiCountryDeploymentTandM = true;
+				}
+				if(partNumber == "6453"){ //Additional Premium Support
+					hasAdditionalPremiumSupport = true;
+				}
+			}			
+			if(find(line.poName_line, "Arrears") <> -1 OR find(line.poName_line, "arrears") <> -1){
+				hasArrearsBilling = true;
+			}
+			//(CSYS-101176 TJG 01-08-2021) End
+			//CSYS-103216 LIN 06-14-2021) Start - Concur Detect By AppZen deadline for closing deals message.
+			if(partNumber == "7507721" AND assetAction == CREATE_ACTION){
+				put(softValidationDict, "concurDetectByAppZenClosingDeal", TRUE_STR);
+			}
+			//CSYS-103216 End
+			//IESCNQRCPQ-177 - Start - LIN-03-08-2023- Adding soft validation for custom payment extract.
+			if(partNumber == "8293749" AND (assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION) AND termNumMonths_quote <> "" AND NOT(extractServiceExist) AND quoteType_quote == ADD_ON_BUSINESS){
+				put(softValidationDict, "customPaymentExractRenwal", TRUE_STR);
+			}
+			//IESCNQRCPQ-177 - End
+			//CSYS-103219 NP Start
+			
+			if(partNumber=="7526964" AND assetAction == CREATE_ACTION)
+			{
+				if(detectByAppzenTerminate_quote){
+					if(disc>84.00){
+						put(softValidationDict, "discountLimitForOversightWhenAppZenIsTerminate", TRUE_STR);
+					}
+				}
+				elif(disc>0.00){
+					put(softValidationDict, "discountLimitForOversight", TRUE_STR);
+				}
+				
+			}
+			
+			//CSYS-103219 End
+			//CSYS-104578 - Start
+			if (piItemType == BASE_FEE) {
+				if(line.coreOffering_line == "Expense"){
+					coreExpense = true;
+				}		
+				if(poCat == "Extended Service" AND line.coreOffering_line == "Invoice Processing"  AND assetAction == "CREATE" AND (poID =="36309" OR poID =="9106104" OR poID =="9106114")){
+					pSEInvoicePro = true;
+				}
+			}
+			if(coreExpense AND pSEInvoicePro){
+				put(softValidationDict, "pSEExpenseCore", TRUE_STR);
+			}
+			//CSYS-104578 - End
+		}
+	}	
+	
+if(hasWalkMe == true AND hasWalkMeSetupandImp == false AND walkMePartnerDelivered == false) {
+	put(softValidationDict, "walkMeSetupImpRequired", TRUE_STR);
+}
+
+if(hasWalkMe == true AND hasWalkMeSetupandImp == true AND walkMePartnerDelivered == true) {
+	put(softValidationDict, "walkMePartnerDelivered", TRUE_STR);
+}
+	
+//(CSYS-101176 TJG 01-08-2021) Start  Previous Code is below
+if(contractAutomation_quote == "Systematized"){	//Soft validations related to Contract Automation:
+
+//rule#1: Contract Automation must be Non-Systematized if Special Terms is populated
+	
+	if(specialTerms_quote <> ""){
+		put(softValidationDict, "specialTerms_quote", specialTerms_quote);
+	}
+//rule#2: Contract Automation must be Non-Systematized when Contract Source is Third Party Paper
+	
+	if(contractSource_quote == "Third Party Paper"){
+		put(softValidationDict, "3rdPartyPaperFlag", TRUE_STR);
+	}
+
+//rule#3: Contract Automation must be Non-Systematized for Enterprise BU contract RENEWALS where the Contract Source = Concur Paper and the Term (no of mo) greater than 36 months //CSYS-100719 (BS. 10/11/2020) 
+//IESCNQRCPQ-1793	
+//	if(quoteType_quote == ADD_ON_BUSINESS AND ownerBU_quote == "Enterprise BU" AND contractSource_quote == "Concur Paper" AND termNumMonths_quote > "36"){	
+//		put(softValidationDict, "concurPaperEnterpriseAddonRenewal", TRUE_STR);
+//	} 
+		
+//rule#4: Contract Automation must be Non-Systematized when the SAP MAR ID is populated
+	
+	if(SAP_MAR_ID_quote <> ""){
+		put(softValidationDict, "SAPMARID", TRUE_STR);
+	}
+
+//rule#5: Contract Automation must be Non-Systematized for SAP Other contracting entity  //CSYS-97615
+
+   	if(contractingEntity_quote == "SAP Other"){
+    		put(softValidationDict, "otherContractingEntity", TRUE_STR);
+    	}
+
+//rule#6: Contract Automation must be Non-Systematized for Brazil contracting entity and purchased from partner is not VAR //CSYS-78932 //CSYS-100494
+	//CSYS-107770 TJG 12/13/2022  ROLLBACK on1/11/2023
+	if(purchasedFromPartnerCategorySFDC_quote <> "VAR" and contractingEntity_quote == "SAP Brasil Ltda."){
+		put(softValidationDict, "brazilContractingEntity", TRUE_STR);
+	}
+
+//rule#7: Contract Automation must be Non-Systematized for SAP (China) Co. Ltd. contracting entity
+	
+	if(contractingEntity_quote == "SAP (China) Co. Ltd."){
+		put(softValidationDict, "chinaContractingEntity", TRUE_STR);
+	}
+
+//rule#8: Contract Automation must be Non-Systematized when service address is in China Peoples Rep
+	
+	if (_quote_process_serviceAddress_country == "China Peoples Rep" AND quoteType_quote == NEW_BUSINESS){
+		put(softValidationDict, "chinaPeoplesRepServiceAddress", TRUE_STR);
+	}
+
+//rule#10: Contract Automation must be Non-Systematized if Billing in Arrears
+
+	if(hasArrearsBilling == true) {
+		put(softValidationDict, "arrearsBillingFlag", TRUE_STR);
+	}
+
+//rule#11: Contract Automation must be Non-Systematized if the current Billing Cycle is changed from Annual.
+		
+	if(quoteType_quote == ADD_ON_BUSINESS AND currentBillingCycle_quote == "Annually" AND billingCycle_quote <> "Annually"	AND NOT(partnerBillingQuote_quote) AND NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){
+		put(softValidationDict, "annualBillingChangedFlag", TRUE_STR);
+	}
+
+//rule#12: Contract Automation must be Non-Systematized for Add-ons with Annual Billing and recurring fees
+	//IESCNQRCPQ-372 TJG 3/2/2023
+	//if(quoteType_quote == ADD_ON_BUSINESS AND billingCycle_quote == "Annually" AND NOT(partnerBillingQuote_quote) AND NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){
+	  if(quoteType_quote == ADD_ON_BUSINESS AND billingCycle_quote == "Annually" AND NOT(partnerBillingQuote_quote) AND NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1)) and contractingEntity_quote <> "Concur Japan (JV)"){
+
+			put(softValidationDict, "annualBillingAddonFlag", TRUE_STR);
+		}
+
+//rule#13: Contract Automation must be Non-Systematized for 3 core quotes
+	if(moreThanTwoCoresFlag_quote){
+			put(softValidationDict, "threeCoreFlag", TRUE_STR);
+		}
+
+//rule#14: Contract Automation must be Non-Systematized if AccountPreProd pass thru flag is true.
+
+	//(CSYS-100128 S.V 10-08-2020 Added the second AND Condition)
+		 if (accountPreProductionStatic_quote AND NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){
+           		put(softValidationDict, "accountPreProdFlag", TRUE_STR);
+		}
+
+//rule#15: Contract Automation must be Non-Systematized if Current Contract Renewal Date is older than January 1, 2008
+
+	if(quoteType_quote == ADD_ON_BUSINESS AND contractRenewalDateAcc_quote <> ""){
+			if(comparedates(strtojavadate(contractRenewalDateAcc_quote, "yyyy-MM-dd"), strtojavadate("2008-01-01", "yyyy-MM-dd")) < 0){
+				put(softValidationDict, "veryOldContractRenewalDate", TRUE_STR);
+			}
+		}
+
+//rule#16: Contract Automation must be Non-Systematized if Contract ARR greater than 150K
+		quoteCurrency = quoteCurrency_quote;
+		totalArrNet = totalArrNet_quote;
+	
+		if (quoteType_quote == ADD_ON_BUSINESS AND termNumMonths_quote <> ""){
+		//if (termNumMonths_quote <> ""){
+			rez = bmql("SELECT currencyCode, conversionRate FROM currencyData WHERE currencyCode = $quoteCurrency");
+			convertedArrNet = 0.0;
+	
+			for entry in rez {
+				rate = get(entry, "conversionRate");
+				convertedArrNet = totalArrNet/atof(rate);
+			}
+	
+                         //IESCNQRCPQ-709 TJG 5/23/2023	
+			//if (convertedArrNet > 150000 AND legalEgregiousTerms_quote <> "Reviewed -- No Egregious Terms"){
+			if (convertedArrNet > 150000 AND legalEgregiousTerms_quote <> "Reviewed -- No Egregious Terms" and contractingEntity_quote <> "Concur Japan (JV)"){
+				put(softValidationDict, "arrGreaterThan150K", TRUE_STR); 
+			}
+		}
+
+//rule#17: Contract Automation must be Non-Systematized when Edition is Premium with Recurring Fees
+	//IESCNQRCPQ-1793						
+	//if(implementationMethods_quote == "Premium" AND  NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){
+	//if(quoteType_quote == "New Business" AND implementationMethods_quote == "Premium" AND  NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){																																		
+	//	put(softValidationDict, "implementationMethods_quote", "Premium");
+//	}	
+
+//rule#18: Contract Automation must be Non-Systematized if Quote contains Corporate Subsidiary Billing.		
+
+	if(hasCorporateSubsidiaryBilling == true) { 	
+		put(softValidationDict, "productsValidationFlag2", TRUE_STR);
+	}
+
+//rule#19: Contract Automation Must be Non-Systematized if Quote contains Additional Premium Support.	
+
+																																		 
+	//IESCNQRCPQ-1725 (OK. 4-22-2024) Comment out the below line to remove the hasAdditionalMultiCountryDeploymentTandM from the condition				
+	//if(hasAdditionalPremiumSupport == true AND hasAdditionalMultiCountryDeploymentTandM == false) {	
+	if(hasAdditionalPremiumSupport == true) {								
+		put(softValidationDict, "productsValidationFlag3", TRUE_STR);
+	}
+
+//rule#20: Contract Automation must be Non-Systematized if Quote contains Additional Multi-Country Expense Configuration in the EMEA or Americas theater.
+	
+	if(ownerTheater_quote <> "APAC" AND hasAdditionalMultiCountryExpenseConfiguration == true) { 	
+		put(softValidationDict, "productsValidationFlag4", TRUE_STR);
+	}
+		
+
+	//IESCNQRCPQ-1499 - LIK-01-25-2024- Contract Automation must be Non-Systematized when Docusign is not used for EMEA.
+	if(quoteType_quote == "New Business" AND customerAgreesToUseDocusign_quote == false AND (paymentMethod_quote == "Direct Debit") AND (quoteCurrency == "EUR") ){
+		
+		put(softValidationDict, "docuSignFlagEMEA", TRUE_STR);
+	}		
+
+//CSYS-104750 (TJG. 11-29-2021)
+//rule#22: Contract Automation must be Non-Systematized if Quote contains Concur User Assistant by WalkMe - Set up and Implementation Custom Edition
+if(hasWalkMeSetupandImp == true) {
+put(softValidationDict, "productsValidationFlag5", TRUE_STR);
+}
+
+//rule#23: Contract Automation must be Non-Systematized if Quote contains Extended Services Advisory Support
+if(hasESAS == true) {
+put(softValidationDict, "productsValidationFlag6", TRUE_STR);
+}	
+		
+	}
+//(CSYS-101176 TJG 01-08-2021) End   Previous code is below		
+/*
+	//CSYS-98095, KW 1/09/2020, add billingCycleVarianceFlag2 if current customer billing cycle does not match the billing cycle on this quote
+	if(quoteType_quote == ADD_ON_BUSINESS AND currentBillingCycle_num <> billingCycle_num){
+		put(softValidationDict, "billingCycleVarianceFlag2", TRUE_STR);
+	}
+	
+	//Soft validations related to Contract Automation:
+	if(contractAutomation_quote == "Systematized"){
+
+		//CSYS-93355 (LN. 2-25-2019)
+		if(ownerMarket_quote == "LATAM" AND paymentMethod_quote <> "Electronic Funds Transfer"){
+			put(softValidationDict, "enforceEFTPaymentMethodForLATAM", TRUE_STR);
+		} 
+	
+		//Build quote level reasons for Soft Validations:
+		//Contract Automation must be Non-Systematized if Special Terms is populated:
+		if(specialTerms_quote <> ""){
+			put(softValidationDict, "specialTerms_quote", specialTerms_quote);
+		}
+		//Contract Automation must be Non-Systematized when Edition is Premium - Validation:
+		//(CSYS-100349 S.V 03-09-2020 Added the second AND Condition)
+		if(implementationMethods_quote == "Premium" AND  NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){
+			put(softValidationDict, "implementationMethods_quote", "Premium");
+		}
+		//CSYS-75637
+		
+		//Contract Automation must be Non-Systematized if BSA Type is Modified:
+		//if(bsaType_quote == "Modified"){
+		//	put(softValidationDict, "bsaType_quote", "Modified");
+		//}
+		
+		//Contract Automation must be Non-Systematized if Contract Type is Modified:
+		if(contractType_quote == "Modified"){
+			put(softValidationDict, "contractType_quote", "Modified");
+		}
+		//CSYS-91413 (LN. 5-16-2018) Commenting out this section of code, we are no longer going to utlize this functionality.  When payment terms differ, we will now support systematized contracts with new legal language in the ASOF/ISOF/SMN-Ent Order Form/Quotation
+		//Contract Automation must be Non-Systematized if Current and New Payment Terms are Different:
+		// if(addOnPaymentTerms_quote <> "" AND terms_quote <> "" AND quoteType_quote == ADD_ON_BUSINESS AND (terms_quote <> addOnPaymentTerms_quote)){
+		// 	put(softValidationDict, "paymentTermsVarianceFlag", TRUE_STR);
+		// }
+		//Contract Automation must be Non-Systematized if the Current Billing Cycle is longer than the New Billing Cycle:
+
+		//CSYS-90721, PhilS 09/23/2019, add currentBillingCycle_num <>0
+		//if(currentBillingCycle_quote <> "" AND quoteType_quote == ADD_ON_BUSINESS AND  //before CSYS-90721
+		if(currentBillingCycle_quote <> "" AND quoteType_quote == ADD_ON_BUSINESS AND (currentBillingCycle_num <>0) AND
+			(
+				//(currentBillingCycle_quote == "Annually" AND billingCycle_quote == "Monthly") OR
+				//(currentBillingCycle_quote == "Annually" AND billingCycle_quote == "Quarterly") OR
+				
+				// CSYS-95249 (LN. 5-20-2019) Allowing the ability to move from a Quarterly Bill Cycle to a Monthly Bill Cycle by allowing the quote to go systematized.
+				//OR (currentBillingCycle_quote == "Quarterly" AND billingCycle_quote == "Monthly")//
+				
+				//CSYS-90721, PhilS 09/23/2019, for example, changing Annually to Quarterly, 12 > 3
+				(currentBillingCycle_num > billingCycle_num)
+			)
+			){
+			put(softValidationDict, "billingCycleVarianceFlag", TRUE_STR);
+		}	
+		//CSYS-97516, Bhavna S, 11/05/2020: Commented below code that sets the paymentMethodVarianceFlag 
+        	// Start
+		//Contract Automation must be Non-Systematized if Current and New Payment Methods are Different
+		//if(currentPaymentMethod_quote <> "" AND quoteType_quote == ADD_ON_BUSINESS AND (paymentMethod_quote <> currentPaymentMethod_quote)){
+		//	put(softValidationDict, "paymentMethodVarianceFlag", TRUE_STR);
+		//}
+		//CSYS-97516 End//
+		//CSYS-96892 SN. 08/2019
+		//
+		//Contract Automation must be Non-Systematized for Concur Technologies Inc., Country Scope:
+		//if(contractingEntity_quote == "Concur Technologies Inc." AND (countryScope_quote == "Single Country" OR countryScope_quote == "Multi-Country")){
+		//	put(softValidationDict, "countryScopeFlag", TRUE_STR);
+		//}
+		//Contract Automation must be Non-Systematized for Netherlands, Country Scope:
+		//if(contractingEntity_quote == "Concur Holdings (Netherlands) B.V." AND countryScope_quote == "N/A"){
+		//	put(softValidationDict, "countryScopeFlag2", TRUE_STR);
+		//}
+		//
+		//CSYS-75637
+		//
+		//Contract Automation must be Non-Systematized if Concur Technologies Inc. and BSA Region EMEA or APA:
+		//if(contractingEntity_quote == "Concur Technologies Inc." AND (bsaRegion_quote == "APA" OR bsaRegion_quote == "EMEA")){
+		//	put(softValidationDict, "bsaRegionFlag", TRUE_STR);
+		//}
+		//Contract Automation must be Non-Systematized if Netherlands and BSA Region North America:
+		//if(contractingEntity_quote == "Concur Holdings (Netherlands) B.V." AND bsaRegion_quote == "North America"){
+		//	put(softValidationDict, "bsaRegionFlag2", TRUE_STR);
+		//}
+		//
+		//Contract Automation must be Non-Systematized for 3 cores or AccountPreProd flag pass thru is true:
+		if(moreThanTwoCoresFlag_quote){
+			put(softValidationDict, "threeCoreFlag", TRUE_STR);
+		}
+		//(CSYS-100128 S.V 10-08-2020 Added the second AND Condition)
+		 if (accountPreProductionStatic_quote AND NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){
+           		put(softValidationDict, "accountPreProdFlag", TRUE_STR);
+		}
+	
+		//Contract Automation must be Non-Systematized if Contract ARR greater than 150K
+		quoteCurrency = quoteCurrency_quote;
+		totalArrNet = totalArrNet_quote;
+	
+		if (quoteType_quote == ADD_ON_BUSINESS and termNumMonths_quote <> ""){
+			rez = bmql("SELECT currencyCode, conversionRate FROM currencyData WHERE currencyCode = $quoteCurrency");
+			convertedArrNet = 0.0;
+	
+			for entry in rez {
+				rate = get(entry, "conversionRate");
+				convertedArrNet = totalArrNet/atof(rate);
+			}
+	
+			if (convertedArrNet > 150000){
+				put(softValidationDict, "arrGreaterThan150K", TRUE_STR);
+			}
+		}
+		//Contract Automation must be Non-Systematized if Current Contract Renewal Date is older than January 1, 2008
+		if(quoteType_quote == ADD_ON_BUSINESS AND contractRenewalDateAcc_quote <> ""){
+			if(comparedates(strtojavadate(contractRenewalDateAcc_quote, "yyyy-MM-dd"), strtojavadate("2008-01-01", "yyyy-MM-dd")) < 0){
+				put(softValidationDict, "veryOldContractRenewalDate", TRUE_STR);
+			}
+		}
+		//CSYS-80294 LN: Contract Automation must be Non-Systematized if Owner Market is Mexico or LATAM AND the quote type is New Business
+		//CSYS-84537
+		//CSYS-89776
+		//	
+		//if((ownerMarket_quote == "Mexico" OR ownerMarket_quote == "LATAM") AND quoteType_quote == "New Business" AND find(accountServicePartnerType_quote, "Certified Implementation Partner") == -1 AND find(accountServicePartnerType_quote, "Customer Success Partner") == -1){
+		//	put(softValidationDict, "ownerMarketFlag", TRUE_STR);
+		//}
+		//
+		//Contract Automation must be Non-Systematized for Add-ons with Annual Billing; CSYS-95097
+		//(CSYS-100115 S.V 10-08-2020 Added the second AND NOT Condition)
+		if(quoteType_quote == ADD_ON_BUSINESS AND billingCycle_quote == "Annually" AND NOT(partnerBillingQuote_quote) AND NOT((findinarray(ProfServOnlyArray, true) <> -1) AND nonProfServCreate == false AND (findinarray(hasAdditionalPremiumSupportArray, true) == -1))){
+			put(softValidationDict, "annualBillingAddonFlag", TRUE_STR);
+		}
+	
+		//Contract Must Be Non-Systematized For Governing Country Law Exception
+		//CSYS-93776 (LN. 11-9-2018) Ensure that the governingCountryLawFlag soft validation triggers when the value is null to align with the Hard Validation
+		governingCountry = "";
+		if(_quote_process_serviceAddress_country <> ""){
+			
+			serviceCountryResSet = bmql("SELECT governingCountryLaw FROM governingLawMapping WHERE svcAddressCountry = $_quote_process_serviceAddress_country");
+			for serviceCountryRes in serviceCountryResSet {
+		 		governingCountry = get(serviceCountryRes, "governingCountryLaw");
+			}
+		}
+		if (governingCountry == ""){
+			put(softValidationDict, "governingCountryLawFlag", TRUE_STR);
+		}
+
+		//CSYS-98783 SN. 05/2020
+		if (_quote_process_serviceAddress_country == "China Peoples Rep" AND quoteType_quote == NEW_BUSINESS AND contractAutomation_quote == "Systematized"){
+			put(softValidationDict, "chinaPeoplesRepServiceAddress", TRUE_STR);
+		}
+
+		//CSYS-67974
+		if((paymentMethod_quote == "Credit Card" OR paymentMethod_quote == "Direct Debit") AND (quoteCurrency == "USD" OR quoteCurrency == "CAD") AND quoteType_quote == "New Business" AND customerAgreesToUseDocusign_quote == false){
+			put(softValidationDict, "docuSignFlag", TRUE_STR);
+		}
+	
+		//CSYS-69519: Customer Region EMEA on Concur Paper - force BSA Type = Modified (DEACTIVATED on 2-10-2017)
+		//if(quoteType_quote <> "New Business" AND customerRegion_quote == "EMEA" AND contractSource_quote == "Concur Paper" AND bsaType_quote <> "Modified"){
+		//	put(softValidationDict, "bsaTypeFlag", TRUE_STR);
+		//}//
+	
+		//CSYS-78255 - Contract Automation must be Non-Systematized for SAP China/CDC contracting entity:
+		if(contractingEntity_quote == "SAP (China) Co. Ltd."){
+			put(softValidationDict, "chinaContractingEntity", TRUE_STR);
+		}
+		//CSYS-100494: Use systermatized contract if purchased from partner = VAR
+		//CSYS-78932 - Contract Automation must be Non-Systematized for Brazil contracting entity:
+		if(//purchasedFromPartnerCategorySFDC_quote <> "VAR" and 
+		   contractingEntity_quote == "SAP Brasil Ltda."){
+			put(softValidationDict, "brazilContractingEntity", TRUE_STR);
+		}
+		//CSYS-97615 (KW. 02-2020) Contract Automation must be Non-Systematized for SAP Other contracting entity:
+   		if(contractingEntity_quote == "SAP Other"){
+    			put(softValidationDict, "otherContractingEntity", TRUE_STR);
+    		}
+		//CSYS-96931 (SN. 08-2019) Contract Automation must be Non-Systematized when Contract Source is Concur Paper with a Contract Renewal for LATAM/Mexico.
+		if(quoteType_quote == ADD_ON_BUSINESS AND contractSource_quote == "Concur Paper" AND termNumMonths_quote <> "" AND (ownerMarket_quote == "Mexico" OR ownerMarket_quote == "LATAM")){
+			put(softValidationDict, "concurPaperLATAMMexicoAddonFlag", TRUE_STR);
+		}
+		//future contract automation Soft Validations go here:
+	
+		//future Soft Validation 1
+		//future Soft Validation 2
+		//etc....
+	
+		//future Soft validations end here.
+	
+	//Build line level reasons for Contract Automation Soft Validations:
+		for line in line_process{
+			lineDesc = line.lineDescription_line;
+			partNumber = line._part_number;
+			assetAction = line.assetAction_line;
+			//Contract Automation Must be Non-Systematized for Products - Validation:
+			if(assetAction <> NONE_ACTION){
+				if(partNumber == "6414"){ //Japan Single Country Expense Config (inactive product)
+					put(softValidationDict, "productsValidationFlag1", TRUE_STR);
+				}
+				if(partNumber == "203735" OR partNumber == "203658"){ //Corporate Subsidiary Billing
+					put(softValidationDict, "productsValidationFlag2", TRUE_STR);
+				}
+				if(partNumber == "2274925"){ //Additional Multi-Country Deployment T and M
+					put(softValidationDict, "productsValidationFlag3", TRUE_STR);
+				}
+			}
+			//Contract Automation must be Non-Systematized if Billing in Arrears:
+			//
+			//if(find(line.poName_line, "Arrears") <> -1 OR find(line.poName_line, "arrears") <> -1){
+			//	put(softValidationDict, "arrearsFlag", TRUE_STR);
+			//}
+			//
+		}
+		
+		//CSYS-100719 (BS. 10/11/2020) Display soft validation message for Enterprise BU contract RENEWALS where the Contract Source = Concur Paper and the Term (no of mo) greater than 36 months
+		//Start
+		if(quoteType_quote == ADD_ON_BUSINESS AND ownerBU_quote == "Enterprise BU" AND contractSource_quote == "Concur Paper" AND termNumMonths_quote > "36"){	
+			put(softValidationDict, "concurPaperEnterpriseAddonRenewal", TRUE_STR);
+		} 
+		//CSYS-100719 (BS. 10/11/2020) End
+	}
+*/
+	
+	//IESCNQRCPQ-1295 - start
+	CoreList = string[];
+	arraySize = 0;
+	CoreServicesArr = string[];
+	CORE_SERVICE = "Core Service";
+	poListOfConsInt = string[] {"203744","329165","346220"}; //PO IDs of consultative Intelligence
+	consIntellNoneDict = dict("string");
+	consIntellonCoreArr = string[];
+	IsConIntellonFirstCore = false;
+	productName = listOfCoreOffering_quote;
+	cores = split(productName, "$$");
+	concurRequestIsOnQuote = false;
+
+	for line in line_process {
+		assetAction = line.assetAction_line;
+		poID = line.poId_line;
+		pi = line._part_number;
+		
+		if(findinarray(cores,"Concur Request - Standalone") <> -1 AND assetAction == "CREATE") { 
+			concurRequestIsOnQuote = true;
+		}
+		
+		if(find(productName, "$$") <> -1) { 
+			if(findinarray(CoreServicesArr,poID)== -1) {
+				append(CoreServicesArr,poID);
+			}
+		}
+		if((findinarray(poListOfConsInt, poID) <> -1 AND (assetAction == "NONE" OR assetAction == "MODIFY")) AND sizeofarray(CoreServicesArr) >= 1){			
+			put(consIntellNoneDict, "1", "true");
+			if(findinarray(consIntellonCoreArr, poID) == -1) {
+				append(consIntellonCoreArr, poID);
+			}
+		}
+		
+	}
+	if(containskey(consIntellNoneDict, "1") AND sizeofarray(CoreServicesArr) >= 1 AND sizeofarray(consIntellonCoreArr) == 1){
+		IsConIntellonFirstCore = true;
+	}
+	if(IsConIntellonFirstCore == true AND concurRequestIsOnQuote == false) {
+		put(softValidationDict, "isCIOnFirstCoreNotSecond", TRUE_STR);
+	}//IESCNQRCPQ-1295 END
+}
+
+//CSYS-106678 PG 07-13-2022
+if(_system_current_step_var == "approved_process" AND purchasedFromPartnerCategorySFDC_quote == "VAR"){
+	if (purchasedFromPartnerCategorySFDC_quote <> vARResellBeforeApproval_quote){
+	put(softValidationDict, "varResellAfterApproval", TRUE_STR);
+	}
+}
+//End CSYS-106678 PG 07-13-2022
+
+//CSYS-106996 (PG 9-2-2022) Moving the COUNTRY validation check to submit
+if(_quote_process_billing_country == "COUNTRY" OR _quote_process_serviceAddress_country == "COUNTRY" OR _quote_process_noticeAddress_country == "COUNTRY"){
+	put(softValidationDict, "COUNTRYonSubmit", TRUE_STR);
+}
+
+//Display soft validation message when there is a Tier change and Billing Pull List date is within the current quarter.
+//CSYS-99026 (OK. 06-04-2020) Start
+if(quoteType_quote == ADD_ON_BUSINESS AND billingPullList_quote <> "")
+{		
+	billingPullListQuarter = util.isDateWithinTheCurrentQuarter(billingPullList_quote); // Check the Billing Pull List date is within current Quarter or not.
+	
+	if(tierChange_quote == true AND billingPullListQuarter == true)
+	{
+		put(softValidationDict, "TierChangeANDBillingPullList", TRUE_STR);
+	}
+} 
+//CSYS-99026 (OK. 06-04-2020) End
+
+//(OK. 5-25-2023) Legal requested to display the soft valiadtion message always. so uncommented below code 
+//IESCNQRCPQ-506 (OK. 4-3-2023) Comment out the below code and move this same code to above inside the pending status
+//CSYS-106054 (OK. 4-11-2022) Start - Comment out below if condition and add one if condition to use the DPA value with Version
+//if(quoteType_quote == ADD_ON_BUSINESS AND dataProcessingAgreementFromAccountText_quote <> "DPA Signed" AND dataProcessingAgreementMenu_quote=="dPASigned" AND NOT(partnerBillingQuote_quote)){ //CSYS-103174 Adding Soft Validation for Sales Rep CSYS-104419 NP 10/11/2021 Exculding for service partner quotes
+//CSYS-107440 (OK. 10-25-2022) Comment out below condition and add one if condition to add the UK DPA value
+//if(quoteType_quote == ADD_ON_BUSINESS AND accountWithOldDPAFlagValue_quote == TRUE_STR AND dataProcessingAgreementMenu_quote == "DPA Signed 2021" AND NOT(partnerBillingQuote_quote)){
+if(quoteType_quote == ADD_ON_BUSINESS AND ((accountWithOldDPAFlagValue_quote == TRUE_STR AND dataProcessingAgreementMenu_quote == "DPA Signed 2021") OR updateDPAFlagWithUK_quote == TRUE_STR) AND NOT(partnerBillingQuote_quote)){
+	put(softValidationDict, "DPAflagSet", TRUE_STR);
+}
+//CSYS-106054 - End
+
+
+//CSYS-106212 LIN 05-11-2022 -  Legal Egregious Terms flag from the Account to BMI
+if(_system_current_step_var == "pending_process" AND legalEgregiousTerms_quote <> "" AND legalEgregiousTerms_quote == "Reviewed - Egregious Terms" AND contractAutomation_quote <> "Non-Systematized" AND quoteType_quote == ADD_ON_BUSINESS){
+	put(softValidationDict, "LegalEgregiousTerms", TRUE_STR);
+}
+//End - CSYS-106212
+
+/*
+//CSYS-104972 LIN 12-15-2021 - When Promo is selected but not saved
+if(externalPromotion_quote <> "" AND (isPromoAppliedIntBoolean_quote <> 0 OR isnull(isPromoAppliedIntBoolean_quote))){
+	put(softValidationDict, "PromoIsApplied", TRUE_STR);
+}
+//End - CSYS-104972
+*/
+ 
+// Soft validations that apply during approved status:
+if(_system_current_step_var == "approved_process"){
+
+	//CSYS-99477 
+	for line in line_process {
+		poID = line._part_custom_field1;
+		assetAction = line.assetAction_line;
+
+		//Quote Create date is before 5/14/2020 and FAVR on Approved status	
+		if(poID == "4722310" AND assetAction == CREATE_ACTION AND comparedates(createdDate, strtojavadate("5/14/2020", "MM/dd/yyyy")) < 0 AND NOT(reviseAfterFAVR_quote)){ 
+			put(softValidationDict, "promptToReviseSaveFAVR", TRUE_STR);
+		}
+	}//end of CSYS-99477
+
+	// CSYS-81281 (KA. 5-30-2017): assess whether a warning should be constructed,
+	// informing the user that the quote cannot be submitted for order:
+	if(NOT(partnerBillingQuote_quote)){//CSYS-95097
+		//CSYS-89840
+	if (commerce.manageAssetNBDValidation()){
+			put(softValidationDict, "assetNBDValidationFlag", TRUE_STR);
+		}
+		
+		//CSYS-101084, (BS, 11/06/2020) Uncommenting below if condition to ROLL BACK changes to allow submitting multiple orders for the same customer in the same month
+		// CSYS-98767	
+		if(quoteType_quote == ADD_ON_BUSINESS AND bMIOEDOfLastSubmittedOrder_quote <> ""){
+	
+			//timezone = util.getUserTimeZone(); //get the timezone the user is in
+			//currentDateDict = util.reconcileCurrentDate(timezone); //reconcile the current date into string components
+	
+			//CURRENT_MONTH_TZ = util.getStringAttribute(currentDateDict, "CURRENT_MONTH_TZ", "", "");
+			//CURRENT_YEAR_TZ = util.getStringAttribute(currentDateDict, "CURRENT_YEAR_TZ", "", "");
+	
+			//CSYS-101178 (BS, 11/26/2020) Adding extra condition to not mark the quote as multiple order if for add-on quote, Professional Services only flag is true, AND the Term (no of mo) is BLANK
+			multipleOrder = true;
+			if (setupOnlyFlag_quote and termNumMonths_quote == ""){
+				multipleOrder = false;
+			}
+			
+			//CSYS-83693 (KA. 8/31/2017):
+			QUOTE_OED_MONTH = "";
+			QUOTE_OED_YEAR = "";
+			if( find(orderEffectiveDate_quote, "/") <> -1 ){
+				QUOTE_OED_MONTH = substring(orderEffectiveDate_quote, 0, 2);
+				QUOTE_OED_YEAR = substring(orderEffectiveDate_quote, 6, 10);
+			}
+			else{
+				QUOTE_OED_MONTH = substring(orderEffectiveDate_quote, 5, 7);
+				QUOTE_OED_YEAR = substring(orderEffectiveDate_quote, 0, 4);
+			}
+		
+			// Format BMI Submit Order Date (from Account) variables:
+			SUBMIT_ORDER_MONTH_ACCT = "";
+			SUBMIT_ORDER_YEAR_ACCT = "";
+		
+			if( find(bMIOEDOfLastSubmittedOrder_quote, "/") <> -1 ){
+				SUBMIT_ORDER_MONTH_ACCT = substring(bMIOEDOfLastSubmittedOrder_quote, 0, 2);
+				SUBMIT_ORDER_YEAR_ACCT = substring(bMIOEDOfLastSubmittedOrder_quote, 6, 10);
+			}
+			else{
+				SUBMIT_ORDER_MONTH_ACCT = substring(bMIOEDOfLastSubmittedOrder_quote, 5, 7);
+				SUBMIT_ORDER_YEAR_ACCT = substring(bMIOEDOfLastSubmittedOrder_quote, 0, 4);
+			}			
+			//CSYS-101178 (BS, 11/26/2020) Adding extra check to show softvalidation message only if the order IS a multiple order in the same month AND there is more than ONE Core Service in the quote
+			morethan1core = false;
+
+			if(find(listOfCoreOffering_quote, "$$") <> -1){ //2 or more cores on quote
+				coreList = split(listOfCoreOffering_quote, "$$");
+				if(sizeofarray(coreList) > 1){
+					morethan1core = true;
+				}
+			}
+			
+			// Check to see if the current month is in the same month as the BMI Submit Order Date on the Account: 
+			if(QUOTE_OED_MONTH <> "" AND SUBMIT_ORDER_MONTH_ACCT <> "" AND QUOTE_OED_YEAR <> "" AND SUBMIT_ORDER_YEAR_ACCT <> ""){
+				if(QUOTE_OED_MONTH == SUBMIT_ORDER_MONTH_ACCT AND QUOTE_OED_YEAR == SUBMIT_ORDER_YEAR_ACCT AND morethan1core AND multipleOrder){	//CSYS-101178
+					put(softValidationDict, "submitOrderDateFlag", TRUE_STR);
+				}
+			}
+		} //End CSYS-98767 End CSYS-101084*/
+	}
+	
+	//IESCNQRCPQ-416 (OK. 2-20-2023) Dispay the message when salesagent change the OED.
+	if (find(currentUserGroup_quote, "legal") == -1 AND _system_user_type == "SalesAgent" AND contractAutomation_quote == "Systematized") {
+		if (orderEffectiveDate_quote <> "" AND previousOrderEffectiveDate_quote <> "") {
+			OEDDate = util.getDateFromString(substring(orderEffectiveDate_quote, 0, 10));
+			OED = datetostr(OEDDate, "yyyy-MM-dd");
+			previousOEDDate = util.getDateFromString(substring(previousOrderEffectiveDate_quote, 0, 10));
+			previousOED = datetostr(previousOEDDate, "yyyy-MM-dd");
+			
+			if (OED <> previousOED) {
+				put(softValidationDict, "OEDChanged", TRUE_STR);
+			}
+		}
+	}
+
+}
+
+softValArray = values(softValidationDict);
+
+//Soft Validations table query:
+if(NOT isempty(softValArray)){ //only query the table if soft validations apply
+
+	softValidationInfo = "";
+	softValidationHeader = "";
+
+	if(_system_current_step_var == "pending_process"){
+		softValidationHeader = "<b><u>" + "Warning: Clicking Submit may throw validation errors" + "</u></b>" + "<br/>";
+	}
+	if(_system_current_step_var == "approved_process"){
+		softValidationHeader = "<b><u>" + "Warning: Clicking Submit Order may throw validation errors" + "</u></b>" + "<br/>";
+	}
+	//CSYS-105298 - Commenting Code for 104767
+	/*
+	//CSYS-104767
+	for line in line_process{
+		pi = line._part_number;
+		if(pi == "36312"){
+			assetOrgExtNetPrice = line.assetOriginalExtendedNetPrice_list;
+		}
+	}
+	// End
+	*/
+	
+	softValidationInfo = softValidationInfo + softValidationHeader;
+	rez = BMQL("SELECT VarName, CurrentValue, Reason, Message, SuggestAction FROM SoftValidations");
+	cnt = 1;
+	size = sizeofarray(softValArray);
+	for entry in rez{
+		VarName = get(entry, "VarName");
+		CurrentValue = get(entry, "CurrentValue");
+		Reason = get(entry, "Reason");
+		Message = get(entry, "Message");
+		SuggestAction = get(entry, "SuggestAction");
+		if(containskey(softValidationDict, VarName)){ //soft validation was found and is applicable
+			softValidationInfo = softValidationInfo + "<b>" + "Reason " + string(cnt) + ": " + "</b>" + Reason + "<br/>" + "<b>" + "Message: " + "</b>" + Message + "<br/>" + "<b>" + "Suggested Action: " + "</b>" + SuggestAction;
+			if(cnt <> size){ //if not the last soft validation in the list
+				softValidationInfo = softValidationInfo + "<br/>" + "*************" + "<br/>"; //add a separator
+			}
+			cnt = cnt + 1;
+		}
+	}
+
+	//CSYS-96847 SN. 12-2019 Adding dynamic message to soft val
+	VarName = "extendedNetPriceBelowThreshold";
+	if(containskey(softValidationDict, VarName)){
+		Reason = "The Extended Net Price is Below Threshold";
+		//CSYS-104774 - LIN -12-01-2021 - Changing message from Preferred Care to Concur Select Care and converting the converted value in integer.
+		Message = "The Concur Select Care Extended Net Price must be a minimum of "+ currency_symbol + string(intConversionResultUI) +" "+ quoteCurrency_quote + " ";//CSYS-99451
+		SuggestAction = "Please increase the price to resolve the error.";
+	 	//soft validation was found and is applicable
+		softValidationInfo = softValidationInfo + "<b>" + "Reason " + string(cnt) + ": " + "</b>" + Reason + "<br/>" + "<b>" + "Message: " + "</b>" + Message + "<br/>" + "<b>" + "Suggested Action: " + "</b>" + SuggestAction;
+		if(cnt <> size){ //if not the last soft validation in the list
+			softValidationInfo = softValidationInfo + "<br/>" + "*************" + "<br/>"; //add a separator
+		}
+		cnt = cnt + 1;
+	}
+	
+	//CSYS-101244 (BS, 12/07/20), Added below dynamic message to soft val for hard floor limit for Advanced Care for Expense and Advanced Care for Travel & Expense for CREATE lines only, to grandfather any existing prices.
+	VarName = "AdvanceCareExtendedNetPriceBelowThreshold";
+	if(containskey(softValidationDict, VarName)){
+		Reason = "The Extended Net Price is Below Threshold";
+		//CSYS-104774 - LIN -12-01-2021  - updated CoversionResult
+		Message = "Advanced Care's final Extended Net Price must be a minimum of "+ currency_symbol + string(intConversionResultUI) +" "+ quoteCurrency_quote + " ";//CSYS-99451
+		SuggestAction = "Please increase the price to resolve the error.";
+	 	//soft validation was found and is applicable
+		softValidationInfo = softValidationInfo + "<b>" + "Reason " + string(cnt) + ": " + "</b>" + Reason + "<br/>" + "<b>" + "Message: " + "</b>" + Message + "<br/>" + "<b>" + "Suggested Action: " + "</b>" + SuggestAction;
+		if(cnt <> size){ //if not the last soft validation in the list
+			softValidationInfo = softValidationInfo + "<br/>" + "*************" + "<br/>"; //add a separator
+		}
+		cnt = cnt + 1;
+	}
+	//End CSYS-101244
+	
+	//CSYS-104767 - LBN 12/09/2021 - Adding dynamic soft validation message for PSE
+	VarName = "ProdSanboxEnviExtendedNetPriceBelowThreshold";
+	if(containskey(softValidationDict, VarName)){
+		Reason = "The pricing rules for Production Sandbox Environment have been updated.";
+		
+		if(assetOrgExtIntNetPrice){
+			Message = "The minimum price for Production Sandbox Environment must at least equal to the current charge of "+ currency_symbol + string(assetOrgExtIntNetPriceValue) +" and the discount can't be greater than 50%.";
+		}
+		else{
+			Message = "The minimum price for Production Sandbox Environment must at least equal to the current charge of "+ currency_symbol + string(assetOrgExtNetPrice) +" and the discount can't be greater than 50%.";
+		}
+		
+		SuggestAction = "Please increase the price of Production Sandbox Environment to be at least as much as previous price";
+		//soft validation was found and is applicable
+		softValidationInfo = softValidationInfo + "<b>" + "Reason " + string(cnt) + ": " + "</b>" + Reason + "<br/>" + "<b>" + "Message: " + "</b>" + Message + "<br/>" + "<b>" + "Suggested Action: " + "</b>" + SuggestAction;
+		if(cnt <> size){ //if not the last soft validation in the list
+		softValidationInfo = softValidationInfo + "<br/>" + "*************" + "<br/>"; //add a separator
+		}
+		cnt = cnt + 1;
+	}
+	//CSYS-104767 END
+	
+	//CSYS-104786 (PG, 23/11/21), Added below dynamic message to soft val for hard floor limit for Premium Assistant SKUs for CREATE lines only, to grandfather any existing prices.
+	VarName = "PremiumAssistantExtendedNetPriceBelowThreshold";
+	if(containskey(softValidationDict, VarName)){
+		Reason = "The Extended Net Price is Below Threshold";
+		Message = "Premium Assistant's final Extended Net Price must be a minimum of "+ currency_symbol + string(intConversionResultUI) +" "+ quoteCurrency_quote + " ";
+		SuggestAction = "Please increase the price to resolve the error.";
+	 	//soft validation was found and is applicable
+		softValidationInfo = softValidationInfo + "<b>" + "Reason " + string(cnt) + ": " + "</b>" + Reason + "<br/>" + "<b>" + "Message: " + "</b>" + Message + "<br/>" + "<b>" + "Suggested Action: " + "</b>" + SuggestAction;
+		if(cnt <> size){ //if not the last soft validation in the list
+			softValidationInfo = softValidationInfo + "<br/>" + "*************" + "<br/>"; //add a separator
+		}
+		cnt = cnt + 1;
+	}
+	//End CSYS-104786
+	
+	//CSYS-104778 (LIN, 12/20/21), Added below dynamic message to soft val for hard floor limit for Essential Care SKUs for CREATE lines only, to grandfather any existing prices.
+	VarName = "EssentialCareExtendedNetPriceBelowThreshold";
+	if(containskey(softValidationDict, VarName)){
+		Reason = "Essential Care has a hard floor requirement.";
+		Message = "Essential Care's final Extended Net Price must be a minimum of "+ currency_symbol + string(intConversionResultUI) +" "+ quoteCurrency_quote + " ";
+		SuggestAction = "Please increase the price above hard floor to resolve the error.";
+	 	//soft validation was found and is applicable
+		softValidationInfo = softValidationInfo + "<b>" + "Reason " + string(cnt) + ": " + "</b>" + Reason + "<br/>" + "<b>" + "Message: " + "</b>" + Message + "<br/>" + "<b>" + "Suggested Action: " + "</b>" + SuggestAction;
+		if(cnt <> size){ //if not the last soft validation in the list
+			softValidationInfo = softValidationInfo + "<br/>" + "*************" + "<br/>"; //add a separator
+		}
+		cnt = cnt + 1;
+	}
+	//End CSYS-104778
+	
+	result = "<fieldset style='border: 1px solid #AAA; margin-bottom:30px;'>" +
+				"<legend style='font-size:14px; font-weight:bold; font-family:Tahoma; margin-left:1em; padding:0.2em 0.8em;'>Soft Validations</legend>" +
+				"<div id='softValidations' style='color:blue; text-align: left; border: 1px blue solid; background-color:#CDF; padding:5px; float:left; margin-left:10px; width:95%;'>" + softValidationInfo +
+				"</div>" +
+			 "</fieldset>";
+}
+
+
+return result;

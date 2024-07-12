@@ -1,0 +1,83 @@
+newDate = "";
+extendedMonths = 0;
+dateDelimiter = "";
+dateSplit = string[];
+dateText = substring((inputDate), 0, 10);
+yearVal = "";
+dashString = "";
+
+if( find(dateText,"-") <> -1 ){
+	dateSplit = split(dateText,"-");
+	dateDelimiter = "-";
+	yearVal = dateSplit[0];
+}
+elif( find(dateText,"/") <> -1 ){ //fix validation rules that use this UTIL
+	dateSplit = split(dateText,"/");
+	dashString = dateSplit[2] + "-" + dateSplit[0] + "-" + dateSplit[1];
+	dateDelimiter = "-";
+	dateSplit = split(dashString,"-");
+	yearVal = dateSplit[0];
+}
+
+
+isLeapYear = false; //for CSYS-40596
+if (isnumber(yearVal)){
+	isLeapYear = isleap(atoi(yearVal)); 
+}
+
+daysDict = dict("integer");
+put(daysDict,"00",31);
+put(daysDict,"01",31);
+if (NOT isLeapYear){put(daysDict,"02",28);}
+else {put(daysDict,"02",29);}
+put(daysDict,"03",31);
+put(daysDict,"04",30);
+put(daysDict,"05",31);
+put(daysDict,"06",30);
+put(daysDict,"07",31);
+put(daysDict,"08",31);
+put(daysDict,"09",30);
+put(daysDict,"10",31);
+put(daysDict,"11",30);
+put(daysDict,"12",31);
+
+if( sizeofarray(dateSplit) > 0 AND isnumber(dateSplit[1]) ){
+	extendedMonths = atoi(dateSplit[1]) + atoi(months) ;
+	if( extendedMonths <=0 ){
+		
+		negExMonth = integer(fabs(extendedMonths));
+		if (fmod(negExMonth,12) == 0) { // To avoid adding extra year
+			dateSplit[0] = string(atoi(dateSplit[0]) - (Integer(negExMonth/12))-1);
+			dateSplit[1] = "12";
+		} else {
+			dateSplit[0] = string(atoi(dateSplit[0]) - (Integer(negExMonth/12))-1);
+			dateSplit[1] = string(12-integer(fmod(negExMonth,12)));
+		}		
+		if( len(dateSplit[1]) == 1 ){
+			dateSplit[1] = "0" + string(12-integer(fmod(negExMonth,12)));
+		}
+	}
+	elif(extendedMonths > 12){
+		if (fmod(extendedMonths,12) == 0) { // To avoid adding extra year
+			dateSplit[0] = string(atoi(dateSplit[0]) + (Integer(extendedMonths/12))-1);
+			dateSplit[1] = "12";
+		} else {
+			dateSplit[0] = string(atoi(dateSplit[0]) + Integer(extendedMonths/12));
+			dateSplit[1] = string(integer(fmod(extendedMonths,12)));
+		}		
+		if( len(dateSplit[1]) == 1 ){
+			dateSplit[1] = "0" + string(integer(fmod(extendedMonths,12)));
+		}
+	}
+	else{
+		dateSplit[1] = string(extendedMonths);
+		if( len(dateSplit[1]) == 1 ){
+			dateSplit[1] = "0" + string(integer(fmod(extendedMonths,12)));
+		}
+	}
+	if (integer(atof(dateSplit[2])) > get(daysDict,dateSplit[1])) {
+		dateSplit[2] = string(get(daysDict,dateSplit[1]));
+	}
+	newDate = join(dateSplit,dateDelimiter);
+}
+return newDate;

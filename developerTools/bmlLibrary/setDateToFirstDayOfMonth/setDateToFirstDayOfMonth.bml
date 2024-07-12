@@ -1,0 +1,22 @@
+//Logic to set date strings to first day of the month
+//applies to date strings in yyyy-MM-dd format
+
+newDate = "";
+yearVal = "";
+monthVal = "";
+dayVal = "";
+splitNewDate = string[];
+
+if( find(inputDate,"-") <> -1 ){
+	splitNewDate = split(inputDate, "-");
+	yearVal = splitNewDate[0];
+	monthVal = splitNewDate[1];
+	dayVal = splitNewDate[2];
+}
+
+if (sizeofarray(splitNewDate) > 0 AND isnumber(dayVal) AND isnumber(monthVal) AND isnumber(yearVal)){
+	firstDayOfMonth = "01";
+	newDate = yearVal + "-" + monthVal + "-" + firstDayOfMonth;
+}
+
+return newDate;

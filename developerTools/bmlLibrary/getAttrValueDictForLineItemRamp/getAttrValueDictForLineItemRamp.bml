@@ -1,0 +1,92 @@
+/*Util - getAttrValueDictForLineItemRamp
+No parameters passed to this util.
+This is called from Pricing and is one of the 2 libraries used to build Ramp XML
+*/
+
+BASE_FEE_LIST_XML_USD = "baseFeeListUSD";
+BASE_FEE_NET_XML_USD = "baseFeeNetUSD";
+INC_FEE_LIST_XML_USD = "increFeeListUSD";
+INC_FEE_NET_XML_USD = "increFeeNetUSD";
+BASE_FEE_LIST_XML = "baseFeeList";
+BASE_FEE_NET_XML = "baseFeeNet";
+INC_FEE_LIST_XML = "increFeeList";
+INC_FEE_NET_XML = "increFeeNet";
+BASE_FEE_NET_NON_UNIFIED = "baseFeeNonUnifiedNet";
+BASE_FEE_NET_NON_UNIFIED_USD = "baseFeeNonUnifiedNetUSD";
+INC_FEE_NON_UNIFIED_NET = "increFeeNonUnifiedNet";
+INC_FEE_NON_UNIFIED_NET_USD = "increFeeNonUnifiedNetUSD";
+BASE_FEE_LIST_NON_UNIFIED_XML = "baseFeeListNonUnified";
+BASE_FEE_LIST_NON_UNIFIED_USD_XML = "baseFeeListNonUnifiedUSD";
+INC_FEE_LIST_NON_UNIFIED_XML = "incFeeListNonUnified";
+INC_FEE_LIST_NON_UNIFIED_USD_XML = "incFeeListNonUnifiedUSD";
+
+
+/* ****** FORMAT XML FOR PROPER DISPLAY BY JAVASCRIPT ****** */
+//CSYS-99936 (NT. 01-08-2020) Added "transactionsBC", "baseIncKey"
+elementArr = String[]{BASE_FEE_LIST_XML_USD, BASE_FEE_NET_XML_USD, INC_FEE_LIST_XML_USD, INC_FEE_NET_XML_USD,
+						BASE_FEE_LIST_XML, BASE_FEE_NET_XML, INC_FEE_LIST_XML, INC_FEE_NET_XML,BASE_FEE_NET_NON_UNIFIED
+							, BASE_FEE_NET_NON_UNIFIED_USD, INC_FEE_NON_UNIFIED_NET, INC_FEE_NON_UNIFIED_NET_USD,
+							BASE_FEE_LIST_NON_UNIFIED_XML, BASE_FEE_LIST_NON_UNIFIED_USD_XML, INC_FEE_LIST_NON_UNIFIED_XML,
+							INC_FEE_LIST_NON_UNIFIED_USD_XML, "baseFeeNetBC", "transactionsBC", "baseIncKey"};
+attributeArr = String[]{ "displayArray", "displayName", "readOnly", "isCurrency" };
+DELIMITER = "@.@";
+rampFormatDelimiter = DELIMITER;
+attributeValueDict = dict("string");
+
+// Determine what XML nodes are displayed in javascript
+put( attributeValueDict, BASE_FEE_LIST_XML_USD + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, BASE_FEE_NET_XML_USD + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, INC_FEE_LIST_XML_USD + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, INC_FEE_NET_XML_USD + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, BASE_FEE_LIST_XML + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, BASE_FEE_NET_XML + rampFormatDelimiter + "displayArray", "inline" );
+put( attributeValueDict, INC_FEE_LIST_XML + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, INC_FEE_NET_XML + rampFormatDelimiter + "displayArray", "inline" );
+//CSYS-99936 (NT. 01-08-2020) - Make baseFeeNonUnifiedNet column visible in UI.
+put( attributeValueDict, BASE_FEE_NET_NON_UNIFIED + rampFormatDelimiter + "displayArray", "inline" );
+put( attributeValueDict, BASE_FEE_NET_NON_UNIFIED_USD + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, INC_FEE_NON_UNIFIED_NET + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, INC_FEE_NON_UNIFIED_NET_USD + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, BASE_FEE_LIST_NON_UNIFIED_XML + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, BASE_FEE_LIST_NON_UNIFIED_USD_XML + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, INC_FEE_LIST_NON_UNIFIED_XML + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, INC_FEE_LIST_NON_UNIFIED_USD_XML + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, "baseFeeNetBC" + rampFormatDelimiter + "displayArray", "none" );
+//CSYS-99936 (NT. 01-08-2020) Added "transactionsBC", "baseIncKey"
+put( attributeValueDict, "transactionsBC" + rampFormatDelimiter + "displayArray", "none" );
+put( attributeValueDict, "baseIncKey" + rampFormatDelimiter + "displayArray", "none" );
+// Determine which fields should display as currency
+put( attributeValueDict, BASE_FEE_NET_XML + rampFormatDelimiter + "isCurrency", "true" );
+put( attributeValueDict, INC_FEE_NET_XML + rampFormatDelimiter + "isCurrency", "true" );
+// Determine the display names of XML nodes
+put(attributeValueDict, INC_FEE_LIST_XML + rampFormatDelimiter + "displayName", "Inc Fee List" );
+put(attributeValueDict, BASE_FEE_LIST_XML + rampFormatDelimiter + "displayName", "Base Fee List" );
+put(attributeValueDict, INC_FEE_NET_XML + rampFormatDelimiter + "displayName", "Inc Fee Net" );
+put(attributeValueDict, BASE_FEE_NET_XML + rampFormatDelimiter + "displayName", "Base Fee Net" );
+//CSYS-99936 (NT. 01-08-2020) Added
+put(attributeValueDict, BASE_FEE_NET_NON_UNIFIED + rampFormatDelimiter + "displayName", "Base Fee NonUnified Net");
+
+// Determine what nodes are read only
+put( attributeValueDict, BASE_FEE_LIST_XML_USD + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, BASE_FEE_NET_XML_USD + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, INC_FEE_LIST_XML_USD + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, INC_FEE_NET_XML_USD + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, BASE_FEE_LIST_XML + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, BASE_FEE_NET_XML + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, INC_FEE_LIST_XML + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, INC_FEE_NET_XML + rampFormatDelimiter + "readOnly", "true" );
+//CSYS-99936 (NT. 01-08-2020) Added
+put( attributeValueDict, BASE_FEE_NET_NON_UNIFIED + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, BASE_FEE_NET_NON_UNIFIED_USD + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, INC_FEE_NON_UNIFIED_NET + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, INC_FEE_NON_UNIFIED_NET_USD + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, BASE_FEE_LIST_NON_UNIFIED_XML + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, BASE_FEE_LIST_NON_UNIFIED_USD_XML + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, INC_FEE_LIST_NON_UNIFIED_XML + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, INC_FEE_LIST_NON_UNIFIED_USD_XML + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, "baseFeeNetBC" + rampFormatDelimiter + "readOnly", "true" );
+//CSYS-99936 (NT. 01-08-2020) Added "transactionsBC", "baseIncKey"
+put( attributeValueDict, "transactionsBC" + rampFormatDelimiter + "readOnly", "true" );
+put( attributeValueDict, "baseIncKey" + rampFormatDelimiter + "readOnly", "true" );
+
+return attributeValueDict;

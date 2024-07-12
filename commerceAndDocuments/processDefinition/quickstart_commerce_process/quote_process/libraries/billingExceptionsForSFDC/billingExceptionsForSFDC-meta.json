@@ -1,0 +1,11 @@
+{
+  "name" : "x - Billing Exceptions For SFDC",
+  "variableName" : "billingExceptionsForSFDC",
+  "description" : "CSYS-101417. CSYS-104211(OK. 2-18-2022) NOT IN USE. Created copy \"billingExceptionForSFDC\" function with \"anytype\" dict.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "orderEffectiveDateBillingException_quote", "annualBundleBillingException_quote", "preproductionBillingException_quote", "submitOrderDateBillingException_quote", "timeMaterialsBillingException_quote", "promotionBillingException_quote", "professionalServTerminationBillingException_quote", "billingExceptionCommentsHDS_quote", "pONumException_quote" ],
+  "systemAttributes" : [ ]
+}

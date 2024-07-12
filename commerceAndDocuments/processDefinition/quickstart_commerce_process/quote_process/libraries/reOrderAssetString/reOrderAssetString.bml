@@ -1,0 +1,72 @@
+PI = 0;
+ASSET_ID = 18;
+ASSET_DELIMITER = "@@";
+INTERNAL_DELIMITER = "$$";
+finalAssetString = "";
+partNumList = string[];
+assetIdList = string[];
+
+assetOrderDict = dict("integer");
+idAssetDict = dict("string");
+orderToAssetListDict = dict("string[]");
+
+if (assetsString_quote <> "" AND NOT isnull(assetsString_quote)){
+	rez = BMQL("SELECT PI,AssetImportOrder FROM PiToCoreOfferingMap ORDER BY AssetImportOrder");
+
+	for entry in rez{
+		put(assetOrderDict, get(entry,"PI"), atoi(get(entry,"AssetImportOrder")));
+	}
+	comment = split(assetsString_quote, ASSET_DELIMITER);
+
+	count = 0;
+	for index in comment {
+		assetArray = split(comment[count],INTERNAL_DELIMITER);
+		partNum = assetArray[PI];
+		assetId = assetArray[ASSET_ID];
+		append(partNumList, partNum);
+		append(assetIdList, assetId);
+		if(NOT isnull(partNum) AND partNum <> "" AND NOT isnull(assetId) AND assetId <> ""){
+			put(idAssetDict, assetId, comment[count]);
+		}
+		count = count + 1;
+	}
+	i = 0;
+	for partNum in partNumList{
+		if(containskey(assetOrderDict,partNum)){
+			orderNum = get(assetOrderDict, partNum );
+		}
+		else{
+			orderNum = 99;
+		}
+		assetList = string[];
+		if ( orderNum > 0 AND  NOT isnull(orderNum)){
+			if(containskey(orderToAssetListDict, orderNum) == false) { //This means no such key exists until now in the dictionary
+				append(assetList, assetIdList[i]);
+				put(orderToAssetListDict, orderNum, assetList);
+			}else{
+				assetList = get(orderToAssetListDict, orderNum);
+				append(assetList, assetIdList[i]);
+				put(orderToAssetListDict, orderNum, assetList);
+			}
+		}
+		i = i + 1;
+	}
+	
+	orderNumList = keys(orderToAssetListDict);
+	orderNumList = sort(orderNumList, "asc");
+	assetIdTempList = string[];
+	
+	for orderNumber in orderNumList{
+		if (isnumber(orderNumber)){
+			assetIdTempList = get(orderToAssetListDict, atoi(orderNumber));
+			for assetId in assetIdTempList{
+				if (containskey(idAssetDict, assetId)){
+					finalAssetString = finalAssetString + get(idAssetDict, assetId) + ASSET_DELIMITER;
+				}
+			}
+		}
+	}
+	
+}
+
+return finalAssetString;

@@ -1,0 +1,36 @@
+piToTrxnDict = dict("string");
+utilResultString = "";
+INTERNAL_DELIMITER = "$$";
+LINEITEM_DELIMITER = "@@";
+QUOTE_DOC_NUM = "1";
+PI_ID = 0;
+NUM_TRXN = 1;
+quoteLineItemsArr = split(dcLineItemsString_quote, LINEITEM_DELIMITER);
+count = 0;
+
+for index in quoteLineItemsArr {
+	lineItemArray = split(quoteLineItemsArr[count],INTERNAL_DELIMITER);
+	piId = lineItemArray[PI_ID];
+	numTrxn = lineItemArray[NUM_TRXN];
+	if(NOT isnull(piId) AND NOT containskey( piToTrxnDict, piId ) AND piId <> "" AND numTrxn <> ""){ 
+		put(piToTrxnDict, piId, numTrxn);
+	}
+	count = count + 1;
+	
+	//IESCNQRCPQ-528 (OK. 4-11-2023) Set dCStoreQuoteWithPartnerADP_quote flag to true when "Partner Marketplace - Concur Integration with ADP" SKU is added newly in the store quote
+	if (piId == "9158386") {
+		utilResultString = util.formAttrValueStr(attributesDict, "dCStoreQuoteWithPartnerADP_quote", QUOTE_DOC_NUM, "true");
+	}
+}
+
+for line in line_process {
+	docNum = line._document_number;
+	pi = line._part_number;
+	if ( containskey( piToTrxnDict, pi )){
+		//result = result + docNum + "~numCommittedTransaction_line~" + get( piToTrxnDict, pi ) + "|";
+		//oRGNumCommittedTrans = integer(atof(currentAssetString[ASSET_COMMITED_TRNS]));
+		utilResultString = util.formAttrValueStr(attributesDict, "numCommittedTransaction_line", docNum, get( piToTrxnDict, pi ));
+	}
+}
+utilResultString = util.formAttrValueStr(attributesDict, "dcLineItemsString_quote", QUOTE_DOC_NUM, "");
+return utilResultString;

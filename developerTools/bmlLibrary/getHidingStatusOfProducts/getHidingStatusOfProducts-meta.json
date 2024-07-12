@@ -1,0 +1,33 @@
+{
+  "name" : "Get Hiding Status Of Products",
+  "variableName" : "getHidingStatusOfProducts",
+  "description" : "CSYS-99720 (SV. 09-07-2020) : Clone of getHidingStatus. Created to support products which are no longer available",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "coreOffering",
+    "type" : "String"
+  }, {
+    "name" : "implementationMethod",
+    "type" : "String"
+  }, {
+    "name" : "serviceAttr",
+    "type" : "String"
+  }, {
+    "name" : "ownerBusinessUnit",
+    "type" : "String"
+  }, {
+    "name" : "ownerMarket",
+    "type" : "String"
+  }, {
+    "name" : "ownerTheater",
+    "type" : "String"
+  }, {
+    "name" : "quoteType",
+    "type" : "String"
+  }, {
+    "name" : "configAttribs",
+    "type" : "Anytype Dictionary"
+  } ],
+  "attributes" : [ ]
+}

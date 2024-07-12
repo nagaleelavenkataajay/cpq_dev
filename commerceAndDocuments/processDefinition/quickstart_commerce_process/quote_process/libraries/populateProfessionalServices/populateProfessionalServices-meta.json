@@ -1,0 +1,11 @@
+{
+  "name" : "Populate Professional Services",
+  "variableName" : "populateProfessionalServices",
+  "description" : "CSYS-99877, BS 08/17/2020, Used to bring in Professional service assets with the configure API and updateTransaction API.",
+  "libraryFunctions" : [ "util.customAtof" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "lineDescription_line" ],
+  "mainDocAttributes" : [ "professionalServicesAssetString_quote", "transactionID_quote", "ownerBU_quote", "ownerTheater_quote", "quoteType_quote", "quoteCurrency_quote", "isProfessionalServicesImport_quote", "assetsString_quote" ],
+  "systemAttributes" : [ "_system_user_session_id", "_system_company_name", "_system_supplier_company_name", "_system_user_login" ]
+}

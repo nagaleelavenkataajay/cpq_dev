@@ -1,0 +1,28 @@
+/* commerce -> populateAssetBillingDict
+attributesDict - dict("string")
+.............................................
+*/
+ASSET_DELIMITER = "@@";
+ASSET_NEXT_BILLING_DATE = 15;
+ASSET_PID = 0;
+INTERNAL_DELIMITER = "$$";
+ASSET_SUBSCRIPTION_ID = 5; //CSYS-100827 (OK. 10-15-2020)
+
+// Break apart quote level asset string in order to find the updated data
+quoteAssetArr = split( assetsString_quote, ASSET_DELIMITER );
+for quoteAsset in quoteAssetArr{
+	splitAsset = split( quoteAsset, INTERNAL_DELIMITER );
+	assetPID = splitAsset[ASSET_PID];
+	assetBillingDate = splitAsset[ASSET_NEXT_BILLING_DATE];
+	assetSubscriptionID = splitAsset[ASSET_SUBSCRIPTION_ID]; //CSYS-100827 (OK. 10-15-2020)
+	
+	// CSYS-100331 (OK. 8-25-2020) Start: Set Next billing Date value to Order effective date for Add on quotes in SAP Other 
+	if (SAPSellsConcurFromAccount_quote == "Shadow Harmony Quote" AND quoteType_quote == "Add-On Business") {
+		assetBillingDate = orderEffectiveDate_quote;
+	}
+	//CSYS-100331 -End
+	
+	put( assetBillingDict, assetPID, assetBillingDate );
+	put( assetBillingDict, assetPID + "subscriptionID", assetSubscriptionID ); //CSYS-100827 (OK. 10-15-2020) Adding asset Subscription Id to the Dict
+}
+return "";

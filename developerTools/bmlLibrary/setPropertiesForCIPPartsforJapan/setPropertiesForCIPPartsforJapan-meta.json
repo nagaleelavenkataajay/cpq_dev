@@ -1,0 +1,21 @@
+{
+  "name" : "Set Properties For CIP Parts for Japan",
+  "variableName" : "setPropertiesForCIPPartsforJapan",
+  "description" : "IESCNQRCPQ-242 (PG 07/03/2023) Copy of \"setPropertiesOfCIPParts\" util function for Japan",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "partnerSpecialty",
+    "type" : "String"
+  }, {
+    "name" : "partnerAuthrzns",
+    "type" : "String"
+  }, {
+    "name" : "partNumArr",
+    "type" : "String[]"
+  }, {
+    "name" : "attributesDict",
+    "type" : "Anytype Dictionary"
+  } ],
+  "attributes" : [ ]
+}

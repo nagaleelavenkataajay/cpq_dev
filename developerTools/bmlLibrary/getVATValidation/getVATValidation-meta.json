@@ -1,0 +1,21 @@
+{
+  "name" : "Get VAT Validation",
+  "variableName" : "getVATValidation",
+  "description" : "Calls the isvat.eu API to return a string with the following info: whether validation succeeded, and if it did, company name.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "vatNumber",
+    "type" : "String"
+  }, {
+    "name" : "overrideVat",
+    "type" : "Boolean"
+  }, {
+    "name" : "serviceCountry",
+    "type" : "String"
+  }, {
+    "name" : "createdDate",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

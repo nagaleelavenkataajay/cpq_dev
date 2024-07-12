@@ -1,0 +1,21 @@
+{
+  "name" : "getFloatAttribute",
+  "variableName" : "getFloatAttribute",
+  "description" : "Obtains the value of a float or currency-type attribute from floatsDict.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Float",
+  "parameters" : [ {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "delimiter",
+    "type" : "String"
+  }, {
+    "name" : "commerceField",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

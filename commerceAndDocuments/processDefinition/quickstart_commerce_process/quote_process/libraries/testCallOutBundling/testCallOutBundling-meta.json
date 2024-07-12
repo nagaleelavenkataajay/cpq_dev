@@ -1,0 +1,11 @@
+{
+  "name" : "TestCallOutBundling",
+  "variableName" : "testCallOutBundling",
+  "description" : "Save, Submit for approval and Order",
+  "libraryFunctions" : [ "util.customAtof" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_sequence_number", "lineDescription_line" ],
+  "mainDocAttributes" : [ "transactionID_quote", "quoteType_quote" ],
+  "systemAttributes" : [ "_system_user_session_id", "_system_supplier_company_name", "_system_company_name" ]
+}

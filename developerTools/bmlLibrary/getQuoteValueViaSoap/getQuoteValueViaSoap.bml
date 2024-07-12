@@ -1,0 +1,24 @@
+/* BML Util: getQuoteValueViaSoap
+  siteCompany
+  sessionId
+  bsid
+  attrTag
+  */
+soapCallXml = "";
+soapCallXml = "<?xml version='1.0' encoding='UTF-8'?><soapenv:Envelope xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><soapenv:Header><bm:userInfo xmlns:bm='urn:soap.bigmachines.com' soapenv:actor='http://schemas.xmlsoap.org/soap/actor/next' soapenv:mustUnderstand='0'><bm:sessionId>" + sessionId + "</bm:sessionId></bm:userInfo><bm:category xmlns:bm='urn:soap.bigmachines.com' soapenv:actor='http://schemas.xmlsoap.org/soap/actor/next' soapenv:mustUnderstand='0'>Commerce</bm:category><bm:xsdInfo xmlns:bm='urn:soap.bigmachines.com' soapenv:actor='http://schemas.xmlsoap.org/soap/actor/next' soapenv:mustUnderstand='0'><bm:schemaLocation>http://" + siteCompany + ".bigmachines.com/bmfsweb/harmonic/schema/v1_0/commerce/transaction_bmClone_1.xsd</bm:schemaLocation></bm:xsdInfo></soapenv:Header><soapenv:Body><bm:getTransaction xmlns:bm='urn:soap.bigmachines.com'><bm:transaction><bm:id>" + bsid + "</bm:id></bm:transaction></bm:getTransaction></soapenv:Body></soapenv:Envelope>";
+
+soapCallResultXml = urldatabypost("https://" + siteCompany + ".bigmachines.com/v1_0/receiver", soapCallXml, "NA");
+result = "";
+
+if (soapCallResultXml <> "NA") {  
+  quoteLevelTag = "<bm:" + attrTag + ">";
+  quoteLevelEndTag = "</bm:" + attrTag + ">";
+  quoteLevelIndex = find(soapCallResultXml,quoteLevelTag);
+  if(quoteLevelIndex <> -1) {
+    // found parent doc number
+    quoteLevel = substring(soapCallResultXml,quoteLevelIndex + len(quoteLevelTag), find(soapCallResultXml, quoteLevelEndTag));
+    result = quoteLevel;
+  }
+}
+
+return result;

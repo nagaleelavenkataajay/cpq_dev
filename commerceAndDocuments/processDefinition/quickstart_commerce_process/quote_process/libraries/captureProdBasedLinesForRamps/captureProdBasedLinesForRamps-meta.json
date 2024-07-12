@@ -1,0 +1,17 @@
+{
+  "name" : "captureProdBasedLinesForRamps",
+  "variableName" : "captureProdBasedLinesForRamps",
+  "description" : "CSYS-100481",
+  "libraryFunctions" : [ "util.getProductBasedRecurringServicesPO", "util.putStringAttribute" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  } ],
+  "subDocAttributes" : [ "poId_line", "_part_custom_field8", "_document_number", "assetAction_line" ],
+  "mainDocAttributes" : [ ],
+  "systemAttributes" : [ ]
+}

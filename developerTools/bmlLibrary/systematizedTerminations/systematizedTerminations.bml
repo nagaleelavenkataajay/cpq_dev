@@ -1,0 +1,247 @@
+// Moved to commerce library -- ATG on 03/08/16
+//SYSTEMATIZED CONTRACTS PHASE 5 UTIL LIBRARY
+/*****ALLOW CONTRACTS TO BE SYSTEMATIZED IF THERE ARE TERMINATED LINE ITEMS*****/
+//This library:
+//1. Feeds the appropriate attribute mapping to the document engine to generate the correct SOF verbage
+//2. Builds out Termination Notes to be sent back to the opportunity
+
+DOCNUM_DELIM = "$*$";
+QUOTE_DOCNUM = "1";
+TRUE_STR = "true";
+FALSE_STR = "false";
+BASE_FEE = "Base";
+CORE_SERVICE = "Core Service";
+EXTENDED_SERVICE = "Extended Service";
+NONE_ACTION = "NONE";
+MODIFY_ACTION = "MODIFY";
+CREATE_ACTION = "CREATE";
+TERMINATE_ACTION = "TERMINATE";
+BLANK = "";
+TERMINATED_CORE_MAPPING = "terminatedCoreMapping_line";
+terminationNotes = "";
+
+coreTerminatesDict = dict("string"); //for CSYS-40346 part 1
+terminateCoreDescDict = dict("string"); //for CSYS-40346 part 1
+coreCreatesDict = dict("string"); //for CSYS-40346 part 1
+coreNonePlusModifyDict = dict("string"); //for CSYS-46907 part 1
+
+familyNoneModifyDict = dict("string");
+familyCreateDict = dict("string");
+familyTerminateDict = dict("string");
+
+hasTripLinkCore = false;
+hasRiskMessagingCore = false;
+expenseCreated = false;
+teTerminated = false;
+teToExpense = false;
+
+for key in seqNumArray { //loop to map terminate and create related components to each model
+	seqNumber = string(key);
+	docNum = get(seqNumAttributeMappingDict, seqNumber);
+	parentDocNum = get(primeStringsDict, docNum + DOCNUM_DELIM + "_parent_doc_number");
+	
+	poCategory = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field20");
+	assetAction = get(primeStringsDict, docNum + DOCNUM_DELIM + "assetAction_line");
+	familyName = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field23");
+	lineDesc = get(primeStringsDict, docNum + DOCNUM_DELIM + "lineDescription_line");
+	isCoreChanged = get(isCoreChangedDict, parentDocNum);
+	isEditionChanged = get(isEditionChangedDict, parentDocNum);
+	
+	if (poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION AND (isCoreChanged == TRUE_STR OR isEditionChanged == TRUE_STR)){
+		put(coreTerminatesDict, parentDocNum, TERMINATE_ACTION); //core has TERMINATE's and CREATE's. original core is getting replaced with another since there's a core/edition change.
+		put(terminateCoreDescDict, parentDocNum, lineDesc);
+	}
+	if (poCategory == CORE_SERVICE AND assetAction == CREATE_ACTION){
+		put(coreCreatesDict, parentDocNum, CREATE_ACTION); //core has CREATE's
+	}
+	if (poCategory == CORE_SERVICE AND (assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION)){ //CSYS-46907 part 2
+		put(coreNonePlusModifyDict, parentDocNum, NONE_ACTION); //core has NONE/MODIFY lines, obviously no terminated lines
+	}
+	if (isnull(get(coreTerminatesDict, parentDocNum))){
+		put(coreTerminatesDict, parentDocNum, "BLANK");
+	}
+	if (isnull(get(terminateCoreDescDict, parentDocNum))){
+		put(terminateCoreDescDict, parentDocNum, "BLANK");
+	}
+	
+	//for SC P5 Step 7:
+	if (assetAction == NONE_ACTION OR assetAction == MODIFY_ACTION){ //if we run into a NONE or MODIFY line
+		put(familyNoneModifyDict, familyName, assetAction); //family has NONEs
+	}
+	
+	if (assetAction == CREATE_ACTION){ //if we run into a CREATE line
+		put(familyCreateDict, familyName, assetAction); //family has CREATEs
+	}
+	
+	if (assetAction == TERMINATE_ACTION){ //if we run into a TERMINATE line
+		put(familyTerminateDict, familyName, assetAction); //Family has TERMINATEs
+	}
+	
+	if (assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND find(lineDesc, "TripLink") <> -1){ 
+		hasTripLinkCore = true;
+	}
+	
+	if (assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND find(lineDesc, "Risk Messaging") <> -1){ 
+		hasRiskMessagingCore = true;
+	}
+	
+	if (assetAction == CREATE_ACTION AND poCategory == CORE_SERVICE AND find(lineDesc, "Expense -") <> -1 AND find(lineDesc, "&") == -1){ //Expense core
+		expenseCreated = true;
+	}
+	
+	if (assetAction == TERMINATE_ACTION AND poCategory == CORE_SERVICE AND find(lineDesc, "Travel & Expense -") <> -1){ //Travel & Expense core
+		teTerminated = true;
+	}
+}
+
+if (expenseCreated AND teTerminated){
+	teToExpense = true;
+}
+
+skipDict1 = dict("string"); //only 1 of the core service create lines will get written to (prevent doc engine from printing multiple paragraphs). 
+skipDict2 = dict("string"); //only 1 of the core service terminate lines will get written to (prevent doc engine from printing multiple paragraphs)
+skipDict3 = dict("string");
+skipDict4 = dict("string"); // only 1 unique PI per product will get written to (avoid duplicate PI's getting printed in doc engine twice per CSYS-52506).
+
+customIntellArray = string[]{"459964", "596", "866", "873", "596", "866", "873", "307", "279", "657"};
+
+for key in seqNumArray { //loop for edition/core change mapping, as well as a completely terminated core. This loop also builds termination notes
+	seqNumber = string(key);
+	docNum = get(seqNumAttributeMappingDict, seqNumber); 
+	parentDocNum = get(primeStringsDict, docNum + DOCNUM_DELIM + "_parent_doc_number");
+	lineDesc = get(primeStringsDict, docNum + DOCNUM_DELIM + "lineDescription_line");
+	
+	familyName = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field23");
+	poCategory = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field20");
+	assetAction = get(primeStringsDict, docNum + DOCNUM_DELIM + "assetAction_line");
+	piItemType = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field8");
+	poID = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field1");
+	
+	pi = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_number"); //CSYS-52506 fix. KA. 10-6-2015
+	
+	if (poCategory == CORE_SERVICE AND assetAction == CREATE_ACTION){
+		if (get(coreTerminatesDict, parentDocNum) == TERMINATE_ACTION AND get(skipDict1, parentDocNum) <> TRUE_STR){ //3. core is being replaced with another (has edition or core change)
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, get(terminateCoreDescDict, parentDocNum));
+			put(skipDict1, parentDocNum, TRUE_STR);
+		}
+		else {
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, BLANK);
+		}
+	}
+	
+	if (poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION AND piItemType == BASE_FEE AND get(coreCreatesDict, parentDocNum) <> CREATE_ACTION){ //2. line is a terminated core. core contains no creates. it's being terminated completely.
+		if (get(skipDict2, parentDocNum) <> TRUE_STR){ 
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, "NOMATCH");
+			put(skipDict2, parentDocNum, TRUE_STR);
+		}
+		else {
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, BLANK);
+		}
+	}
+	
+	if (poCategory == CORE_SERVICE AND assetAction == TERMINATE_ACTION AND piItemType == BASE_FEE AND get(coreCreatesDict, parentDocNum) == CREATE_ACTION){ //3. Line is a terminated core base, and there's an edition/core change
+		if (get(skipDict3, parentDocNum) <> TRUE_STR){ 
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, "TERMINATEDCOREBASE");
+			put(skipDict3, parentDocNum, TRUE_STR);
+		}
+		else{
+			utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, BLANK);
+		}
+	}
+	
+	if (get(coreNonePlusModifyDict, parentDocNum) == NONE_ACTION){ //CSYS-46907 part 3
+		utilResultString = util.formAttrValueStr(attributesDict, TERMINATED_CORE_MAPPING, docNum, BLANK); //Since the core doesn't have any core service terminated lines, make sure all terminated core mappings in that core get set back to blank
+	}
+	
+	//SC P5 Step 7 continued:
+	//Core services:
+	if (poCategory == CORE_SERVICE){
+		if (get(familyCreateDict, familyName) <> CREATE_ACTION AND get(familyTerminateDict, familyName) == TERMINATE_ACTION AND lineDesc <> "TripIt Pro - User Based Pricing"){ //family contains terminates and no creates, exclude TripIt Pro - User Based Pricing
+			if (assetAction == TERMINATE_ACTION AND find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+		
+		if (lineDesc == "TripIt Pro - User Based Pricing" AND assetAction == TERMINATE_ACTION){
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+	}
+	
+	//TE to Expense Scenario:
+	if (poCategory == CORE_SERVICE){
+		if (get(familyCreateDict, familyName) == CREATE_ACTION AND get(familyTerminateDict, familyName) == TERMINATE_ACTION AND lineDesc <> "TripIt Pro - User Based Pricing"){
+			print "teToExpense Var: " + string(teToExpense);
+			if (teToExpense){
+				if (find(terminationNotes, "TRAVEL") == -1){
+					terminationNotes = terminationNotes + "TRAVEL" + "; ";
+				}
+			}
+		}
+	}
+	
+	//Extended services:
+	if (poCategory == EXTENDED_SERVICE){
+		if (get(familyCreateDict, familyName) <> CREATE_ACTION AND get(familyTerminateDict, familyName) == TERMINATE_ACTION AND poID <> "36374" AND find(lineDesc, "Risk Management") == -1 AND find(lineDesc, "TripLink") == -1 AND find(lineDesc, "TripIt Pro") == -1 AND find(lineDesc, "TripIt for Teams") == -1 AND find(familyName, "Intelligence") == -1 AND poID <> "1055"){ //family contains terminates and no creates. Exclude Total Advantage, Risk Management, TripIt, Intelligence, Triplink, and Concur Connector for Salesforce extended services
+			if (assetAction == TERMINATE_ACTION AND find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}	
+	
+		if (find(lineDesc, "Total Advantage") <> -1 AND assetAction == TERMINATE_ACTION){ //Total Advantage terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+	
+		if (find(lineDesc, "Risk Management") <> -1 AND assetAction == TERMINATE_ACTION AND NOT hasRiskMessagingCore){ //Risk Management terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+		
+		if (find(lineDesc, "TripLink") <> -1 AND assetAction == TERMINATE_ACTION AND NOT hasTripLinkCore AND get(familyCreateDict, familyName) <> CREATE_ACTION AND get(familyTerminateDict, familyName) == TERMINATE_ACTION){ //TripLink terminations: no TripLink core, family contains Terminates but no creates
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+		
+		if ((find(lineDesc, "TripIt Pro") <> -1 OR find(lineDesc, "TripIt for Teams") <> -1) AND assetAction == TERMINATE_ACTION){ //TripIt terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}
+		}
+		
+		if (poID == "1055" AND assetAction == TERMINATE_ACTION){ //Concur Connector for Salesforce terminations
+			if (find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}	
+		}
+		
+		if ((get(familyTerminateDict, familyName) == TERMINATE_ACTION AND get(familyNoneModifyDict, familyName) <> NONE_ACTION AND get(familyNoneModifyDict, familyName) <> MODIFY_ACTION AND get(familyCreateDict, familyName) <> CREATE_ACTION AND find(familyName, "Intelligence") <> -1) OR (findinarray(customIntellArray, poID) <> -1)){ //Intelligence family has Terminates but doesn't have Create's or None's or Modify's. OR one of the *related* intelligence products is being terminated (CSYS-46753 KA 6-29-2015)
+			if (assetAction == TERMINATE_ACTION AND find(terminationNotes, lineDesc) == -1){
+				terminationNotes = terminationNotes + lineDesc + "; ";
+			}	
+		}
+
+	} //end Extended Services check
+}
+
+terminationNotes2 = "";
+if (terminationNotes <> ""){
+	terminationNotes2 = "BMI: " + terminationNotes;
+}
+
+terminationNotes3 = "";
+if (terminationNotes2 <> ""){
+	terminationNotes3 = substring(terminationNotes2,0,-2); //trim the semi-colon
+}
+
+if (terminationNotes3 == ""){ //if we don't have notes, blank out the terminated date
+	utilResultString = util.formAttrValueStr(attributesDict, "terminatedDate_quote", QUOTE_DOCNUM, "");
+}
+
+utilResultString = util.formAttrValueStr(attributesDict, "terminationNotes_quote", QUOTE_DOCNUM, terminationNotes3);
+
+return "";

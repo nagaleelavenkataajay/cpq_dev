@@ -1,0 +1,43 @@
+/* Create Master Group String [createMasterGroupString] - BML Libraries */ 
+/* Input: void */ 
+/* Returns delimited list of group numbers for use in the printed output. */ 
+/* Written by Erich Rusch, 9/9/09 */ 
+/* Added Line sequencing script 9/23/09 */ 
+/*
+result = "";
+ungroupedFlag = false;
+groupNumbers = String[];
+groupNumbersDict = dict("integer");
+ungroupedCounter = 1;
+counter = 1;
+
+for aline in line_process {
+	//If we haven't added this group to the master group string, add it
+	if(findinarray(groupNumbers, aline.customGroup_line) == -1
+	   AND aline.customGroup_line <> "" AND aline._model_variable_name == ""){
+		append(groupNumbers, aline.customGroup_line);
+		put(groupNumbersDict, aline.customGroup_line, 1);
+	}
+	
+	//Check the special ungrouped case
+	if ( aline.customGroup_line == "" ) {
+		ungroupedFlag = true;
+		result = result + aline._document_number + "~outputSequenceNumber_line~" + string(ungroupedCounter) + "|";
+		ungroupedCounter = ungroupedCounter + 1;
+	}
+	else {
+		counter = get(groupNumbersDict, aline.customGroup_line);
+		result = result + aline._document_number + "~outputSequenceNumber_line~" + string(counter) + "|";
+		counter = counter + 1;
+		put(groupNumbersDict, aline.customGroup_line, counter);
+	}
+} // END for aline in line_process
+
+//If there are ungrouped line items, put them last
+if (ungroupedFlag) {
+	append(groupNumbers, "99999");
+}
+
+return result + "1~outputMasterGroupString_quote~" + getarrayattrstring(groupNumbers) + "$,$|";
+*/
+return "";

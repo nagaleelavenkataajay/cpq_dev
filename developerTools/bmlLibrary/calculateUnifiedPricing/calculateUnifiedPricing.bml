@@ -1,0 +1,1785 @@
+/* Util -> calculateUnifiedPricing 
+
+unifiedPricingDataDict - String[] Dictionary 
+unifiedPricingDataRowCount - Integer
+docToChildNumListDict - String[] Dictionary
+currentDocNum - String
+stringsDict - String Dictionary
+integersDict - Integer Dictionary
+floatDict - Float Dictionary
+
+11/26/2013 Edited by Lawrence Fodge to add promotions. TODO: not found in unifiedPRicing datatable
+*/
+result = false;
+iterArr = range(unifiedPricingDataRowCount);
+docNumPODict = dict("string"); // key: document_number; value: PO_ID
+docNumPOCatDict = dict("string"); // key: document_number; value: PO_CATEGORY
+docNumItemTypeDict = dict("string"); // key: document_number; value: Item Type
+docNumRollupDict = dict("string"); // key: document_number; value:Roll up
+docNumNumOfRampsDict = dict("integer"); // key: document_number; value:Number of Ramps
+docNumFromRampsDict = dict("string"); // key: document_number; value:From ramps 
+docNumToRampsDict = dict("string"); // key: document_number; value:to ramps
+
+debug = false;
+childNumArr = string[];
+allChildrenNumArr = string[];
+isGrouped = "";
+partNum = "";
+poId = "";
+poCat = "";
+itemType = "";
+rollUp = "";
+fromRamps = "";
+toRamps = "";
+DELIMITER = "@.@";
+PART_NUM = "_part_number";
+PO_ID = "poId_line";
+PO_CATEGORY = "poCategory_line";
+IS_GROUPED = "isPartOfPackage_line";
+TRUE_STR = "true";
+LIST_PRICE = "listPrice_line";
+EXT_LIST = "extendedList_line";
+NET_EACH = "netPriceEach_line";
+EXT_NET = "extendedNetPrice_line";
+TERM_BASED_PRICE = "termBasedListPrice_line";
+EXT_TERM_BASED_PRICE = "extTermBasedListPrice_line";
+PROMO_PRICE = "promoPrice_line";
+NET_PRICE_UNIFIED = "netPriceUnified_line";
+EXT_NET_PRICE_UNIFIED = "extNetPriceUnified_line";
+QTY = "numCommittedTransaction_line";
+DISCOUNT = "discount_line";
+DISCOUNT_TYPE = "discountType_line";
+PERCENTAGE_DISCOUNT_TYPE = "%";
+AMOUNT_DISCOUNT_TYPE = "Amt";
+ITEM_TYPE = "piItemType_line";
+ROLL_UP = "rollUp_line";
+PERCENTAGE_DISCOUNT_TYPE = "%";
+AMOUNT_DISCOUNT_TYPE = "Amt";
+SETUP_FEE = "Setup";
+INCR_FEE = "Incremental";
+BASE_FEE = "Base";
+PRE_PROD = "Pre Prod";
+CORE_SERVICE_CATEGORY = "Core Service";
+PROD_PRICE = "productBasedPrice_line";
+PROD_ROLL = "productBasedPriceRollUp";
+RAMP_DELIMITER = "-_**_-";
+NUMBER_RAMP_ENTRIES = "numRampEntries";
+FROM = "from";
+TO = "to";
+PRICE_DELIMITER = "*.*";
+RAMP_MESSAGE = "rampValidationMessage_quote";
+INCREMENTAL_FEE_LIST = "incrementalFeeList";
+INCREMENTAL_FEE_NET = "incrementalFeeNet";
+RAMP_FLAG = "rampFlag_line";
+IS_RAMPABLE = "isRampable";
+DISCOUNT_AMOUNT = "discountAmt_line";
+rampValidationMessage = "";
+INCREMENTAL_FEE_RATIO_VALUE = "incrementalFeeRatioValue";
+NET_PRICE_UNIFIED = "netPriceUnified_line";
+EXT_NET_PRICE_UNIFIED = "extNetPriceUnified_line";
+RAMP_PRICE_FOR_NON_RAMPABLE_BASE = "rampPriceForNonRampableBase";
+UNIFIED_LIST_PRICE = "unifiedListPrice";
+NON_RAMPABLE_BASE_INCREMENTAL_STRING = "nonRampableBaseIncrementalString";
+BASE_LIST_PRICE_UNIFIED = "listPriceUnified";
+TRANS_VALIDATION_APPLIES = "transValidationApplies"; //CSYS-70683
+NONE_ACTION = "NONE";
+
+// Get the document number of all the children for this model
+if(containskey(docToChildNumListDict, currentDocNum)) {
+	allChildrenNumArr = get(docToChildNumListDict, currentDocNum);
+}
+// Get only the grouped line items under that model
+for childNum in allChildrenNumArr {
+	isGroupedKey = childNum + DELIMITER + IS_GROUPED;
+	if (containskey(stringsDict, isGroupedKey)) {
+		isGrouped = get(stringsDict, isGroupedKey);
+	}
+	if(isGrouped == TRUE_STR) {
+		append(childNumArr, childNum);
+	}
+}
+
+				  
+// Get the partnumber and PO of each of the children
+for childNum in childNumArr {
+	partNumLookupKey = childNum + DELIMITER + PART_NUM;
+	if (containskey(stringsDict, partNumLookupKey)) {
+		partNum = get(stringsDict, partNumLookupKey);
+	}
+	poIdLookupKey = partNum + DELIMITER + PO_ID;
+	if (containskey(stringsDict, poIdLookupKey)) {
+		poId = get(stringsDict, poIdLookupKey);
+	}
+	itemTypeLookupKey = partNum + DELIMITER + ITEM_TYPE;
+	if (containskey(stringsDict, itemTypeLookupKey)) {
+		itemType = get(stringsDict, itemTypeLookupKey);
+	}
+	rollUpLookupKey = partNum + DELIMITER + ROLL_UP;
+	if (containskey(stringsDict, rollUpLookupKey)) {
+		rollUp = get(stringsDict, rollUpLookupKey);
+	}
+	poCatLookupKey = partNum + DELIMITER + PO_CATEGORY;
+	if (containskey(stringsDict, poCatLookupKey)) {
+		poCat = get(stringsDict, poCatLookupKey);
+	}
+	numOfRampsLookupKey = childNum + DELIMITER + NUMBER_RAMP_ENTRIES;
+	numOfRamps = 0;
+	if(containskey(integersDict, numOfRampsLookupKey)) {
+		numOfRamps = get(integersDict, numOfRampsLookupKey);
+	}
+	fromRampsLookupKey = childNum + DELIMITER + FROM;
+	if(containskey(stringsDict, fromRampsLookupKey)) {
+		fromRamps = get(stringsDict, fromRampsLookupKey);
+	}
+	toRampsLookupKey = childNum + DELIMITER + TO;
+	if(containskey(stringsDict, toRampsLookupKey)) {
+		toRamps = get(stringsDict, toRampsLookupKey);
+	}
+	if(find(childNum, "_**_") == -1) { // Base Fee has multiple entries in the dict
+		put(docNumPODict, childNum, poId);
+		put(docNumPOCatDict, childNum, poCat);
+		put(docNumItemTypeDict, childNum, itemType);
+		put(docNumRollupDict, childNum, rollUp);
+		put(docNumNumOfRampsDict, childNum, numOfRamps);
+		put(docNumFromRampsDict, childNum, fromRamps);
+		put(docNumToRampsDict, childNum, toRamps);
+	}
+}
+
+// Check for validation for ramps. All Base fee (grouped line items) line items' ramps must be the same
+numOfRampsArr = integer[];
+fromRampsArr = string[];
+toRampsArr = string[];
+counter = 0;
+for childNum in childNumArr {
+	childItemType = "";
+	childNumOfRamps = 0;
+	childFromRamps = "";
+	childToRamps = "";
+	poId = "";
+	if(containskey(docNumItemTypeDict, childNum)) {
+		childItemType = get(docNumItemTypeDict, childNum);
+	}
+	if(containskey(docNumNumOfRampsDict, childNum)) {
+		childNumOfRamps = get(docNumNumOfRampsDict, childNum);
+	}
+	if(containskey(docNumFromRampsDict, childNum)) {
+		childFromRamps = get(docNumFromRampsDict, childNum);
+	}
+	if(containskey(docNumToRampsDict, childNum)) {
+		childToRamps = get(docNumToRampsDict, childNum);
+	}
+	if(containskey(docNumPODict, childNum)) { //CSYS-70683
+		poId = get(docNumPODict, childNum);
+	}
+	isRampable = "false";
+	if ( containskey( stringsDict, childNum + DELIMITER + IS_RAMPABLE ) ){
+		isRampable = get( stringsDict, childNum + DELIMITER + IS_RAMPABLE );
+	}
+	transValidation = ""; //CSYS-70683
+	if ( poId <> "" AND containskey( stringsDict, poId + DELIMITER + TRANS_VALIDATION_APPLIES ) ){
+		transValidation = get( stringsDict, poId + DELIMITER + TRANS_VALIDATION_APPLIES );
+	}
+	
+	if(childItemType == BASE_FEE AND isRampable == TRUE_STR AND transValidation == TRUE_STR) { //CSYS-70683: added the transValidation check
+		append(numOfRampsArr, childNumOfRamps);
+		append(fromRampsArr, childFromRamps);
+		append(toRampsArr, childToRamps);
+		counter = counter + 1;
+	}
+}
+counterArr = range(counter);
+for count in counterArr {
+	if(numOfRampsArr[count] <> numOfRampsArr[0]) {
+		rampValidationMessage = rampValidationMessage + "Number of Ramps in grouped line items don't match. ";
+		break;
+	}
+	if(fromRampsArr[count] <> fromRampsArr[0]) {
+		rampValidationMessage = rampValidationMessage + "From Ramps in grouped line items don't match. ";
+		break;
+	}
+	if(toRampsArr[count] <> toRampsArr[0]) {
+		rampValidationMessage = rampValidationMessage + "To Ramps in grouped line items don't match. ";
+		break;
+	}
+}
+
+for item in iterArr {
+	itemKey = string(item) + DELIMITER + currentDocNum;
+	if ( containskey( unifiedPricingDataDict, itemKey ) <> true ){
+		itemKey = string(item);
+	}
+	if(containskey(unifiedPricingDataDict, itemKey)) {
+		POArr = get(unifiedPricingDataDict, itemKey); // POArr[0]=coreProdPO, POArr[1]==unifiedPO
+		baseUnifiedPrice = 0.0;
+		setUpUnifiedPrice = 0.0;
+		incrUnifiedPrice = 0.0;
+		preProdUnifiedPrice = 0.0;
+		
+		// Added by Lawrence 11/26/2013 for promotion compatibility
+		basePromo = 0.0;
+		setupPromo = 0.0;
+		incrPromo = 0.0;
+		preProdPromo = 0.0;
+		extBasePromo = 0.0;
+		extSetupPromo = 0.0;
+		extIncrPromo = 0.0;
+		extPreProdPromo = 0.0;
+		
+		baseUnifiedPriceExt = 0.0;
+		setUpUnifiedPriceExt = 0.0;
+		incrUnifiedPriceExt = 0.0;
+		preProdUnifiedPriceExt = 0.0;
+		childPOArr = values(docNumPODict); // Size of childNumArr, childPOArr and docNumPODict will all be the same
+		childPOArrIndex = 0;
+		baseCoreDocNum = "";
+		setUpCoreDocNum = "";
+		incrCoreDocNum = "";
+		preProdCoreDocNum = "";
+		baseUnifiedDocNum = "";
+		setUpUnifiedDocNum = "";
+		incrUnifiedDocNum = "";
+		preProdUnifiedDocNum = "";
+		disc = 0.0;
+		discType = "";
+		incrDisc = 0.0;
+		incrDiscType = "";
+		//modelDisc = 0.0;
+		//modelDiscType = "";
+		numTrxns = 0;
+		baseListArr = string[];
+		summedUpBaseListArr = float[];
+		summedUpBaseListCountArr = integer[];
+		incrListArr = string[];
+		summedUpIncrListArr = float[];
+		summedUpIncrListCountArr = integer[];
+		prodPriceArr = string[];
+		summedUpProdPriceArr = float[];
+
+		/*for childPO in childPOArr {
+			
+			if(childPO == POArr[0]) {
+				coreDocNum = childNumArr[childPOArrIndex];
+				priceLookupKey = coreDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {			
+					unifiedPrice = unifiedPrice + get(floatDict, priceLookupKey);
+				}
+			} elif(childPO == POArr[2]) {
+				unifiedDocNum = childNumArr[childPOArrIndex];
+				priceLookupKey = unifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {			
+					unifiedPrice = unifiedPrice + get(floatDict, priceLookupKey);
+				}
+			} 
+		}*/
+		// Unified Product Based price for saving as ramp XML LIst price
+		unifiedProductAsListPrice = 0.0;
+		for childNum in childNumArr {
+			childPO = "";
+			childItemType = "";
+			childRollUp = "";
+			childPOCat = "";
+			childNumOfRamps = 0;
+			
+			if(containskey(docNumPODict, childNum)) {
+				childPO = get(docNumPODict, childNum);
+			}
+
+				  
+				   
+	
+			if(containskey(docNumItemTypeDict, childNum)) {
+				childItemType = get(docNumItemTypeDict, childNum);
+			}
+			if(containskey(docNumRollUpDict, childNum)) {
+				childRollUp = get(docNumRollUpDict, childNum);
+			}
+			if(containskey(docNumPOCatDict, childNum)) {
+				childPOCat = get(docNumPOCatDict, childNum);
+			}
+			if(containskey(docNumNumOfRampsDict, childNum)) {
+				childNumOfRamps = get(docNumNumOfRampsDict, childNum);
+			}
+			rampsArr = range(childNumOfRamps);
+			//put( floatDict, rampKey + DELIMITER + PROD_ROLL, prodPrice );
+			if(childPO == POArr[0] AND childItemType == BASE_FEE) {
+				if(childRollUp == "Y") {
+					baseCoreDocNum = childNum;
+					priceLookupKey = baseCoreDocNum + DELIMITER + LIST_PRICE;
+					
+					if (containskey(floatDict, priceLookupKey)) {			
+						baseUnifiedPrice = baseUnifiedPrice + get(floatDict, priceLookupKey);
+					}
+					// Added by Lawrence for promo integration
+					promoKey = baseCoreDocNum + DELIMITER + "promotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						basePromo = basePromo + get( floatDict, promoKey );
+					}
+					promoKey = baseCoreDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						extBasePromo = extBasePromo + get( floatDict, promoKey );
+					}
+					
+					priceLookupKey = baseCoreDocNum + DELIMITER + EXT_LIST;
+					if (containskey(floatDict, priceLookupKey)) {			
+						baseUnifiedPriceExt = baseUnifiedPriceExt + get(floatDict, priceLookupKey);
+					}
+					if(rampValidationMessage == "") {
+						index = 0;
+						listPriceStr = "";
+						incrListPriceStr = "";
+						prodPriceString = "";
+						summedUpBaseListCountArr = range(childNumOfRamps); // Set the size here
+						summedUpIncrListCountArr = range(childNumOfRamps); // Set the size here
+						
+						for ramp in rampsArr {
+							rampKey = childNum + RAMP_DELIMITER + string(index);
+							extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+							//incrListLookUpKey = rampKey + DELIMITER + LIST_PRICE;
+							incrListLookUpKey = rampKey + DELIMITER + INCREMENTAL_FEE_RATIO_VALUE;
+							prodPriceLookupKey = rampKey + DELIMITER + PROD_PRICE;
+							if(containskey(floatDict, extListLookUpKey)) {
+								// Use ramp price for non rampable base only here in the core base fee
+								listPriceStr = listPriceStr + string(get(floatDict, extListLookUpKey)) + PRICE_DELIMITER; 
+							}
+							if(containskey(floatDict, incrListLookUpKey)) {
+								incrListPriceStr = incrListPriceStr + string(get(floatDict, incrListLookUpKey)) + PRICE_DELIMITER; 
+							}
+							
+							if ( containskey(floatDict, prodPriceLookupKey ) ){
+								prodPriceString = prodPriceString + string(get(floatDict, prodPriceLookupKey)) + PRICE_DELIMITER; 
+							}
+							index = index + 1;
+						}
+						append(baseListArr, listPriceStr);
+						append(incrListArr, incrListPriceStr);
+						append(prodPriceArr, prodPriceString);
+					}
+				} else {
+					baseUnifiedDocNum = childNum;
+					priceLookupKey = baseUnifiedDocNum + DELIMITER + LIST_PRICE;
+					if (containskey(floatDict, priceLookupKey)) {
+								
+						baseUnifiedPrice = baseUnifiedPrice + get(floatDict, priceLookupKey);
+					
+					}
+					// Added by Lawrence for promo integration
+					promoKey = baseUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						basePromo = basePromo + get( floatDict, promoKey );
+					}
+					// Added by Lawrence for promo integration
+					promoKey = baseUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						extBasePromo = extBasePromo + get( floatDict, promoKey );
+					}
+					
+					priceLookupKey = baseUnifiedDocNum + DELIMITER + EXT_LIST;
+					if (containskey(floatDict, priceLookupKey)) {
+		
+						baseUnifiedPriceExt = baseUnifiedPriceExt + get(floatDict, priceLookupKey);
+					
+					}
+					// Zero out the prices of the unified PI
+					listPriceKey = baseUnifiedDocNum + DELIMITER + LIST_PRICE;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = baseUnifiedDocNum + DELIMITER + EXT_LIST;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = baseUnifiedDocNum + DELIMITER + TERM_BASED_PRICE;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = baseUnifiedDocNum + DELIMITER + EXT_TERM_BASED_PRICE;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = baseUnifiedDocNum + DELIMITER + NET_EACH;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = baseUnifiedDocNum + DELIMITER + EXT_NET;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = baseUnifiedDocNum + DELIMITER + PROMO_PRICE;
+					put(floatDict, listPriceKey, 0.0);
+				
+		
+					
+					if(rampValidationMessage == "") {
+						index = 0;
+						listPriceStr = "";
+						incrListPriceStr = "";
+						prodPriceString = "";
+						for ramp in rampsArr {
+							
+							rampKey = childNum + RAMP_DELIMITER + string(index);
+							extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+							extNetLookUpKey = rampKey + DELIMITER + EXT_NET;
+							//incrListLookUpKey = rampKey + DELIMITER + LIST_PRICE;
+							incrListLookUpKey = rampKey + DELIMITER + INCREMENTAL_FEE_RATIO_VALUE;
+							prodPriceLookupKey = rampKey + DELIMITER + PROD_PRICE;
+							if(containskey(floatDict, extListLookUpKey)) {
+								listPriceStr = listPriceStr + string(get(floatDict, extListLookUpKey) )+ PRICE_DELIMITER; 
+							}
+							if(containskey(floatDict, incrListLookUpKey)) {
+								incrListPriceStr = incrListPriceStr + string(get(floatDict, incrListLookUpKey) )+ PRICE_DELIMITER; 
+							}
+							
+							if ( containskey(floatDict, prodPriceLookupKey ) ){
+								prodPriceString = prodPriceString + string(get(floatDict, prodPriceLookupKey)) + PRICE_DELIMITER; 
+							}
+							
+							// Zero out the prices for non Core
+							put(floatDict, extListLookUpKey, 0.0);
+							put(floatDict, extNetLookUpKey, 0.0);
+							// Zero out the incremental prices
+							incrFeeListKey = rampKey + DELIMITER + INCREMENTAL_FEE_LIST;
+							incrFeeNetKey = rampKey + DELIMITER + INCREMENTAL_FEE_NET;
+							prodKey = rampkey + DELIMITER + PROD_ROLL;
+							put(floatDict, incrFeeListKey, 0.0);
+							put(floatDict, incrFeeNetKey, 0.0);
+							put(floatDict, prodKey, 0.0 );
+							index = index + 1;
+						}
+						append(baseListArr, listPriceStr);
+						append(incrListArr, incrListPriceStr);
+						append(prodPriceArr, prodPriceString );
+					}
+				}
+			} elif(childPO == POArr[1] AND childItemType == BASE_FEE) {
+				baseUnifiedDocNum = childNum;
+				priceLookupKey = baseUnifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {
+							
+					baseUnifiedPrice = baseUnifiedPrice + get(floatDict, priceLookupKey);
+					
+				}
+				// Added by Lawrence for promo integration
+				promoKey = baseUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					basePromo = basePromo + get( floatDict, promoKey );
+				}
+				// Added by Lawrence for promo integration
+				promoKey = baseUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extBasePromo = extBasePromo + get( floatDict, promoKey );
+				}
+				
+				
+				priceLookupKey = baseUnifiedDocNum + DELIMITER + EXT_LIST;
+				if (containskey(floatDict, priceLookupKey)) {
+						
+					baseUnifiedPriceExt = baseUnifiedPriceExt + get(floatDict, priceLookupKey);
+					
+				}
+				// Zero out the prices of the unified PI
+				listPriceKey = baseUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = baseUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = baseUnifiedDocNum + DELIMITER + TERM_BASED_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = baseUnifiedDocNum + DELIMITER + EXT_TERM_BASED_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = baseUnifiedDocNum + DELIMITER + NET_EACH;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = baseUnifiedDocNum + DELIMITER + EXT_NET;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = baseUnifiedDocNum + DELIMITER + PROMO_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				
+				
+				if(rampValidationMessage == "") {
+					index = 0;
+					listPriceStr = "";
+					incrListPriceStr = "";
+					prodPriceString = "";
+					for ramp in rampsArr {
+						rampKey = childNum + RAMP_DELIMITER + string(index);
+						extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+						extNetLookUpKey = rampKey + DELIMITER + EXT_NET;
+						incrListLookUpKey = rampKey + DELIMITER + INCREMENTAL_FEE_RATIO_VALUE;
+						prodPriceLookupKey = rampKey + DELIMITER + PROD_PRICE;
+						if(containskey(floatDict, extListLookUpKey)) {
+							listPriceStr = listPriceStr + string(get(floatDict, extListLookUpKey) )+ PRICE_DELIMITER; 
+						}
+						if(containskey(floatDict, incrListLookUpKey)) {
+							incrListPriceStr = incrListPriceStr + string(get(floatDict, incrListLookUpKey) )+ PRICE_DELIMITER; 
+						}
+						if ( containskey(floatDict, prodPriceLookupKey ) ){
+								prodPrice = get( floatDict, prodPriceLookupKey );
+								unifiedProductAsListPrice = unifiedProductAsListPrice + prodPrice;	
+						}
+						if ( containskey(floatDict, prodPriceLookupKey ) ){
+								prodPriceString = prodPriceString + string(get(floatDict, prodPriceLookupKey)) + PRICE_DELIMITER; 
+						}
+						/*
+						if (containskey( floatDict, prodPriceLookupKey ) ){
+								prodPrice = get( floatDict, prodPriceLookupKey );
+								prodRollLookupKey = rampKey + DELIMITER + PROD_ROLL;
+								put( floatDict, prodRollLookupKey, 0.0 );
+								existingProdKey = baseCoreDocNum + RAMP_DELIMITER + string(index) + DELIMITER + PROD_ROLL;
+								existingProdPrice = get(floatDict, existingProdKey );
+								newPrice = existingProdPrice + prodPrice;
+								  
+					   
+							  
+								put( floatDict, existingProdKey, newPrice );
+						}*/
+						// Zero out the prices for non Core
+						put(floatDict, extListLookUpKey, 0.0);
+						put(floatDict, extNetLookUpKey, 0.0);
+						// Zero out the incremental prices
+						incrFeeListKey = rampKey + DELIMITER + INCREMENTAL_FEE_LIST;
+						incrFeeNetKey = rampKey + DELIMITER + INCREMENTAL_FEE_NET;
+						prodKey = rampkey + DELIMITER + PROD_ROLL;
+						put(floatDict, incrFeeListKey, 0.0);
+						put(floatDict, incrFeeNetKey, 0.0);
+						put(floatDict, prodKey, 0.0 );
+						index = index + 1;
+					}
+					append(baseListArr, listPriceStr);
+					append(incrListArr, incrListPriceStr);
+					append(prodPriceArr, prodPriceString );
+				}
+			} elif(childPO <> POArr[0] AND childPO <> POArr[1] AND childItemType == BASE_FEE AND ((childPOCat == CORE_SERVICE_CATEGORY AND childRollUp == "N") OR (childPOCat <> CORE_SERVICE_CATEGORY))) {
+				baseUnifiedDocNum = childNum;
+				priceLookupKey = baseUnifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {
+					
+					baseUnifiedPrice = baseUnifiedPrice + get(floatDict, priceLookupKey);
+				}
+				
+				// Added by Lawrence for promo integration
+				promoKey = baseUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					basePromo = basePromo + get( floatDict, promoKey );
+				}
+				// Added by Lawrence for promo integration
+				promoKey = baseUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extBasePromo = extBasePromo + get( floatDict, promoKey );
+				}
+				
+				
+				priceLookupKey = baseUnifiedDocNum + DELIMITER + EXT_LIST;
+				if (containskey(floatDict, priceLookupKey)) {
+				
+					baseUnifiedPriceExt = baseUnifiedPriceExt + get(floatDict, priceLookupKey);
+
+				}
+				// Zero out the prices of the unified PI
+				listPriceKey = baseUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = baseUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+				if(rampValidationMessage == "") {
+					index = 0;
+					listPriceStr = "";
+					incrListPriceStr = "";
+					prodPriceString = "";
+					for ramp in rampsArr {
+						rampKey = childNum + RAMP_DELIMITER + string(index);
+						extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+						extNetLookUpKey = rampKey + DELIMITER + EXT_NET;
+						incrListLookUpKey = rampKey + DELIMITER + INCREMENTAL_FEE_RATIO_VALUE;
+						prodPriceLookupKey = rampKey + DELIMITER + PROD_PRICE;
+						if(containskey(floatDict, extListLookUpKey)) {
+							listPriceStr = listPriceStr + string(get(floatDict, extListLookUpKey) )+ PRICE_DELIMITER; 
+						}
+						if(containskey(floatDict, incrListLookUpKey)) {
+							incrListPriceStr = incrListPriceStr + string(get(floatDict, incrListLookUpKey) )+ PRICE_DELIMITER; 
+						}
+						if ( containskey(floatDict, prodPriceLookupKey ) ){
+								prodPriceString = prodPriceString + string(get(floatDict, prodPriceLookupKey)) + PRICE_DELIMITER; 
+						}
+						// Zero out the prices for non Core
+						put(floatDict, extListLookUpKey, 0.0);
+						put(floatDict, extNetLookUpKey, 0.0);
+						// Zero out the incremental prices
+						incrFeeListKey = rampKey + DELIMITER + INCREMENTAL_FEE_LIST;
+						incrFeeNetKey = rampKey + DELIMITER + INCREMENTAL_FEE_NET;
+						prodKey = rampkey + DELIMITER + PROD_ROLL;
+						put(floatDict, incrFeeListKey, 0.0);
+						put(floatDict, incrFeeNetKey, 0.0);
+						put(floatDict, prodKey, 0.0 );
+						index = index + 1;
+					}
+					append(baseListArr, listPriceStr);
+					append(incrListArr, incrListPriceStr);
+					append(prodPriceArr, prodPriceString );
+				}
+			} elif(childPO == POArr[0] AND childItemType == SETUP_FEE) {
+				if(childRollUp == "Y") {
+					setUpCoreDocNum = childNum;
+					priceLookupKey = setUpCoreDocNum + DELIMITER + LIST_PRICE;
+					if (containskey(floatDict, priceLookupKey)) {			
+						setUpUnifiedPrice = setUpUnifiedPrice + get(floatDict, priceLookupKey);
+					}
+					// Added by Lawrence for promo integration
+					promoKey = setUpCoreDocNum + DELIMITER + "promotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						setupPromo = setupPromo + get( floatDict, promoKey );
+					}
+					// Added by Lawrence for promo integration
+					promoKey = setUpCoreDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						extSetupPromo = extSetupPromo + get( floatDict, promoKey );
+					}
+					
+					priceLookupKey = setUpCoreDocNum + DELIMITER + EXT_LIST;
+					if (containskey(floatDict, priceLookupKey)) {			
+						setUpUnifiedPriceExt = setUpUnifiedPriceExt + get(floatDict, priceLookupKey);
+					}
+				} else {
+					setUpUnifiedDocNum = childNum;
+					priceLookupKey = setUpUnifiedDocNum + DELIMITER + LIST_PRICE;
+					if (containskey(floatDict, priceLookupKey)) {			
+						setUpUnifiedPrice = setUpUnifiedPrice + get(floatDict, priceLookupKey);
+					}
+					// Added by Lawrence for promo integration
+					promoKey = setUpUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						setupPromo = setupPromo + get( floatDict, promoKey );
+					}
+					// Added by Lawrence for promo integration
+					promoKey = setUpUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						extSetupPromo = extSetupPromo + get( floatDict, promoKey );
+					}	
+					
+					priceLookupKey = setUpUnifiedDocNum + DELIMITER + EXT_LIST;
+					if (containskey(floatDict, priceLookupKey)) {			
+						setUpUnifiedPriceExt = setUpUnifiedPriceExt + get(floatDict, priceLookupKey);
+					}
+					// Zero out the prices of the unified PI
+					listPriceKey = setUpUnifiedDocNum + DELIMITER + LIST_PRICE;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = setUpUnifiedDocNum + DELIMITER + EXT_LIST;
+					put(floatDict, listPriceKey, 0.0);
+				}
+			} elif(childPO == POArr[1] AND childItemType == SETUP_FEE) {
+				setUpUnifiedDocNum = childNum;
+				priceLookupKey = setUpUnifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {			
+					setUpUnifiedPrice = setUpUnifiedPrice + get(floatDict, priceLookupKey);
+				}
+				priceLookupKey = setUpUnifiedDocNum + DELIMITER + EXT_LIST;
+				if (containskey(floatDict, priceLookupKey)) {			
+					setUpUnifiedPriceExt = setUpUnifiedPriceExt + get(floatDict, priceLookupKey);
+				}
+				// Added by Lawrence for promo integration
+				promoKey = setUpUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					setupPromo = setupPromo + get( floatDict, promoKey );
+				}
+				// Added by Lawrence for promo integration
+				promoKey = setUpUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extSetupPromo = extSetupPromo + get( floatDict, promoKey );
+				}
+				
+				// Zero out the prices of the unified PI
+				listPriceKey = setUpUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = setUpUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			} elif(childPO <> POArr[0] AND childPO <> POArr[1] AND childItemType == SETUP_FEE AND ((childPOCat == CORE_SERVICE_CATEGORY AND childRollUp == "N") OR (childPOCat <> CORE_SERVICE_CATEGORY))) {
+				setUpUnifiedDocNum = childNum;
+				priceLookupKey = setUpUnifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {			
+					setUpUnifiedPrice = setUpUnifiedPrice + get(floatDict, priceLookupKey);
+				}
+				priceLookupKey = setUpUnifiedDocNum + DELIMITER + EXT_LIST;
+				if (containskey(floatDict, priceLookupKey)) {			
+					setUpUnifiedPriceExt = setUpUnifiedPriceExt + get(floatDict, priceLookupKey);
+				}
+				
+				// Added by Lawrence for promo integration
+				promoKey = setUpUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					setupPromo = setupPromo + get( floatDict, promoKey );
+				}
+				// Added by Lawrence for promo integration
+				promoKey = setUpUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extSetupPromo = extSetupPromo + get( floatDict, promoKey );
+				}
+				
+				// Zero out the prices of the unified PI
+				listPriceKey = setUpUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = setUpUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			}  elif(childPO == POArr[0] AND childItemType == INCR_FEE) {
+				if(childRollUp == "Y") {
+
+					incrCoreDocNum = childNum;
+					priceLookupKey = incrCoreDocNum + DELIMITER + LIST_PRICE;
+					if (containskey(floatDict, priceLookupKey)) {			
+						incrUnifiedPrice = incrUnifiedPrice + get(floatDict, priceLookupKey);
+						
+					}
+					// Added by Lawrence for promo integration
+					promoKey = incrCoreDocNum + DELIMITER + "promotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						incrPromo = incrPromo + get( floatDict, promoKey );
+					}
+					// Added by Lawrence for promo integration
+					promoKey = incrCoreDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						extIncrPromo = extIncrPromo + get( floatDict, promoKey );
+					}
+
+					
+			   
+										   
+							 
+	  
+					priceLookupKey = incrCoreDocNum + DELIMITER + EXT_LIST;										
+					if (containskey(floatDict, priceLookupKey)) {			
+						incrUnifiedPriceExt = incrUnifiedPriceExt + get(floatDict, priceLookupKey);
+					}
+				} else {
+					incrUnifiedDocNum = childNum;
+					priceLookupKey = incrUnifiedDocNum + DELIMITER + LIST_PRICE;
+
+					if (containskey(floatDict, priceLookupKey)) {
+						
+						incrUnifiedPrice = incrUnifiedPrice + get(floatDict, priceLookupKey);
+					
+						
+					}
+					// Added by Lawrence for promo integration
+					promoKey = incrUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						incrPromo = incrPromo + get( floatDict, promoKey );
+					}
+					// Added by Lawrence for promo integration
+					promoKey = incrUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+					if ( containskey( floatDict, promoKey )){
+						extIncrPromo = extIncrPromo + get( floatDict, promoKey );
+					}
+					
+					priceLookupKey = incrUnifiedDocNum + DELIMITER + EXT_LIST;
+					if (containskey(floatDict, priceLookupKey)) {
+									
+						incrUnifiedPriceExt = incrUnifiedPriceExt + get(floatDict, priceLookupKey);
+						
+					}
+					// Zero out the prices of the unified PI
+					listPriceKey = incrUnifiedDocNum + DELIMITER + LIST_PRICE;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = incrUnifiedDocNum + DELIMITER + EXT_LIST;
+					put(floatDict, listPriceKey, 0.0);
+				}
+			} elif(childPO == POArr[1] AND childItemType == INCR_FEE) {
+				incrUnifiedDocNum = childNum;
+				priceLookupKey = incrUnifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {
+						
+					incrUnifiedPrice = incrUnifiedPrice + get(floatDict, priceLookupKey);
+					
+				}
+				// Added by Lawrence for promo integration
+				promoKey = incrUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					incrPromo = incrPromo + get( floatDict, promoKey );
+				}
+				// Added by Lawrence for promo integration
+				promoKey = incrUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extIncrPromo = extIncrPromo + get( floatDict, promoKey );
+				}
+				
+				priceLookupKey = incrUnifiedDocNum + DELIMITER + EXT_LIST;
+				if (containskey(floatDict, priceLookupKey)) {
+						
+					incrUnifiedPriceExt = incrUnifiedPriceExt + get(floatDict, priceLookupKey);
+				
+				}
+				// Zero out the prices of the unified PI
+				listPriceKey = incrUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = incrUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			} elif(childPO <> POArr[0] AND childPO <> POArr[1] AND childItemType == INCR_FEE AND ((childPOCat == CORE_SERVICE_CATEGORY AND childRollUp == "N") OR (childPOCat <> CORE_SERVICE_CATEGORY))) {
+				incrUnifiedDocNum = childNum;
+				priceLookupKey = incrUnifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {
+							
+					incrUnifiedPrice = incrUnifiedPrice + get(floatDict, priceLookupKey);
+					
+				}
+				// Added by Lawrence for promo integration
+				promoKey = incrUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					incrPromo = incrPromo + get( floatDict, promoKey );
+				}
+				// Added by Lawrence for promo integration
+				promoKey = incrUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extIncrPromo = extIncrPromo + get( floatDict, promoKey );
+				}
+				
+				priceLookupKey = incrUnifiedDocNum + DELIMITER + EXT_LIST;
+				if (containskey(floatDict, priceLookupKey)) {
+							
+					incrUnifiedPriceExt = incrUnifiedPriceExt + get(floatDict, priceLookupKey);
+					
+				}
+		
+										  
+							   
+	 
+				// Zero out the prices of the unified PI
+				listPriceKey = incrUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = incrUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			} elif(childPO == POArr[0] AND childItemType == PRE_PROD) {
+				if(childRollUp == "Y") {
+					preProdCoreDocNum = childNum;
+					priceLookupKey = preProdCoreDocNum + DELIMITER + LIST_PRICE;
+					if (containskey(floatDict, priceLookupKey)) {			
+						preProdUnifiedPrice = preProdUnifiedPrice + get(floatDict, priceLookupKey);
+					}
+					// Added by Lawrence for promo integration
+				promoKey = preProdCoreDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					preProdPromo = preProdPromo + get( floatDict, promoKey );
+				}
+				// Added by Lawrence for promo integration
+				promoKey = preProdCoreDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extPreProdPromo = extPreProdPromo + get( floatDict, promoKey );
+				}
+				
+				
+					priceLookupKey = preProdCoreDocNum + DELIMITER + EXT_LIST;
+					if (containskey(floatDict, priceLookupKey)) {			
+						preProdUnifiedPriceExt = preProdUnifiedPriceExt + get(floatDict, priceLookupKey);
+					}
+				} else {
+					preProdUnifiedDocNum = childNum;
+					priceLookupKey = preProdUnifiedDocNum + DELIMITER + LIST_PRICE;
+					if (containskey(floatDict, priceLookupKey)) {			
+						preProdUnifiedPrice = preProdUnifiedPrice + get(floatDict, priceLookupKey);
+					}
+						// Added by Lawrence for promo integration
+				promoKey = preProdUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					preProdPromo = preProdPromo + get( floatDict, promoKey );
+				}
+				// Added by Lawrence for promo integration
+				promoKey = preProdUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extPreProdPromo = extPreProdPromo + get( floatDict, promoKey );
+				}
+					priceLookupKey = preProdUnifiedDocNum + DELIMITER + EXT_LIST;
+					if (containskey(floatDict, priceLookupKey)) {			
+						preProdUnifiedPriceExt = preProdUnifiedPriceExt + get(floatDict, priceLookupKey);
+					}
+					// Zero out the prices of the unified PI
+					listPriceKey = preProdUnifiedDocNum + DELIMITER + LIST_PRICE;
+					put(floatDict, listPriceKey, 0.0);
+					listPriceKey = preProdUnifiedDocNum + DELIMITER + EXT_LIST;
+					put(floatDict, listPriceKey, 0.0);
+				}
+			} elif(childPO == POArr[1] AND childItemType == PRE_PROD) {
+				preProdUnifiedDocNum = childNum;
+				priceLookupKey = preProdUnifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {			
+					preProdUnifiedPrice = preProdUnifiedPrice + get(floatDict, priceLookupKey);
+				}
+						// Added by Lawrence for promo integration
+				promoKey = preProdUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					preProdPromo = preProdPromo + get( floatDict, promoKey );
+				}
+					// Added by Lawrence for promo integration
+				promoKey = preProdUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extPreProdPromo = extPreProdPromo + get( floatDict, promoKey );
+				}
+				
+				
+				priceLookupKey = preProdUnifiedDocNum + DELIMITER + EXT_LIST;
+				if (containskey(floatDict, priceLookupKey)) {			
+					preProdUnifiedPriceExt = preProdUnifiedPriceExt + get(floatDict, priceLookupKey);
+				}
+				// Zero out the prices of the unified PI
+				listPriceKey = preProdUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = preProdUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			} elif(childPO <> POArr[0] AND childPO <> POArr[1] AND childItemType == PRE_PROD AND ((childPOCat == CORE_SERVICE_CATEGORY AND childRollUp == "N") OR (childPOCat <> CORE_SERVICE_CATEGORY))) {
+				preProdUnifiedDocNum = childNum;
+				priceLookupKey = preProdUnifiedDocNum + DELIMITER + LIST_PRICE;
+				if (containskey(floatDict, priceLookupKey)) {			
+					preProdUnifiedPrice = preProdUnifiedPrice + get(floatDict, priceLookupKey);
+				}
+						// Added by Lawrence for promo integration
+				promoKey = preProdUnifiedDocNum + DELIMITER + "promotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					preProdPromo = preProdPromo + get( floatDict, promoKey );
+				}
+					// Added by Lawrence for promo integration
+				promoKey = preProdUnifiedDocNum + DELIMITER + "extPromotionPriceAppliedToList";
+				if ( containskey( floatDict, promoKey )){
+					extPreProdPromo = extPreProdPromo + get( floatDict, promoKey );
+				}
+				
+				
+				priceLookupKey = preProdUnifiedDocNum + DELIMITER + EXT_LIST;
+				if (containskey(floatDict, priceLookupKey)) {			
+					preProdUnifiedPriceExt = preProdUnifiedPriceExt + get(floatDict, priceLookupKey);
+				}
+				// Zero out the prices of the unified PI
+				listPriceKey = preProdUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = preProdUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			}
+		}
+		// Assign the unified price to the list price of the line item corresponding to the coreDocNum
+		listPriceKey = baseCoreDocNum + DELIMITER + LIST_PRICE;
+		put(floatDict, listPriceKey, baseUnifiedPrice);
+		listPriceKey = setUpCoreDocNum + DELIMITER + LIST_PRICE;
+		put(floatDict, listPriceKey, setUpUnifiedPrice);
+		listPriceKey = incrCoreDocNum + DELIMITER + LIST_PRICE;
+		put(floatDict, listPriceKey, incrUnifiedPrice);
+		listPriceKey = preProdCoreDocNum + DELIMITER + LIST_PRICE;
+		put(floatDict, listPriceKey, preProdUnifiedPrice);
+		
+		// Lawrence
+		// Assign the total promotion prices to the core line items to be used in net price calculations
+		promoKey = baseCoreDocNum + DELIMITER + "unifiedBasePromoPrice";
+		put( floatDict, promoKey, basePromo );
+		promoKey = setUpCoreDocNum + DELIMITER + "unifiedSetupPromoPrice";
+		put( floatDict, promoKey, setupPromo );
+		promoKey = incrCoreDocNum + DELIMITER + "unifiedIncrPromoPrice";
+		put( floatDict, promoKey, incrPromo);
+		promoKey = preProdCoreDocNum + DELIMITER + "unifiedPreProdPromoPrice";
+		put( floatDict, promoKey, preProdPromo );
+		
+		
+		listPriceKey = baseCoreDocNum + DELIMITER + EXT_LIST;
+		put(floatDict, listPriceKey, baseUnifiedPriceExt);
+		listPriceKey = setUpCoreDocNum + DELIMITER + EXT_LIST;
+		put(floatDict, listPriceKey, setUpUnifiedPriceExt);
+		listPriceKey = incrCoreDocNum + DELIMITER + EXT_LIST;
+		put(floatDict, listPriceKey, incrUnifiedPriceExt);
+		listPriceKey = preProdCoreDocNum + DELIMITER + EXT_LIST;
+		put(floatDict, listPriceKey, preProdUnifiedPriceExt);
+		
+		// Initialize the summedUpList Array here
+		for baseList in summedUpBaseListCountArr {
+			append(summedUpBaseListArr, 0.0);
+		}
+		
+		// Calculate Ramp level list prices
+		rampPriceForNonRampableBase = 0.0;
+		for priceStr in baseListArr {
+			eachLineRampPriceArr = split(priceStr, PRICE_DELIMITER);
+			priceIndex = 0;
+			for eachLineRampPrice in eachLineRampPriceArr {
+				if(eachLineRampPrice <> "" AND isnumber(eachLineRampPrice)) {
+					summedUpBaseListArr[priceIndex] = summedUpBaseListArr[priceIndex] + atof(eachLineRampPrice);
+				}
+				priceIndex = priceIndex + 1;
+			}
+		}
+		if(rampValidationMessage == "") {
+			index = 0;
+			for summedUpBaseList in summedUpBaseListArr {
+				rampKey = baseCoreDocNum + RAMP_DELIMITER + string(index);
+				extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+				put(floatDict, extListLookUpKey, summedUpBaseList);
+				index = index + 1;
+			}
+		}
+		
+		for priceStr in incrListArr {
+			eachLineRampPriceArr = split(priceStr, PRICE_DELIMITER);
+			priceIndex = 0;
+			for eachLineRampPrice in eachLineRampPriceArr {
+				if(eachLineRampPrice <> "" AND isnumber(eachLineRampPrice)) {
+					summedUpIncrListArr[priceIndex] = summedUpIncrListArr[priceIndex] + atof(eachLineRampPrice);
+				}
+				priceIndex = priceIndex + 1;
+			}
+		}
+		
+		for priceStr in prodPriceArr{
+			eachLineRampPriceArr = split(priceStr, PRICE_DELIMITER);
+			priceIndex = 0;
+			for eachLineRampPrice in eachLineRampPriceArr{
+				if(eachLineRampPrice <> "" AND isnumber(eachLineRampPrice)){
+					summedUpProdPriceArr[priceIndex] = summedUpProdPriceArr[priceIndex] + atof(eachLineRampPrice);
+				}
+				priceIndex = priceIndex + 1;
+			}
+		}
+		if(rampValidationMessage == "") {
+			index = 0;
+			for summedUpIncrList in summedUpIncrListArr {
+				rampKey = baseCoreDocNum + RAMP_DELIMITER + string(index);
+				incrListLookUpKey = rampKey + DELIMITER + INCREMENTAL_FEE_LIST;
+				put(floatDict, incrListLookUpKey, summedUpIncrList);
+				index = index + 1;
+			}
+			
+			index = 0;
+			for summedUpProdPrice in summedUpProdPriceArr{
+				rampKey = baseCoreDocNum + RAMP_DELIMITER + string(index);
+				prodPriceKey = rampKey + DELIMITER + PROD_ROLL;
+				put(floatDict, prodPriceKey, summedUpProdPrice );
+				index = index + 1;
+			}
+		}
+		// Calculate Unified Net Prices
+		// Get the model level discount
+		/*discountLookupKey = currentDocNum + DELIMITER + DISCOUNT;
+		if(containskey(floatDict, discountLookupKey)) {
+			modelDisc = get(floatDict, discountLookupKey);
+		}
+		discTypeLookupKey = currentDocNum + DELIMITER + DISCOUNT_TYPE;
+		if(containskey(stringsDict, discTypeLookupKey)) {
+			modelDiscType = get(stringsDict, discTypeLookupKey);
+		}*/
+		//Base
+		discountLookupKey = baseCoreDocNum + DELIMITER + DISCOUNT;
+		totalDiscountAmount = 0.0;
+		discountSaveKey = baseCoreDocNum + DELIMITER + DISCOUNT_AMOUNT;
+		if(containskey(floatDict, discountLookupKey)) {
+			disc = get(floatDict, discountLookupKey);
+		}
+		discTypeLookupKey = baseCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+		if(containskey(stringsDict, discTypeLookupKey)) {
+			discType = get(stringsDict, discTypeLookupKey);
+		}
+		incrDiscountLookupKey = incrCoreDocNum + DELIMITER + DISCOUNT;
+		if(containskey(floatDict, incrDiscountLookupKey)) {
+			incrDisc = get(floatDict, incrDiscountLookupKey);
+		}
+		incrDiscTypeLookupKey = incrCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+		if(containskey(stringsDict, incrDiscTypeLookupKey)) {
+			incrDiscType = get(stringsDict, incrDiscTypeLookupKey);
+		}
+		
+		// Modified by Lawrence to add in promo
+		baseNetPriceEa = 0.0;
+		baseNetPriceExt = 0.0;
+		if(discType == AMOUNT_DISCOUNT_TYPE) {
+			baseNetPriceEa = baseUnifiedPrice - basePromo;
+			promoUnifiedPriceExt = baseUnifiedPriceExt - extBasePromo;
+			if(promoUnifiedPriceExt <> 0){
+				baseNetPriceEa = baseNetPriceEa - ((disc/promoUnifiedPriceExt) * baseNetPriceEa);
+			}
+			
+			baseNetPriceExt = promoUnifiedPriceExt - disc;
+			totalDiscountAmount = disc;
+		} else {
+			baseNetPriceEa = baseUnifiedPrice - basePromo;
+			baseNetPriceEa = baseNetPriceEa - (disc * baseNetPriceEa/100);
+			promoUnifiedPriceExt = baseUnifiedPriceExt - extBasePromo;
+			baseNetPriceExt = promoUnifiedPriceExt - (disc * promoUnifiedPriceExt/100);	
+			totalDiscountAmount = (disc * promoUnifiedPriceExt/100);
+		}
+		
+		
+		put( floatDict, discountSaveKey, totalDiscountAmount);
+		netPriceKey = baseCoreDocNum + DELIMITER + NET_PRICE_UNIFIED;
+		put(floatDict, netPriceKey, baseNetPriceEa);
+		extNetKey = baseCoreDocNum + DELIMITER + EXT_NET_PRICE_UNIFIED;
+		put(floatDict, extNetKey, baseNetPriceExt);
+		netPriceKey = baseCoreDocNum + DELIMITER + NET_EACH;
+		put(floatDict, netPriceKey, baseNetPriceEa);
+		extNetKey = baseCoreDocNum + DELIMITER + EXT_NET;
+		put(floatDict, extNetKey, baseNetPriceExt);
+		
+		// Calculate Ramp Level Net prices
+		if(rampValidationMessage == "") {
+			index = 0;
+			
+			// This information is used to properly unify the incremental fees of non rampable base fees
+			nonRampableIncKey = baseCoreDocNum + DELIMITER + NON_RAMPABLE_BASE_INCREMENTAL_STRING;
+			nonRampableIncString = "";
+			if ( containskey( stringsDict, nonRampableIncKey ) ){
+				nonRampableIncString = get( stringsDict, nonRampableInckey );
+			}
+			nonRampableIncArr = split( nonRampableIncString, DELIMITER );
+			nonRampableIncFloat = Float[];
+			for nonRampableInc in nonRampableIncArr{
+				if ( isnumber ( nonRampableInc ) ){
+					append( nonRampableIncFloat, atof( nonRampableInc ) );
+				}
+				else{
+					append( nonRampableIncFloat, 0.0 );
+				}
+			}
+						
+			for summedUpBaseList in summedUpBaseListArr {
+				priceLookupKey = baseCoreDocNum + DELIMITER + EXT_LIST;
+				nonRampableBaseKey = currentDocNum + DELIMITER + RAMP_PRICE_FOR_NON_RAMPABLE_BASE;
+				rampPriceForNonRampableBase = 0.0;
+				
+				if ( containskey( floatDict, nonRampableBaseKey ) ){
+					rampPriceForNonRampableBase = get( floatDict, nonRampableBaseKey );
+				}
+				rampKey = baseCoreDocNum + RAMP_DELIMITER + string(index);
+				extNetLookUpKey = rampKey + DELIMITER + EXT_NET;
+				incrNetLookUpKey = rampKey + DELIMITER + INCREMENTAL_FEE_NET;
+				summedUpTotal = rampPriceForNonRampableBase + summedUpBaseList;		
+				
+				//if ( containskey( floatDict, discountSaveKey ) ) {
+				//	summedUpTotalDiscount = get( floatDict, discountSaveKey );
+				
+				//}		
+				basePromoDiscPercentKey = baseCoreDocNum + DELIMITER + "promoDiscPercent_line";
+				basePromoDiscPercent = 0.0;
+				incrPromoDiscPercentKey = incrCoreDocNum + DELIMITER + "promoDiscPercent_line";
+				incrPromoDiscPercent = 0.0;
+
+				if (containskey(floatDict, basePromoDiscPercentKey)){
+					basePromoDiscPercent = get(floatDict, basePromoDiscPercentKey);
+				}
+				if (containskey(floatDict, incrPromoDiscPercentKey)){
+					incrPromoDiscPercent = get(floatDict, incrPromoDiscPercentKey);
+				}
+				
+				extProdBasedPriceBaseKey = rampKey + DELIMITER + "extProductBasedPrice_line";
+				extProdBasedPriceBase = 0.0;
+				incrRampKey = incrCoreDocNum + RAMP_DELIMITER + string(index);
+				prodBasedPriceIncrKey = incrRampKey + DELIMITER + "productBasedPrice_line";
+				prodBasedPriceIncr = 0.0;
+				if (containskey(floatDict, extProdBasedPriceBaseKey)){
+					extProdBasedPriceBase = get(floatDict, extProdBasedPriceBaseKey);
+				}
+				if (containskey(floatDict, prodBasedPriceIncrKey)){
+					prodBasedPriceIncr = get(floatDict, prodBasedPriceIncrKey);
+				}
+
+				if(discType == AMOUNT_DISCOUNT_TYPE) {
+					summedUpBaseNet = summedUpTotal - disc;	
+				} 
+				else {
+					//need to add in promo discount here
+					promoAppliedPriceBase = extProdBasedPriceBase - (basePromoDiscPercent * extProdBasedPriceBase/100);
+					summedUpPromoUnifiedPriceBase = (summedUpTotal - extProdBasedPriceBase) + promoAppliedPriceBase;
+					summedUpBaseNet = summedUpPromoUnifiedPriceBase - (disc * summedUpPromoUnifiedPriceBase/100);
+					promoUnifiedPriceExtTest = summedUpTotal - extBasePromo;
+					baseNetPriceExtTest = promoUnifiedPriceExtTest - (disc * promoUnifiedPriceExtTest /100);
+				}
+				summedUpIncrTotal = summedUpIncrListArr[index] + nonRampableIncFloat[index];
+				if(incrDiscType == AMOUNT_DISCOUNT_TYPE) {
+					summedUpIncrNet = summedUpIncrTotal - incrDisc;
+					
+				} else {
+					//summedUpIncrNet = summedUpIncrTotal - (incrDisc * summedUpIncrTotal/100);
+					promoAppliedPriceIncr = prodBasedPriceIncr - (incrPromoDiscPercent * prodBasedPriceIncr/100);
+					summedUpPromoUnifiedPriceIncr = (summedUpIncrTotal - prodBasedPriceIncr) + promoAppliedPriceIncr;
+					summedUpIncrNet = summedUpPromoUnifiedPriceIncr - (incrDisc * summedUpPromoUnifiedPriceIncr/100);
+				}
+				
+				//put(floatDict, extNetLookUpKey, summedUpBaseNet);
+				//put(floatDict, incrNetLookUpKey, summedUpIncrNet);
+				extNetUnifiedLookUpKey = rampKey + DELIMITER + EXT_NET_PRICE_UNIFIED;
+				incrNetUnifiedLookUpKey = rampKey + DELIMITER + NET_PRICE_UNIFIED;
+				baseListUnifiedLookUpKey = rampKey + DELIMITER + BASE_LIST_PRICE_UNIFIED;
+
+				//CSYS-86113 (KA. 10-24-2017):
+				userBaseFeeNetKey = rampKey + DELIMITER + "userBaseFeeNet";
+				userIncFeeNetKey = rampKey + DELIMITER + "userIncFeeNet";
+				systemBaseFeeNetKey = rampKey + DELIMITER + "systemBaseFeeNet";
+				systemIncFeeNetKey = rampKey + DELIMITER + "systemIncFeeNet";
+				systemIncFeeNetUSDKey = rampKey + DELIMITER + "systemIncFeeNetUSD";//CSYS-95310 
+				regularDocNum = "";
+				rampIndex = "";
+				userEnteredBaseFlag = false;
+				userEnteredIncFlag = false;
+				if(find(rampKey, RAMP_DELIMITER) <> -1){
+					rampIndexArr = split( rampKey, RAMP_DELIMITER );
+     				rampIndex = rampIndexArr[1];
+     			 	regularDocNum = rampIndexArr[0];
+				}
+				howManyRamps = util.getIntegerAttribute( integersDict, regularDocNum, DELIMITER, NUMBER_RAMP_ENTRIES );
+				overrideRampPrice = "";
+				if(containskey(stringsDict, baseCoreDocNum + DELIMITER + "overrideRampPrice")){
+					overrideRampPrice = get(stringsDict, baseCoreDocNum + DELIMITER + "overrideRampPrice");
+				}
+				if(overrideRampPrice == TRUE_STR AND howManyRamps <> 0 AND rampIndex <> ""){
+					//check if we're not dealing with the last ramp:
+					if(isnumber(rampIndex) AND atoi(rampIndex) < howManyRamps - 1){
+						if(containskey(floatDict, userBaseFeeNetKey)){
+							//if user elected to overwrite the baseFeeNet:
+							userBaseFeeNet = get(floatDict, userBaseFeeNetKey);
+							//summedUpBaseNet = userBaseFeeNet;
+							put(floatDict, extNetLookUpKey, userBaseFeeNet);
+							put(floatDict, extNetUnifiedLookUpKey, userBaseFeeNet);
+							userEnteredBaseFlag = true;
+							if(find(rampKey, RAMP_DELIMITER) <> -1){
+								put(stringsDict, rampKey + DELIMITER + "userEnteredRampPricing", TRUE_STR);
+							}
+						}
+						if(containskey(floatDict, userIncFeeNetKey)){
+							//if user elected to overwrite the incrFeeNet:
+							userIncFeeNet = get(floatDict, userIncFeeNetKey);
+							//summedUpIncrNet = userIncFeeNet;
+							put(floatDict, extNetLookUpKey, userIncFeeNet);
+							put(floatDict, incrNetUnifiedLookUpKey, userIncFeeNet);
+							userEnteredIncFlag = true;
+							if(find(rampKey, RAMP_DELIMITER) <> -1){
+								put(stringsDict, rampKey + DELIMITER + "userEnteredRampPricing", TRUE_STR);
+							}
+						}
+					}
+				}
+
+				if(NOT userEnteredBaseFlag){
+					put(floatDict, extNetLookUpKey, summedUpBaseNet);
+					put(floatDict, extNetUnifiedLookUpKey, summedUpBaseNet);
+				}
+				if(NOT userEnteredIncFlag){
+					put(floatDict, incrNetLookUpKey, summedUpIncrNet);
+					put(floatDict, incrNetUnifiedLookUpKey, summedUpIncrNet);
+				}
+
+				put(floatDict, systemBaseFeeNetKey, summedUpBaseNet);
+				put(floatDict, systemIncFeeNetKey, summedUpIncrNet);
+				put(floatDict, systemIncFeeNetUSDKey, summedUpIncrNet);//CSYS-95310 
+				put(floatDict, baseListUnifiedLookupKey, summedUpTotal);
+				index = index + 1;
+			}
+		}		
+		// Setup
+		discountLookupKey = setUpCoreDocNum + DELIMITER + DISCOUNT;
+		totalDiscountAmount = 0.0;
+		discountSaveKey = setUpCoreDocNum + DELIMITER + DISCOUNT_AMOUNT;
+		if(containskey(floatDict, discountLookupKey)) {
+			disc = get(floatDict, discountLookupKey);
+		}
+		discTypeLookupKey = setUpCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+		if(containskey(stringsDict, discTypeLookupKey)) {
+			discType = get(stringsDict, discTypeLookupKey);
+		}
+		// Lawrence : Promo modifications
+		setUpNetPriceEa = 0.0;
+		setUpNetPriceExt = 0.0;
+		if(discType == AMOUNT_DISCOUNT_TYPE) {
+			setUpNetPriceEa = setUpUnifiedPrice - setupPromo;
+			promoUnifiedPriceExt = setUpUnifiedPriceExt - extSetupPromo;
+			if(promoUnifiedPriceExt <> 0){
+				setUpNetPriceEa = setUpNetPriceEa - ((disc/promoUnifiedPriceExt) * setUpNetPriceEa);
+			}
+
+			setUpNetPriceExt = promoUnifiedPriceExt - disc;
+			totalDiscountAmount = disc;
+		} else {
+		promoUnifiedPriceExt = setUpUnifiedPriceExt - extSetupPromo;
+			setUpNetPriceEa = setUpUnifiedPrice - setupPromo;
+			setUpNetPriceEa = setUpNetPriceEa - (disc * setUpNetPriceEa/100);
+			setUpNetPriceExt = promoUnifiedPriceExt - (disc * promoUnifiedPriceExt/100);
+			totalDiscountAmount = (disc * promoUnifiedPriceExt/100);
+		}
+		put( floatDict, discountSaveKey, totalDiscountAmount);
+		netPriceKey = setUpCoreDocNum + DELIMITER + NET_PRICE_UNIFIED;
+		put(floatDict, netPriceKey, setUpNetPriceEa);
+		extNetKey = setUpCoreDocNum + DELIMITER + EXT_NET_PRICE_UNIFIED;
+		put(floatDict, extNetKey, setUpNetPriceExt);
+		netPriceKey = setUpCoreDocNum + DELIMITER + NET_EACH;
+		put(floatDict, netPriceKey, setUpNetPriceEa);
+		extNetKey = setUpCoreDocNum + DELIMITER + EXT_NET;
+		put(floatDict, extNetKey, setUpNetPriceExt);
+		// Incremental
+		discountLookupKey = incrCoreDocNum + DELIMITER + DISCOUNT;
+		totalDiscountAmount = 0.0;
+		discountSaveKey = incrCoreDocNum + DELIMITER + DISCOUNT_AMOUNT;
+		if(containskey(floatDict, discountLookupKey)) {
+			disc = get(floatDict, discountLookupKey);
+		}
+		discTypeLookupKey = incrCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+		if(containskey(stringsDict, discTypeLookupKey)) {
+			discType = get(stringsDict, discTypeLookupKey);
+		}
+		// Lawrence : Promo Modifications
+		incrNetPriceEa = 0.0;
+		incrNetPriceExt = 0.0;
+		if(discType == AMOUNT_DISCOUNT_TYPE) {
+			incrNetPriceEa = incrUnifiedPrice - incrPromo;
+			promoUnifiedPriceExt = incrUnifiedPriceExt - extIncrPromo;
+			if(promoUnifiedPriceExt <> 0){
+				incrNetPriceEa = incrNetPriceEa - ((disc/promoUnifiedPriceExt) * incrNetPriceEa);
+			}
+
+			incrNetPriceExt = promoUnifiedPriceExt - disc;
+			totalDiscountAmount = disc;
+		} else {
+			incrNetPriceEa = incrUnifiedPrice - incrPromo;
+			promoUnifiedPriceExt = incrUnifiedPriceExt - extIncrPromo;
+			incrNetPriceEa = incrNetPriceEa - (disc * incrNetPriceEa/100);
+			incrNetPriceExt = promoUnifiedPriceExt - (disc * promoUnifiedPriceExt/100);
+			totalDiscountAmount = (disc * promoUnifiedPriceExt/100);
+		}
+		put( floatDict, discountSaveKey, totalDiscountAmount);
+		netPriceKey = incrCoreDocNum + DELIMITER + NET_PRICE_UNIFIED;
+		put(floatDict, netPriceKey, incrNetPriceEa);
+		extNetKey = incrCoreDocNum + DELIMITER + EXT_NET_PRICE_UNIFIED;
+		put(floatDict, extNetKey, incrNetPriceExt);
+		netPriceKey = incrCoreDocNum + DELIMITER + NET_EACH;
+		put(floatDict, netPriceKey, incrNetPriceEa);
+		extNetKey = incrCoreDocNum + DELIMITER + EXT_NET;
+		put(floatDict, extNetKey, incrNetPriceExt);
+		// Pre Prod
+		discountLookupKey = preProdCoreDocNum + DELIMITER + DISCOUNT;
+		totalDiscountAmount = 0.0;
+		discountSaveKey = preProdCoreDocNum + DELIMITER + DISCOUNT_AMOUNT;
+		if(containskey(floatDict, discountLookupKey)) {
+			disc = get(floatDict, discountLookupKey);
+		}
+		discTypeLookupKey = preProdCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+		if(containskey(stringsDict, discTypeLookupKey)) {
+			discType = get(stringsDict, discTypeLookupKey);
+		}
+		
+		preProdNetPriceEa = 0.0;
+		preProdNetPriceExt = 0.0;
+		if(discType == AMOUNT_DISCOUNT_TYPE) {
+			preProdNetPriceEa = preProdUnifiedPrice - preProdPromo;
+			promoUnifiedPriceExt = preProdUnifiedPriceExt - extPreProdPromo;
+			if(promoUnifiedPriceExt <> 0){
+				preProdNetPriceEa = preProdNetPriceEa - ((disc/promoUnifiedPriceExt) * preProdNetPriceEa);
+			}
+
+			preProdNetPriceExt = promoUnifiedPriceExt - disc;
+			totalDiscountAmount = disc;
+		} else {
+			preProdNetPriceEa = preProdUnifiedPrice - preProdPromo;
+			promoUnifiedPriceExt = preProdUnifiedPriceExt - extPreProdPromo;
+			preProdNetPriceEa = preProdNetPriceEa - (disc * preProdNetPriceEa/100);
+			preProdNetPriceExt = promoUnifiedPriceExt - (disc * promoUnifiedPriceExt/100);
+			totalDiscountAmount = (disc * promoUnifiedPriceExt/100);
+		}
+		put( floatDict, discountSaveKey, totalDiscountAmount);
+		netPriceKey = preProdCoreDocNum + DELIMITER + NET_PRICE_UNIFIED;
+		put(floatDict, netPriceKey, preProdNetPriceEa);
+		extNetKey = preProdCoreDocNum + DELIMITER + EXT_NET_PRICE_UNIFIED;
+		put(floatDict, extNetKey, preProdNetPriceExt);
+		netPriceKey = preProdCoreDocNum + DELIMITER + NET_EACH;
+		put(floatDict, netPriceKey, preProdNetPriceEa);
+		extNetKey = preProdCoreDocNum + DELIMITER + EXT_NET;
+		put(floatDict, extNetKey, preProdNetPriceExt);
+		result = true;
+	} 
+}
+
+// If there is no entry in the "unifiedPricing" datatable
+
+if(NOT(result)) { 
+	baseUnifiedPrice = 0.0;
+	setUpUnifiedPrice = 0.0;
+	incrUnifiedPrice = 0.0;
+	preProdUnifiedPrice = 0.0;
+	baseUnifiedPriceExt = 0.0;
+	setUpUnifiedPriceExt = 0.0;
+	incrUnifiedPriceExt = 0.0;
+	preProdUnifiedPriceExt = 0.0;
+	baseCoreDocNum = "";
+	setUpCoreDocNum = "";
+	incrCoreDocNum = "";
+	preProdCoreDocNum = "";
+	baseUnifiedDocNum = "";
+	setUpUnifiedDocNum = "";
+	incrUnifiedDocNum = "";
+	preProdUnifiedDocNum = "";
+	disc = 0.0;
+	discType = "";
+	incrDisc = 0.0;
+	incrDiscType = "";
+	modelDisc = 0.0;
+	modelDiscType = "";
+	numTrxns = 0;
+	baseListArr = string[];
+	summedUpBaseListArr = float[];
+	summedUpBaseListCountArr = integer[];
+	incrListArr = string[];
+	summedUpIncrListArr = float[];
+	summedUpIncrListCountArr = integer[];
+	for childNum in childNumArr {
+		childPO = "";
+		childPOCat = "";
+		childItemType = "";
+		childRollUp = "";
+		childNumOfRamps = 0;
+		if(containskey(docNumPODict, childNum)) {
+			childPO = get(docNumPODict, childNum);
+		}
+		if(containskey(docNumItemTypeDict, childNum)) {
+			childItemType = get(docNumItemTypeDict, childNum);
+		}
+		if(containskey(docNumRollUpDict, childNum)) {
+			childRollUp = get(docNumRollUpDict, childNum);
+		}
+		if(containskey(docNumPOCatDict, childNum)) {
+			childPOCat = get(docNumPOCatDict, childNum);
+		}
+		if(containskey(docNumNumOfRampsDict, childNum)) {
+			childNumOfRamps = get(docNumNumOfRampsDict, childNum);
+		}
+		rampsArr = range(childNumOfRamps);
+		if(childPOCat == CORE_SERVICE_CATEGORY AND childItemType == BASE_FEE AND childRollUp == "Y") {
+			baseCoreDocNum = childNum;
+			priceLookupKey = baseCoreDocNum + DELIMITER + LIST_PRICE;
+			if (containskey(floatDict, priceLookupKey)) {			
+				baseUnifiedPrice = baseUnifiedPrice + get(floatDict, priceLookupKey);
+			}
+			priceLookupKey = baseCoreDocNum + DELIMITER + EXT_LIST;
+			if (containskey(floatDict, priceLookupKey)) {			
+				baseUnifiedPriceExt = baseUnifiedPriceExt + get(floatDict, priceLookupKey);
+			}
+			if(rampValidationMessage == "") {
+				index = 0;
+				listPriceStr = "";
+				incrListPriceStr = "";
+				summedUpBaseListCountArr = range(childNumOfRamps); // Set the size here
+				summedUpIncrListCountArr = range(childNumOfRamps); // Set the size here
+				for ramp in rampsArr {
+					rampKey = childNum + RAMP_DELIMITER + string(index);
+					extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+					incrListLookUpKey = rampKey + DELIMITER + INCREMENTAL_FEE_LIST;
+					if(containskey(floatDict, extListLookUpKey)) {
+						listPriceStr = listPriceStr + string(get(floatDict, extListLookUpKey)) + PRICE_DELIMITER; 
+					}
+					if(containskey(floatDict, incrListLookUpKey)) {
+						incrListPriceStr = incrListPriceStr + string(get(floatDict, incrListLookUpKey)) + PRICE_DELIMITER; 
+					}
+					index = index + 1;
+				}
+				append(baseListArr, listPriceStr);
+				append(incrListArr, incrListPriceStr);
+			}
+		} elif(((childPOCat == CORE_SERVICE_CATEGORY AND childRollUp == "N") OR (childPOCat <> CORE_SERVICE_CATEGORY)) AND childItemType == BASE_FEE) {
+			baseUnifiedDocNum = childNum;
+			priceLookupKey = baseUnifiedDocNum + DELIMITER + LIST_PRICE;
+			if (containskey(floatDict, priceLookupKey)) {			
+				baseUnifiedPrice = baseUnifiedPrice + get(floatDict, priceLookupKey);
+			}
+			priceLookupKey = baseUnifiedDocNum + DELIMITER + EXT_LIST;
+			if (containskey(floatDict, priceLookupKey)) {			
+				baseUnifiedPriceExt = baseUnifiedPriceExt + get(floatDict, priceLookupKey);
+			}
+			// Zero out the prices of the unified PI if there is a core PI to roll the prices to.
+			if(baseCoreDocNum <> "") {
+				listPriceKey = baseUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = baseUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			}
+			if(rampValidationMessage == "") {
+				index = 0;
+				listPriceStr = "";
+				for ramp in rampsArr {
+					rampKey = childNum + RAMP_DELIMITER + string(index);
+					extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+					extNetLookUpKey = rampKey + DELIMITER + EXT_NET;
+					incrListLookUpKey = rampKey + DELIMITER + LIST_PRICE;
+					if(containskey(floatDict, extListLookUpKey)) {
+						listPriceStr = listPriceStr + string(get(floatDict, extListLookUpKey) )+ PRICE_DELIMITER; 
+					}
+					if(containskey(floatDict, incrListLookUpKey)) {
+						listPriceStr = listPriceStr + string(get(floatDict, incrListLookUpKey) )+ PRICE_DELIMITER; 
+					}
+					// Zero out the prices for non Core
+					put(floatDict, extListLookUpKey, 0.0);
+					put(floatDict, extNetLookUpKey, 0.0);
+					incrListKey = rampKey + DELIMITER + INCREMENTAL_FEE_LIST;
+					incrNetKey = rampKey + DELIMITER + INCREMENTAL_FEE_NET;
+					put(floatDict, incrListKey, 0.0);
+					put(floatDict, incrNetKey, 0.0);
+					index = index + 1;
+				}
+				append(baseListArr, listPriceStr);
+			}
+		} elif(childPOCat == CORE_SERVICE_CATEGORY AND childItemType == SETUP_FEE AND childRollUp == "Y") {
+			setUpCoreDocNum = childNum;
+			priceLookupKey = setUpCoreDocNum + DELIMITER + LIST_PRICE;
+			if (containskey(floatDict, priceLookupKey)) {			
+				setUpUnifiedPrice = setUpUnifiedPrice + get(floatDict, priceLookupKey);
+			}
+			priceLookupKey = setUpCoreDocNum + DELIMITER + EXT_LIST;
+			if (containskey(floatDict, priceLookupKey)) {			
+				setUpUnifiedPriceExt = setUpUnifiedPriceExt + get(floatDict, priceLookupKey);
+			}
+		} elif(((childPOCat == CORE_SERVICE_CATEGORY AND childRollUp == "N") OR (childPOCat <>CORE_SERVICE_CATEGORY)) AND childItemType == SETUP_FEE) {
+			setUpUnifiedDocNum = childNum;
+			priceLookupKey = setUpUnifiedDocNum + DELIMITER + LIST_PRICE;
+			if (containskey(floatDict, priceLookupKey)) {			
+				setUpUnifiedPrice = setUpUnifiedPrice + get(floatDict, priceLookupKey);
+			}
+			priceLookupKey = setUpUnifiedDocNum + DELIMITER + EXT_LIST;
+			if (containskey(floatDict, priceLookupKey)) {			
+				setUpUnifiedPriceExt = setUpUnifiedPriceExt + get(floatDict, priceLookupKey);
+			}
+			// Zero out the prices of the unified PI if there is a core PI to roll the prices to.
+			if(setUpCoreDocNum <> "") {
+				listPriceKey = setUpUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = setUpUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			}
+		} elif(childPOCat == CORE_SERVICE_CATEGORY AND childItemType == INCR_FEE AND childRollUp == "Y") {
+			incrCoreDocNum = childNum;
+			priceLookupKey = incrCoreDocNum + DELIMITER + LIST_PRICE;
+			if (containskey(floatDict, priceLookupKey)) {			
+				incrUnifiedPrice = incrUnifiedPrice + get(floatDict, priceLookupKey);
+				
+			}
+			priceLookupKey = incrCoreDocNum + DELIMITER + EXT_LIST;
+			if (containskey(floatDict, priceLookupKey)) {			
+				incrUnifiedPriceExt = incrUnifiedPriceExt + get(floatDict, priceLookupKey);
+			}
+		} elif(((childPOCat == CORE_SERVICE_CATEGORY AND childRollUp == "N") OR (childPOCat <>CORE_SERVICE_CATEGORY)) AND childItemType == INCR_FEE) {
+			incrUnifiedDocNum = childNum;
+			priceLookupKey = incrUnifiedDocNum + DELIMITER + LIST_PRICE;
+			if (containskey(floatDict, priceLookupKey)) {			
+				incrUnifiedPrice = incrUnifiedPrice + get(floatDict, priceLookupKey);
+			}
+			priceLookupKey = incrUnifiedDocNum + DELIMITER + EXT_LIST;
+			if (containskey(floatDict, priceLookupKey)) {			
+				incrUnifiedPriceExt = incrUnifiedPriceExt + get(floatDict, priceLookupKey);
+			}
+			// Zero out the prices of the unified PI if there is a core PI to roll the prices to.
+			if(incrCoreDocNum <> "") {
+				listPriceKey = incrUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = incrUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			}
+		} elif(childPOCat == CORE_SERVICE_CATEGORY AND childItemType == PRE_PROD AND childRollUp == "Y") {
+			preProdCoreDocNum = childNum;
+			priceLookupKey = preProdCoreDocNum + DELIMITER + LIST_PRICE;
+			if (containskey(floatDict, priceLookupKey)) {			
+				preProdUnifiedPrice = preProdUnifiedPrice + get(floatDict, priceLookupKey);
+			}
+			priceLookupKey = preProdCoreDocNum + DELIMITER + EXT_LIST;
+			if (containskey(floatDict, priceLookupKey)) {			
+				preProdUnifiedPriceExt = preProdUnifiedPriceExt + get(floatDict, priceLookupKey);
+			}
+		} elif(((childPOCat == CORE_SERVICE_CATEGORY AND childRollUp == "N") OR (childPOCat <>CORE_SERVICE_CATEGORY)) AND childItemType == PRE_PROD) {
+			preProdUnifiedDocNum = childNum;
+			priceLookupKey = preProdUnifiedDocNum + DELIMITER + LIST_PRICE;
+			if (containskey(floatDict, priceLookupKey)) {			
+				preProdUnifiedPrice = preProdUnifiedPrice + get(floatDict, priceLookupKey);
+			}
+			priceLookupKey = preProdUnifiedDocNum + DELIMITER + EXT_LIST;
+			if (containskey(floatDict, priceLookupKey)) {			
+				preProdUnifiedPriceExt = preProdUnifiedPriceExt + get(floatDict, priceLookupKey);
+			}
+			// Zero out the prices of the unified PI if there is a core PI to roll the prices to.
+			if(preProdCoreDocNum <> "") {
+				listPriceKey = preProdUnifiedDocNum + DELIMITER + LIST_PRICE;
+				put(floatDict, listPriceKey, 0.0);
+				listPriceKey = preProdUnifiedDocNum + DELIMITER + EXT_LIST;
+				put(floatDict, listPriceKey, 0.0);
+			}
+		}
+	}
+	// Assign the unified price to the list price of the line item corresponding to the coreDocNum
+	listPriceKey = baseCoreDocNum + DELIMITER + LIST_PRICE;
+	put(floatDict, listPriceKey, baseUnifiedPrice);
+	listPriceKey = setUpCoreDocNum + DELIMITER + LIST_PRICE;
+	put(floatDict, listPriceKey, setUpUnifiedPrice);
+	listPriceKey = incrCoreDocNum + DELIMITER + LIST_PRICE;
+	put(floatDict, listPriceKey, incrUnifiedPrice);
+	listPriceKey = preProdCoreDocNum + DELIMITER + LIST_PRICE;
+	put(floatDict, listPriceKey, preProdUnifiedPrice);
+		
+	listPriceKey = baseCoreDocNum + DELIMITER + EXT_LIST;
+	put(floatDict, listPriceKey, baseUnifiedPriceExt);
+	listPriceKey = setUpCoreDocNum + DELIMITER + EXT_LIST;
+	put(floatDict, listPriceKey, setUpUnifiedPriceExt);
+	listPriceKey = incrCoreDocNum + DELIMITER + EXT_LIST;
+	put(floatDict, listPriceKey, incrUnifiedPriceExt);
+	listPriceKey = preProdCoreDocNum + DELIMITER + EXT_LIST;
+	put(floatDict, listPriceKey, preProdUnifiedPriceExt);	
+	// Initialize the summedUpList Array here
+	for baseList in summedUpBaseListCountArr {
+		append(summedUpBaseListArr, 0.0);
+	}
+		
+	// Calculate Ramp level list prices
+	for priceStr in baseListArr {
+		eachLineRampPriceArr = split(priceStr, PRICE_DELIMITER);
+		priceIndex = 0;
+		for eachLineRampPrice in eachLineRampPriceArr {
+			if(eachLineRampPrice <> "" AND isnumber(eachLineRampPrice)) {
+				summedUpBaseListArr[priceIndex] = summedUpBaseListArr[priceIndex] + atof(eachLineRampPrice);
+			}
+				priceIndex = priceIndex + 1;
+		}
+	}
+	if(rampValidationMessage == "") {
+		index = 0;
+		for summedUpBaseList in summedUpBaseListArr {
+			rampKey = baseCoreDocNum + RAMP_DELIMITER + string(index);
+			extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+			put(floatDict, extListLookUpKey, summedUpBaseList);
+			index = index + 1;
+		}
+	}	
+	
+	for priceStr in incrListArr {
+		eachLineRampPriceArr = split(priceStr, PRICE_DELIMITER);
+		priceIndex = 0;
+		for eachLineRampPrice in eachLineRampPriceArr {
+			if(eachLineRampPrice <> "" AND isnumber(eachLineRampPrice)) {
+				summedUpIncrListArr[priceIndex] = summedUpIncrListArr[priceIndex] + atof(eachLineRampPrice);
+			}
+				priceIndex = priceIndex + 1;
+		}
+	}
+	if(rampValidationMessage == "") {
+		index = 0;
+		for summedUpIncrList in summedUpIncrListArr {
+			rampKey = incrCoreDocNum + RAMP_DELIMITER + string(index);
+			extListLookUpKey = rampKey + DELIMITER + EXT_LIST;
+			put(floatDict, extListLookUpKey, summedUpIncrList);
+			index = index + 1;
+		}
+	}	
+	// Calculate Unified Net Prices
+	//Base
+	discountLookupKey = baseCoreDocNum + DELIMITER + DISCOUNT;
+	if(containskey(floatDict, discountLookupKey)) {
+		disc = get(floatDict, discountLookupKey);
+	}
+	discTypeLookupKey = baseCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+	if(containskey(stringsDict, discTypeLookupKey)) {
+		discType = get(stringsDict, discTypeLookupKey);
+	}
+	if(discType == AMOUNT_DISCOUNT_TYPE) {
+		baseNetPriceEa = baseUnifiedPrice;
+		if(baseUnifiedPriceExt <> 0){
+			baseNetPriceEa = baseUnifiedPrice - ((disc/baseUnifiedPriceExt) * baseUnifiedPrice);
+		}
+		baseNetPriceExt = baseUnifiedPriceExt - disc;
+	} else {
+		baseNetPriceEa = baseUnifiedPrice - (disc * baseUnifiedPrice/100);
+		baseNetPriceExt = baseUnifiedPriceExt - (disc * baseUnifiedPriceExt/100);
+	}
+	incrDiscountLookupKey = incrCoreDocNum + DELIMITER + DISCOUNT;
+	if(containskey(floatDict, incrDiscountLookupKey)) {
+		incrDisc = get(floatDict, incrDiscountLookupKey);
+	}
+	incrDiscTypeLookupKey = incrCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+	if(containskey(stringsDict, incrDiscTypeLookupKey)) {
+		incrDiscType = get(stringsDict, incrDiscTypeLookupKey);
+	}
+	netPriceKey = baseCoreDocNum + DELIMITER + NET_PRICE_UNIFIED;
+	put(floatDict, netPriceKey, baseNetPriceEa);
+	extNetKey = baseCoreDocNum + DELIMITER + EXT_NET_PRICE_UNIFIED;
+	put(floatDict, extNetKey, baseNetPriceExt);
+	netPriceKey = baseCoreDocNum + DELIMITER + NET_EACH;
+	put(floatDict, netPriceKey, baseNetPriceEa);
+	extNetKey = baseCoreDocNum + DELIMITER + EXT_NET;
+	put(floatDict, extNetKey, baseNetPriceExt);
+	// Calculate Ramp Level Net prices
+	if(rampValidationMessage == "") {
+		index = 0;
+		for summedUpBaseList in summedUpBaseListArr {
+			rampKey = baseCoreDocNum + RAMP_DELIMITER + string(index);
+			extNetLookUpKey = rampKey + DELIMITER + EXT_NET;
+			if(discType == AMOUNT_DISCOUNT_TYPE) {
+				summedUpBaseNet = summedUpBaseList - disc;
+			} else {
+				summedUpBaseNet = summedUpBaseList - (disc * summedUpBaseList/100);
+			}
+			if(incrDiscType == AMOUNT_DISCOUNT_TYPE) {
+				summedUpIncrNet = summedUpIncrListArr[index] - incrDisc;
+			} else {
+				summedUpIncrNet = summedUpIncrListArr[index] - (incrDisc * summedUpIncrListArr[index]/100);
+			}
+			put(floatDict, extNetLookUpKey, summedUpBaseNet);
+			put(floatDict, extNetLookUpKey, summedUpIncrNet);
+			index = index + 1;
+		}
+	}
+	// Setup
+	discountLookupKey = setUpCoreDocNum + DELIMITER + DISCOUNT;
+	if(containskey(floatDict, discountLookupKey)) {
+		disc = get(floatDict, discountLookupKey);
+	}
+	discTypeLookupKey = setUpCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+	if(containskey(stringsDict, discTypeLookupKey)) {
+		discType = get(stringsDict, discTypeLookupKey);
+	}
+	if(discType == AMOUNT_DISCOUNT_TYPE) {
+		setUpNetPriceEa = setUpUnifiedPrice;
+		if(setUpUnifiedPriceExt <> 0){
+			setUpNetPriceEa = setUpUnifiedPrice - ((disc/setUpUnifiedPriceExt) * setUpUnifiedPrice);
+		}
+		setUpNetPriceExt = setUpUnifiedPriceExt - disc;
+	} else {
+		setUpNetPriceEa = setUpUnifiedPrice - (disc * setUpUnifiedPrice/100);
+		setUpNetPriceExt = setUpUnifiedPriceExt - (disc * setUpUnifiedPriceExt/100);
+	}
+	netPriceKey = setUpCoreDocNum + DELIMITER + NET_PRICE_UNIFIED;
+	put(floatDict, netPriceKey, setUpNetPriceEa);
+	extNetKey = setUpCoreDocNum + DELIMITER + EXT_NET_PRICE_UNIFIED;
+	put(floatDict, extNetKey, setUpNetPriceExt);
+	netPriceKey = setUpCoreDocNum + DELIMITER + NET_EACH;
+	put(floatDict, netPriceKey, setUpNetPriceEa);
+	extNetKey = setUpCoreDocNum + DELIMITER + EXT_NET;
+	put(floatDict, extNetKey, setUpNetPriceExt);
+	// Incremental
+	discountLookupKey = incrCoreDocNum + DELIMITER + DISCOUNT;
+	if(containskey(floatDict, discountLookupKey)) {
+		disc = get(floatDict, discountLookupKey);
+	}
+	discTypeLookupKey = incrCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+	if(containskey(stringsDict, discTypeLookupKey)) {
+		discType = get(stringsDict, discTypeLookupKey);
+	}
+	if(discType == AMOUNT_DISCOUNT_TYPE) {
+		incrNetPriceEa = incrUnifiedPrice;
+		if(incrUnifiedPriceExt <> 0){
+			incrNetPriceEa = incrUnifiedPrice - ((disc/incrUnifiedPriceExt) * incrUnifiedPrice);
+		}
+		incrNetPriceExt = incrUnifiedPriceExt - disc;
+	} else {
+		incrNetPriceEa = incrUnifiedPrice - (disc * incrUnifiedPrice/100);
+		incrNetPriceExt = incrUnifiedPriceExt - (disc * incrUnifiedPriceExt/100);
+	}
+	netPriceKey = incrCoreDocNum + DELIMITER + NET_PRICE_UNIFIED;
+	put(floatDict, netPriceKey, incrNetPriceEa);
+	extNetKey = incrCoreDocNum + DELIMITER + EXT_NET_PRICE_UNIFIED;
+	put(floatDict, extNetKey, incrNetPriceExt);
+	netPriceKey = incrCoreDocNum + DELIMITER + NET_EACH;
+	put(floatDict, netPriceKey, incrNetPriceEa);
+	extNetKey = incrCoreDocNum + DELIMITER + EXT_NET;
+	put(floatDict, extNetKey, incrNetPriceExt);
+	// Pre Prod
+	discountLookupKey = preProdCoreDocNum + DELIMITER + DISCOUNT;
+	if(containskey(floatDict, discountLookupKey)) {
+		disc = get(floatDict, discountLookupKey);
+	}
+	discTypeLookupKey = preProdCoreDocNum + DELIMITER + DISCOUNT_TYPE;
+	if(containskey(stringsDict, discTypeLookupKey)) {
+		discType = get(stringsDict, discTypeLookupKey);
+	}
+	preProdNetPriceEa = 0.0;
+	if(discType == AMOUNT_DISCOUNT_TYPE) {
+		preProdNetPriceEa = preProdUnifiedPrice;
+		if(preProdUnifiedPriceExt <> 0){
+			preProdNetPriceEa = preProdUnifiedPrice - ((disc/preProdUnifiedPriceExt) * preProdUnifiedPrice);
+		}
+		preProdNetPriceExt = preProdUnifiedPriceExt - disc;
+	} else {
+		preProdNetPriceEa = preProdUnifiedPrice - (disc * preProdUnifiedPrice/100);
+		preProdNetPriceExt = preProdUnifiedPriceExt - (disc * preProdUnifiedPriceExt/100);
+	}
+	netPriceKey = preProdCoreDocNum + DELIMITER + NET_PRICE_UNIFIED;
+	put(floatDict, netPriceKey, preProdNetPriceEa);
+	extNetKey = preProdCoreDocNum + DELIMITER + EXT_NET_PRICE_UNIFIED;
+	put(floatDict, extNetKey, preProdNetPriceExt);
+	netPriceKey = preProdCoreDocNum + DELIMITER + NET_EACH;
+	put(floatDict, netPriceKey, preProdNetPriceEa);
+	extNetKey = preProdCoreDocNum + DELIMITER + EXT_NET;
+	put(floatDict, extNetKey, preProdNetPriceExt);
+}
+put(stringsDict, "1" + DELIMITER + RAMP_MESSAGE, rampValidationMessage);
+return result;

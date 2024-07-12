@@ -1,0 +1,12 @@
+{
+  "name" : "processTierPricingWorksheet",
+  "variableName" : "processTierPricingWorksheet",
+  "description" : "NOT USED. *** Remove after tier pricing stabalized ***",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "input",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

@@ -1,0 +1,15 @@
+{
+  "name" : "evalNoMath",
+  "variableName" : "evalNoMath",
+  "description" : "NOT USED",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "expression",
+    "type" : "String"
+  }, {
+    "name" : "attrs",
+    "type" : "String Dictionary"
+  } ],
+  "attributes" : [ ]
+}

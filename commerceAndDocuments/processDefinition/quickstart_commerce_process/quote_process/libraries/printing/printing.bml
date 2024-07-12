@@ -1,0 +1,303 @@
+/* Create Master Group String [createMasterGroupString] - BML Libraries */ 
+/* Input: void */ 
+/* Returns delimited list of group numbers for use in the printed output. */ 
+/* Written by Erich Rusch, 9/9/09 */ 
+/* Added Line sequencing script 9/23/09 */ 
+result = "";
+ungroupedFlag = false;
+groupNumbers = String[];
+groupNumbersDict = dict("integer");
+totalsFloatsDict = dict("float");
+customStringsDict = dict("string");
+ungroupedCounter = 1;
+counter = 1;
+DELIMITER = "@.@";
+TERMINATE_ACTION = "TERMINATE";
+NONE_ACTION = "NONE";
+TRUE_STR = "true";
+FALSE_STR = "false";
+CORE_SERVICE = "Core Service";
+EXTENDED_SERVICE = "Extended Service";
+proposalQuantityFlag = false; //CSYS-82405 LN. 5/31/2017
+advReportingPOList = string[]{"3724956", "3725044"};//CSYS-89519
+
+/*
+for aline in line_process {
+	//If we haven't added this group to the master group string, add it
+	if (findinarray(groupNumbers, aline.customGroup_line) == -1 AND aline.customGroup_line <> "" 
+	    AND aline._model_variable_name == "" ) {
+		append(groupNumbers, aline.customGroup_line);
+		put(groupNumbersDict, aline.customGroup_line, 1);
+	}
+	//Check the special ungrouped case
+	if ( aline.customGroup_line == "" ){
+		ungroupedFlag = true;
+		result = result + aline._document_number + "~outputSequenceNumber_line~" + string(ungroupedCounter) + "|";
+		ungroupedCounter = ungroupedCounter + 1;
+	}
+	else{
+		counter = get(groupNumbersDict, aline.customGroup_line);
+		result = result + aline._document_number + "~outputSequenceNumber_line~" + string(counter) + "|";
+		counter = counter + 1;
+		put(groupNumbersDict, aline.customGroup_line, counter);
+	}
+
+} // END for aline in line_process
+
+//If there are ungrouped line items, put them last
+if (ungroupedFlag) {
+	append(groupNumbers, "99999");
+}
+
+//check to see if any ad-hoc line items have been added
+if(len(miscChargeDesc1_quote) > 0 OR len(miscChargeDesc2_quote) > 0 OR
+   len(miscChargeDesc3_quote) > 0 OR len(miscChargeDesc4_quote) > 0 OR
+   len(miscChargeDesc5_quote) > 0 ) {
+	result = result + "1~adHocFlag_quote~true|";
+}
+else{
+	result = result + "1~adHocFlag_quote~false|";
+}
+
+return result + "1~showSubtotal_quote~true|"
+	      + "1~outputMasterGroupString_quote~" + getarrayattrstring(groupNumbers) + "$,$|";*/
+
+//create a mapping between the Add On items and the line action 
+lineFilterHash = string[];
+if(find(add_OnItemsDisplay_quote,"New")<>-1){
+	append(lineFilterHash,"CREATE");
+}if(find(add_OnItemsDisplay_quote,"Existing")<>-1){
+	append(lineFilterHash,"NONE");
+	append(lineFilterHash,"MODIFY");
+}if(find(add_OnItemsDisplay_quote,"Terminated")<>-1){
+	append(lineFilterHash,"TERMINATE");
+}
+//support for legacy quotes (adi Smulian, 7/17/12)
+if(isempty(lineFilterHash)){
+	append(lineFilterHash,"CREATE");
+}
+ 
+totalBaseExtendedPrice = 0.0;
+totalPreProdExtendedPrice = 0.0;
+totalIncrementalExtendedPrice = 0.0;
+totalSetupExtendedPrice = 0.0;
+billingCycleFees = 0.0;
+billingCycle = 1;
+
+if (billingCycle_quote == "Monthly"){
+	billingCycle = 1;
+}
+elif (billingCycle_quote == "Quarterly"){
+	billingCycle = 3;
+}
+//CSYS-90719, Phil S. 06/20/2020(09/30/2019), Semi-Annually
+elif (billingCycle_quote == "Semi-Annually"){
+	billingCycle = 6;
+}
+//
+else{
+	billingCycle = 12;
+}
+
+for line in line_process {
+	docNum = line._document_number;
+	parentDocNum = line._parent_doc_number;
+	extendedPrice = line.extendedNetPrice_line;
+	netPrice = line.netPriceEach_line;
+	assetNetPrice = line.assetOriginalNetPrice_list;
+	itemType = line.piItemType_line;
+	rampable = line.rampFlag_line;
+	action = line.assetAction_line;
+	billingCycleFees = billingCycle * extendedPrice;
+	poID = line.poId_line;
+	poCategory = line.poCategory_line;
+	overrideDefaultRampPlan = line.overrideDefaultRampPlan_line;//CSYS-80373 (LN. 9/13/2017)
+	pi = line._part_number;//CSYS-88124 (LN. 12/12/2017)
+
+	//CSYS-80373 (LN. 9/13/2017) Proposal (Invoice Template Logic) Ramp plan check on whether it should print out the Table Header
+	//Loop through the first time and assess the criteria, if met put "true" in the customStringsDict to be used later
+	if(add_OnItemsDisplay_quote <> "Terminated" AND (overrideDefaultRampPlan == TRUE_STR OR outputDisplayRamp_quote == TRUE_STR)){
+		put(customStringsDict, parentDocNum + DELIMITER + "modelRampMapping", TRUE_STR);
+	}
+	
+
+	//CSYS-79926 Part 1 (model variables):
+	totalBaseExtendedNetByModel = util.getFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalBaseExtendedNetByModel");
+	totalBaseNetByModel = util.getFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalBaseNetByModel");
+	totalIncrementalExtendedNetByModel = util.getFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalIncrementalExtendedNetByModel");
+	totalSetupExtendedNetByModel = util.getFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalSetupExtendedNetByModel");
+	totalPreProdExtendedNetByModel = util.getFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalPreProdExtendedNetByModel");
+	//CSYS-79926 Part 1 END 
+	
+	if(findinarray(lineFilterHash,action) <> -1)
+	{
+		
+		if (itemType == "Base"){
+			totalBaseExtendedPrice = totalBaseExtendedPrice + billingCycle * extendedPrice;
+			totalBaseExtendedNetByModel = totalBaseExtendedNetByModel + billingCycle * extendedPrice; //CSYS-79926
+			if (findinarray(advReportingPOList, poID) == -1){
+				//CSYS-97178, Phil S. 10/08/2019,
+				// original code: totalBaseNetByModel = totalBaseNetByModel + netPrice; //CSYS-79926
+				if (action == "TERMINATE"){ doNothing = true;}
+				else{totalBaseNetByModel = totalBaseNetByModel + netPrice;}
+				}
+				//end of CSYS-97178
+		}	
+		elif (itemType == "Incremental" AND (poID <> "416635" AND poID <> "566")){//CSYS-83674 LN. 7/13/2017 Exclude Invoice Check Payments & Invoice Check Payments Canada from being included in the totals on the Proposal
+			totalIncrementalExtendedPrice = totalIncrementalExtendedPrice + extendedPrice;
+			totalIncrementalExtendedNetByModel = totalIncrementalExtendedNetByModel + extendedPrice; //CSYS-79926
+		}
+		elif (itemType == "Setup"){
+			totalSetupExtendedPrice = totalSetupExtendedPrice + extendedPrice;
+			totalSetupExtendedNetByModel = totalSetupExtendedNetByModel + extendedPrice; //CSYS-79926
+		}
+		elif (itemType == "Pre Prod"){
+			totalPreProdExtendedPrice = totalPreProdExtendedPrice + extendedPrice;
+			totalPreProdExtendedNetByModel = totalPreProdExtendedNetByModel + extendedPrice; //CSYS-79926
+		}
+
+		//CSYS-79926 Part 2 (determine the model terminate action structure):
+		modelTerminateActionStructure = util.getStringAttribute(customStringsDict, parentDocNum, DELIMITER, "modelTerminateActionStructure");
+
+		if(action == TERMINATE_ACTION){
+			if(poCategory == CORE_SERVICE){
+				if( find(modelTerminateActionStructure, CORE_SERVICE) == -1 ){
+					utilResultFlag = util.putStringAttribute(customStringsDict, parentDocNum, DELIMITER, "modelTerminateActionStructure", modelTerminateActionStructure + CORE_SERVICE + DELIMITER);
+				}
+			}
+			if(poCategory == EXTENDED_SERVICE){
+				if( find(modelTerminateActionStructure, EXTENDED_SERVICE) == -1 ){
+					utilResultFlag = util.putStringAttribute(customStringsDict, parentDocNum, DELIMITER, "modelTerminateActionStructure", modelTerminateActionStructure + EXTENDED_SERVICE + DELIMITER);
+				}
+			}
+
+			netPrice = assetNetPrice;
+
+			if(itemType == "Incremental"){
+				if( NOT containskey(customStringsDict, poID + DELIMITER + "terminatedIncrementalFeeOutput") ){
+					utilResultFlag = util.putStringAttribute(customStringsDict, poID, DELIMITER, "terminatedIncrementalFeeOutput", string(netPrice));
+				}
+			}
+		}
+		//CSYS-79926 Part 2 END
+
+	}
+
+	//CSYS-88124 (LN. 12/12/2017) Utilizing includePartnerBillingLanguage_quote attribute to be used in Document Designer for conditional Terms and Conditions based on whether there is a Core Service that will NOT be shown on the contract - hide certain verbiage; CSYS-95097
+	if(pi <> "" AND partnerBillingQuote_quote AND quoteType_quote == "Add-On Business" AND poCategory == CORE_SERVICE){
+		if(action == NONE_ACTION AND NOT(includeAllProductsOnContract_quote)){
+			result = result + "1" + "~includePartnerBillingLanguage_quote~" + TRUE_STR + "|";
+		}
+		else {
+			result = result + "1" + "~includePartnerBillingLanguage_quote~" + FALSE_STR + "|";
+		}
+	}
+	
+
+
+	//CSYS-79926 continued:
+	utilResultFlag = util.putFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalBaseExtendedNetByModel", totalBaseExtendedNetByModel);
+	utilResultFlag = util.putFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalBaseNetByModel", totalBaseNetByModel);
+	utilResultFlag = util.putFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalIncrementalExtendedNetByModel", totalIncrementalExtendedNetByModel);
+	utilResultFlag = util.putFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalSetupExtendedNetByModel", totalSetupExtendedNetByModel);
+	utilResultFlag = util.putFloatAttribute(totalsFloatsDict, parentDocNum, DELIMITER, "totalPreProdExtendedNetByModel", totalPreProdExtendedNetByModel);
+
+	result = result + docNum + "~netPriceEachOutput_line~" + string(netPrice) + "~" + "|";
+
+
+
+}
+
+showProjectRoadMapHeader = false;//CSYS-80373 (LN. 9/13/2017) Check for Proposal Project Roadmap Header logic, whether to print only once
+//CSYS-79926 part 3 (reloop and populate the model lines with the totals):
+for line in line_process{
+	docNum = line._document_number;
+	pi = line._part_number;
+	poID = line.poID_line;
+	quantity = line._price_quantity;//CSYS-82405 LN. 5/31/2017
+	//CSYS-95625
+	marketingName = line._part_custom_field25;
+	lineDesc = line.lineDescription_line;	
+
+	if(pi == ""){ //model lines
+
+		//CSYS-80373 (LN. 9/13/2017) Check for the Proposal - Invoice Ramp plan column header logic, ensure it prints correctly based on scenario
+		if(containskey(customStringsDict, docNum + DELIMITER + "modelRampMapping")){//if the current docNum equals the parentDocNum (model)
+			result = result + docNum + "~rampPlanDisplayProposalHeader_line~" + TRUE_STR + "~" + "|";
+			showProjectRoadMapHeader = true;
+		}
+		else{//if the current docNum does not equal the parentDocNum (model)
+			result = result + docNum + "~rampPlanDisplayProposalHeader_line~" + FALSE_STR + "~" + "|";
+			showProjectRoadMapHeader = false;
+		}
+
+
+		totalBaseExtendedNetByModel = util.getFloatAttribute(totalsFloatsDict, docNum, DELIMITER, "totalBaseExtendedNetByModel");
+		totalBaseNetByModel = util.getFloatAttribute(totalsFloatsDict, docNum, DELIMITER, "totalBaseNetByModel");
+		totalIncrementalExtendedNetByModel = util.getFloatAttribute(totalsFloatsDict, docNum, DELIMITER, "totalIncrementalExtendedNetByModel");
+		totalSetupExtendedNetByModel = util.getFloatAttribute(totalsFloatsDict, docNum, DELIMITER, "totalSetupExtendedNetByModel");
+		totalPreProdExtendedNetByModel = util.getFloatAttribute(totalsFloatsDict, docNum, DELIMITER, "totalPreProdExtendedNetByModel");
+
+		result = result + docNum + "~totalBaseFeeExtendedNetBCOutput_line~" + string(totalBaseExtendedNetByModel) + "~" + "|";
+		result = result + docNum + "~totalBaseFeeNetOutput_line~" + string(totalBaseNetByModel) + "~" + "|";
+		result = result + docNum + "~totalIncrementalNetOutput_line~" + string(totalIncrementalExtendedNetByModel) + "~" + "|";
+		result = result + docNum + "~totalSetUpNetOutput_line~" + string(totalSetupExtendedNetByModel) + "~" + "|";
+		result = result + docNum + "~totalPreProdFeeNetBCOutput_line~" + string(totalPreProdExtendedNetByModel) + "~" + "|";	
+
+		modelTerminateActionStructure = util.getStringAttribute(customStringsDict, docNum, DELIMITER, "modelTerminateActionStructure");	
+
+		//not blank means there are terminates within the model and the user has elected to include them on the proposal
+		if(modelTerminateActionStructure <> ""){ 
+			//populate the attribute to be parsed by the proposal table xsl:
+			result = result + docNum + "~modelTerminateActionStructure_line~" + modelTerminateActionStructure + "~" + "|";	
+		}
+		else{
+			//blank out the attribute so the proposal table xsl ignores it:
+			result = result + docNum + "~modelTerminateActionStructure_line~" + "" + "~" + "|";
+		}
+	}
+	else{
+		lineDescForDocDesigner = "";
+		terminatedIncrementalFeeOutput = util.getStringAttribute(customStringsDict, poID, DELIMITER, "terminatedIncrementalFeeOutput");
+		if(terminatedIncrementalFeeOutput == ""){
+			terminatedIncrementalFeeOutput = "0.0";
+		}
+		result = result + docNum + "~terminatedIncrementalFeeOutput_line~" + terminatedIncrementalFeeOutput + "~" + "|";
+		if (NOT(editionlessUniversal_quote) AND NOT(editionlessContract_quote)){
+			lineDescForDocDesigner = lineDesc;
+		}else{
+			lineDescForDocDesigner = marketingName;
+		}
+		result = result + docNum + "~lineDescriptionForDocumentDesigner_line~" + lineDescForDocDesigner + "~" + "|";
+	}
+
+	
+
+
+	//CSYS-82405 LN. 5/31/2017
+	if (quantity > 1){
+		proposalQuantityFlag = true;
+	}
+
+}
+
+
+//CSYS-80373 (LN. 9/20/2017) Set the quote level attribute rampPlanDisplayProposalHeader_quote accordingly to display on the Invoice Proposal "Project Roadmap" Header section only once
+if(showProjectRoadMapHeader){
+	result = result + "1" + "~rampPlanDisplayProposalHeader_quote~" + TRUE_STR + "~" + "|";
+} 
+else{
+	result = result + "1" + "~rampPlanDisplayProposalHeader_quote~" + FALSE_STR + "~" + "|";
+}
+
+
+//CSYS-79926 Part 3 END 
+
+result = result + "1~totalBaseFeeNetBCOutput_quote~" + string(totalBaseExtendedPrice) + "~" + "|";
+result = result + "1~totalPreProdFeeNetBCOutput_quote~" + string(totalPreProdExtendedPrice) + "~" + "|";
+result = result + "1~totalIncrementalNetOutput_quote~" + string(totalIncrementalExtendedPrice) + "~" + "|";
+result = result + "1~totalSetUpNetOutput_quote~" + string(totalSetupExtendedPrice) + "~" + "|";
+//CSYS-82405 LN. 5/21/2017
+result = result + "1~proposalQuantityFlag_quote~" + string(proposalQuantityFlag) + "~" + "|";
+
+return result;

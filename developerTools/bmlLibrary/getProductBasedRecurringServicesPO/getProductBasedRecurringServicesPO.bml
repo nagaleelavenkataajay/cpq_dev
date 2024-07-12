@@ -1,0 +1,23 @@
+/*
+
+####### CSYS-94381 (LN. 1-3-2019) #######
+
+A new utility library to call the ProductBasedRecServs table.
+This table returns the parent/child poID's for those child products whose ramp plans need to match the parent.
+Return Type = String 
+	Returns a string array: [parentPoID~childPoID, ]
+*/
+
+resultArr = String[];
+TILDE_DELIMITER = "~";
+
+response = BMQL ("SELECT parentPoID, childPoID FROM ProductBasedRecServs");
+
+for entry in response {
+	parentPoID = get(entry, "parentPoID");
+	childPoID = get(entry, "childPoID");
+
+	append(resultArr, parentPoID + TILDE_DELIMITER + childPoID);
+}
+
+return resultArr;

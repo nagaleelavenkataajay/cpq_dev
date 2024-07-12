@@ -1,0 +1,18 @@
+{
+  "name" : "Format Price",
+  "variableName" : "fomatPrice",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "price",
+    "type" : "Float"
+  }, {
+    "name" : "currencySymbol",
+    "type" : "String"
+  }, {
+    "name" : "numDecimals",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

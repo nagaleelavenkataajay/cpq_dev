@@ -1,0 +1,10 @@
+parsedVal = "";
+ATTR_DELIMITER = "~";
+
+if(valueString <> ""){
+	parsedValSplit = split(valueString, ATTR_DELIMITER);
+	parsedValSplitted = parsedValSplit[2]; 
+	parsedVal = replace(parsedValSplitted , "|", "");
+}
+
+return parsedVal;

@@ -1,0 +1,29 @@
+result = "";
+
+bmiSessionId = _system_user_session_id;
+siteName = lower(_system_company_name);
+commerceProcess = "quickstart_commerce_process";
+quoteProcess = "quote_process";
+buyerCompanyName = siteName;
+promoDetails= externalPromotion_quote;
+intCount = 1;
+//updateTransaction:
+updateTransactionURL = "https://" + lower(buyerCompanyName) +".bigmachines.com/bmfsweb/"+ lower(buyerCompanyName) + "/image/WebServices/updatePromoDetails.xml";
+SoapUpdate = urldatabyget(updateTransactionURL,"","error");
+SoapUpdate = replace(SoapUpdate, "SESSION_ID", bmiSessionId);
+SoapUpdate = replace(SoapUpdate, "SITE_NAME", lower(siteName));
+SoapUpdate = replace(SoapUpdate, "PROCESS_VAR_NAME", commerceProcess);
+SoapUpdate = replace(SoapUpdate, "TRANSACTION_ID", transactionID_quote);
+SoapUpdate = replace(SoapUpdate, "BUYER_COMPANY_NAME", buyerCompanyName);
+SoapUpdate = replace(SoapUpdate, "SUPPLIER_COMPANY_NAME", _system_supplier_company_name);
+SoapUpdate = replace(SoapUpdate, "DOCUMENT_VAR_NAME_MAIN", quoteProcess);
+SoapUpdate = replace(SoapUpdate, "ACTION_VAR_NAME", "save_quote");
+SoapUpdate = replace(SoapUpdate, "LOGIN_NAME", _system_user_login);
+SoapUpdate = replace(SoapUpdate, "PROMO_SELECTED", promoDetails);
+SoapUpdate = replace(SoapUpdate, "PROMO_COUNT", "1");
+SoapUpdate = replace(SoapUpdate, "FALSE_STR", "false"); 
+
+update_result = urldatabypost("https://"+ siteName +".bigmachines.com/v1_0/receiver", SoapUpdate, "");
+
+
+return "";

@@ -1,0 +1,54 @@
+/* util -> spliceXMLNodeValuesExtended
+
+originalXMLString - String
+spliceNodeName - String
+newNodeValues - String[]
+parentNode - String
+
+*/
+result = "";
+
+openingTag = "<" + spliceNodeName;
+spliceNodeIndex = -1;
+spliceStartIndex = -1;
+spliceEndIndex = -1;
+
+remaining = originalXmlString;
+indexAttr = find(remaining, openingTag + " " );
+if ( indexAttr == -1  ){
+	indexAttr = find( remaining, openingTag + ">" );
+}
+if ( indexAttr <> -1){
+	for newValue in newNodeValues {
+		spliceNodeIndex = find(remaining, openingTag + " ");
+		if ( spliceNodeIndex == -1 ){
+			spliceNodeIndex = find( remaining, openingTag + ">" );
+		}
+		spliceStartIndex = find(remaining, ">", spliceNodeIndex) + 1;	//Add 1, because otherwise this returns the index of the ">" in e.g. <transactions class="transactions">, and actually we want the index of where the value starts
+		spliceEndIndex = find(remaining, "</", spliceStartIndex);
+		
+		soFar = substring(remaining, 0, spliceStartIndex);
+
+		remaining = substring(remaining, spliceEndIndex);
+		
+		result = result + soFar + newValue;
+	}
+}
+else{
+	for newValue in newNodeValues{
+		spliceNodeIndex = find( remaining, "</" + parentNode );
+		//IESCNQRCPQ-1255 (OK. 11-1-2023) Comment out below line and move it down to prevent the runtime exception error
+		//spliceEndIndex = find( remaining, ">", spliceNodeIndex);
+		if ( spliceNodeIndex == -1 ) {
+			continue;
+		}
+		spliceEndIndex = find( remaining, ">", spliceNodeIndex); //IESCNQRCPQ-1255 (OK. 11-1-2023) Moved from above
+		soFar = substring( remaining,0, spliceNodeIndex );
+		remaining = substring( remaining, spliceEndIndex + 1 );
+		result = result + soFar + openingTag + ">" + newValue + "</" + spliceNodeName + ">" + "</" + parentNode + ">";
+	}
+}
+	
+result = result + remaining;
+
+return result;

@@ -1,0 +1,50 @@
+/* util.getApprovalEmail
+
+userLogin - String, _system_user_login
+stringsDict - String Dictionary, Can contain new information if necessary
+
+Returns a commerce string
+
+Used to populate the approval email attributes 
+*/
+QUOTE_DOC_NUM = "1";
+approvalEmailSet = bmql("SELECT mgrEmail, vpEmail, svpEmail, gmEmail, evpEmail, cfoEmail FROM approverNames WHERE userLogin = $userLogin");
+actionName = "";
+if ( containskey( stringsDict, "actionName" ) ){
+	actionName = get( stringsDict, "actionName" );
+}
+mgrEmail = "";
+vpEmail = "";
+svpEmail = "";
+gmEmail = "";
+evpEmail = "";
+cfoEmail = "";
+// Cycle through the returns and save the information
+// We only want to keep one result
+for approvalEmail in approvalEmailSet{
+	mgrEmail = get(approvalEmail, "mgrEmail");
+	vpEmail = get(approvalEmail, "vpEmail" );
+	svpEmail = get(approvalEmail, "svpEmail");
+	gmEmail = get(approvalEmail, "gmEmail");
+	evpEmail = get(approvalEmail, "evpEmail");
+	cfoEmail = get(approvalEmail, "cfoEmail" );
+}
+
+retStr = QUOTE_DOC_NUM + "~mgrEmail_quote~" + mgrEmail + "|" 
+  		+ QUOTE_DOC_NUM + "~vPEmail_quote~" + vpEmail + "|" 
+		+ QUOTE_DOC_NUM + "~sVPEmail_quote~" + svpEmail + "|" 
+		+ QUOTE_DOC_NUM + "~gMEmail_quote~" + gmEmail + "|"
+		+ QUOTE_DOC_NUM + "~evpEmail_quote~" + evpEmail + "|" 
+		+ QUOTE_DOC_NUM + "~cFOEmail_quote~" + cfoEmail + "|";
+
+
+if ( actionName == "submit" OR actionName == "request approval"){
+	retStr = retStr + QUOTE_DOC_NUM + "~mgrLogin_quote~" + mgrEmail + "|" 
+		+ QUOTE_DOC_NUM + "~vpLogin_quote~" + vpEmail + "|" 
+		+ QUOTE_DOC_NUM + "~svpLogin_quote~" + svpEmail + "|" 
+		+ QUOTE_DOC_NUM + "~gmLogin_quote~" + gmEmail + "|"
+		+ QUOTE_DOC_NUM + "~evpLogin_quote~" + evpEmail + "|" 
+		+ QUOTE_DOC_NUM + "~cfoLogin_quote~" + cfoEmail + "|";
+}
+
+return retStr;

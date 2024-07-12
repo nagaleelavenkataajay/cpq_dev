@@ -1,0 +1,317 @@
+//Existing intel script has been transformed into this util. However, refactoring of this script still needs to be done, which should include taking only one side of boolean logic, and any contrary condition will hence take the other side. Note that attribute names need refactoring as well 
+
+if(coreOfferings <> "" AND implementationMethods <> ""){
+	
+	intelMappingDict = dict("string");
+	coreHasSelectableIntellDict = dict("string");
+	parentDocNumArray = integer[];
+	//myIntellMappingArray = string[];
+	//coreWithIntellArray = string[];
+	extServPOArray = string[];
+	corePOArray = string[];
+	corePONameArray = string[];
+	allParentDocNums = string[];
+	crossModelTrigger = false;
+	nonReconfigTrigger = false;
+	intellOnOtherCores = false;
+	reconfiguredDocNum = "";
+	PO_DELIMITER = "~";
+	//IESCNQRCPQ-1295
+	isConsIntOnFirstCoreNotonSecond = false;
+	poListOfConsInt = string[] {"203744","329165","346220"}; //PO IDs of consultative Intelligence
+	//END
+
+	//CSYS-89209 (LN. 2-9-2018) Setting up new Constants, Arrays and Dictionaries to leverage logic
+	CORE_SERVICE = "Core Service";
+	BASE_FEE = "Base";
+	coreMappingArr = string[];
+	intellMappingArr = string[];
+	intellTerminateDict = dict("string");
+	intellNoneDict = dict("string");
+
+	
+	current_core = "";
+	rez = BMQL("SELECT selectedDocumentNumber_quote, listOfCoreOffering_quote, listOfImplementationMethods_quote FROM commerce.quote_process");
+
+	for entry in rez{
+		current_core = get(entry, "listOfCoreOffering_quote");
+		reconfiguredDocNum = get(entry, "selectedDocumentNumber_quote");
+	}
+	
+	if(current_core == "" OR (find(current_core, "$$") == -1 AND reconfigure == "true")){
+		return true; //never fire the rule when adding the first core or reconfiguring the first core when it's the only core on the quote
+	}
+	
+	/*
+	intellRez = bmql("SELECT RelatedIntelPO, CoreWithoutIntel FROM AddCoreWithIntell");
+	for entry in intellRez {
+		intellPO = get(entry,"RelatedIntelPO");
+		CoreWithoutIntell = get(entry,"CoreWithoutIntel");
+		append(myIntellMappingArray, intellPO);
+		append(coreWithIntellArray, CoreWithoutIntell);
+	}
+
+
+	INTELL_PO5 = "662007"; //Insight Premium for Expense (CSYS-68545. KA. 8-11-2016)
+	INTELL_PO6 = "662299"; //Insight Premium for Travel & Expense (CSYS-68545. KA. 8-11-2016)
+	INTELL_PO7 = "662306"; //Insight Preimum for Invoice Processing (CSYS-68545. KA. 8-11-2016)
+	INTELL_PO8 = "662323"; //Insight Premium for Concur Request - Standalone (CSYS-68545. KA. 8-11-2016)
+	
+	append(myIntellMappingArray, INTELL_PO5);
+	append(myIntellMappingArray, INTELL_PO6);
+	append(myIntellMappingArray, INTELL_PO7);
+	append(myIntellMappingArray, INTELL_PO8);
+	*/
+	// Query ExtServValidation to populate the collection objects
+	queryResult = bmql("SELECT ExtServicePOs, CorePOs FROM ExtServValidation where ServiceAttribute = $attributeName");
+	for entry in queryResult {
+		extServPOs = get(entry,"ExtServicePOs");
+		corePOs = get(entry,"CorePOs");
+		extServPOArray = split(extServPOs, PO_DELIMITER);
+		corePOArray = split(corePOs, PO_DELIMITER);
+		break;
+	}
+	partRecords = bmql("select part_number, description, custom_field1, custom_field2 from _parts where custom_field1 in $corePOArray");
+	
+	for partRecord in partRecords {
+		corePOName = get(partRecord, "custom_field2");
+		append(corePONameArray, corePOName);
+	}
+	//End
+	
+	lineItemsInfo = util.getLineItemsInfoFromCommerceToConfig(reconfiguredDocNum);
+	reconfiguredCoreOffering = get(lineItemsInfo,"coreOffering_line");
+	reconfiguredDocNumber = get(lineItemsInfo,"_document_number");
+	
+	isIntellOnQuote = false;	
+	lineRez = BMQL("SELECT poId_line, _parent_doc_number, _document_number, _part_number, assetAction_line, lineDescription_line, poCategory_line FROM commerce.line_process");
+
+	for entry in lineRez {
+		docNum = get(entry,"_document_number");
+		pi = get(entry,"_part_number");
+		lineDescription = get(entry, "lineDescription_line");
+		assetAction = get(entry, "assetAction_line");//CSYS-89209
+		poCategory = get(entry, "poCategory_line");//CSYS-89209
+		poID = get(entry,"poId_line");//CSYS-89209
+
+		if (pi == "") { //models only
+			if (findinarray(corePONameArray, lineDescription) <> -1){
+				put(coreHasSelectableIntellDict, docNum, "true"); //core on the quote has selectable intell
+			}
+			append(allParentDocNums, docNum);
+		}
+
+		//CSYS-89209 Determine how many cores exist on the Assets, utilized in the Reconfigure = TRUE portion of the logic
+		if(pi <> "" AND poCategory == CORE_SERVICE AND assetAction <> "TERMINATE" AND assetAction <> "CREATE"){
+			if(findinarray(coreMappingArr, poID) == -1){
+				append(coreMappingArr, poID);
+			}	
+		}
+	}
+
+	//CSYS-89209 Loop through assets
+	for entry in lineRez{
+		pi = get(entry,"_part_number");
+		poID = get(entry,"poId_line");
+		assetAction = get(entry,"assetAction_line");
+		parentDocNum = get(entry,"_parent_doc_number");
+
+		if(pi <> ""){
+
+			if(containskey(coreHasSelectableIntellDict, parentDocNum)){
+				//If there is a model with a selectable Intell, and the Intell asset is a NONE action code, and there are more 1 or more cores on the asset, map this to the dict
+				if((assetAction == "NONE" OR assetAction == "MODIFY") AND findinarray(extServPOArray, poID) <> -1 AND sizeofarray(coreMappingArr) >= 1){					
+					put(intellNoneDict, "1", "true");
+
+					//If the poID doesn't yet exist in the array, append it to the intellMappingArr
+					if(findinarray(intellMappingArr, poID) == -1){
+						append(intellMappingArr, poID);
+					}
+				
+				}
+
+				//If there is a TERMINATED Intell, map to the dictionary
+				if(assetAction == "TERMINATE" AND findinarray(extServPOArray, poID) <> -1){
+					put(intellTerminateDict, "1", "true");
+				}
+
+			}
+		}
+	}
+
+
+	for entry in lineRez {
+		pi = get(entry,"_part_number");
+		poID = get(entry,"poId_line");
+		assetAction = get(entry,"assetAction_line");
+		parentDocNum = get(entry,"_parent_doc_number");
+		if (pi <> ""){
+			if (get(coreHasSelectableIntellDict, parentDocNum) == "true"){
+				if (isnumber(parentDocNum)){
+					parentDocNumInt = atoi(parentDocNum);
+				}
+				append(parentDocNumArray, parentDocNumInt);
+				if (get(intelMappingDict , parentDocNum) <> "true"){
+					put(intelMappingDict , parentDocNum, "false");
+				}
+				if (assetAction <> "TERMINATE" AND findinarray(extServPOArray, poID) <> -1){ //if line is a non-terminated intell
+					put(intelMappingDict , parentDocNum, "true");
+					isIntellOnQuote = true;				
+	
+				}
+				//IESCNQRCPQ-1295
+				if((assetAction == "NONE" OR assetAction == "MODIFY") AND findinarray(poListOfConsInt, poID) <> -1 AND containskey(intellNoneDict, "1") AND sizeofarray(coreMappingArr) >= 1 AND sizeofarray(intellMappingArr) < 2){
+					isConsIntOnFirstCoreNotonSecond = true;
+				}//END
+			}	
+		}
+	}
+	
+	parentCount = 0;
+	trueFalseString = "";
+	for index1 in parentDocNumArray {
+		if (parentDocNumArray[parentCount] <> parentDocNumArray[parentCount - 1]){
+			//append(finalParentDocNumArray, string(index1) + get(intellMappingDict,string(index1)));
+			trueFalseString = trueFalseString + string(index1) +  get(intelMappingDict, string(index1));
+		}
+		parentCount = parentCount + 1;
+	}
+	
+	if (find(trueFalseString, "true") <> -1 AND find(trueFalseString, "false") <> -1){ 	
+		crossModelTrigger = true;
+	}
+	
+	//check nonreconfigured models
+	nonConfigString = "";
+	intellOnOtherCoresStr = "";
+	for index in allParentDocNums {
+		if(index <> reconfiguredDocNumber){ //ignore reconfigured doc num
+			nonConfigString = nonConfigString + get(coreHasSelectableIntellDict, index); //append the rest of the selectable intell evals to new boolean string
+			intellOnOtherCoresStr = intellOnOtherCoresStr + get(intelMappingDict, index);
+		}
+	}
+	
+	nonSelectableString = "";
+	nonSelectableOnly = false;
+	for index in allParentDocNums { //don't ignore reconfigured doc num
+		nonSelectableString = nonSelectableString + get(coreHasSelectableIntellDict, index);
+	}
+	
+	if (find(nonSelectableString, "true") == -1){ 	
+		nonSelectableOnly = true;
+	}
+	
+	if (find(nonConfigString, "true") <> -1){ 	
+		nonReconfigTrigger = true;
+	}
+	
+	if (find(intellOnOtherCoresStr, "true") <> -1){ 
+		intellOnOtherCores = true;
+	}
+	
+	//initialize variables for config attributes
+	reconfig = reconfigure;
+	businessIntell = attributeValue;
+	
+	//Are there any line items on the quote already
+	hasLineItems = false; //piece 1
+	for entry in lineRez {
+		lineDescription = get(entry,"lineDescription_line");
+		if (lineDescription <> ""){ //if we see any line items on the quote
+			hasLineItems = true;
+			break;
+		}
+	}
+	
+	//determine if the core in config has selectable intelligence
+	configHasSelectableIntell = false; 
+	fullCoreName = coreOfferings + " - " + implementationMethods;
+	
+	if(coreOfferings == "Invoice Processing" AND implementationMethods == "Standard"){
+		fullCoreName = "Invoice Processing - Standard Implementation";
+	}
+	/*
+	intellCoreSet = BMQL("SELECT CoreWithoutIntel FROM AddCoreWithIntell");
+	for entry in intellCoreSet {
+		intellCoreName = get(entry, "CoreWithoutIntel");
+		if (fullCoreName == intellCoreName){
+			configHasSelectableIntell = true; //core offering in config has selectable intell
+			break;
+		}
+	}
+	*/
+	//Start
+	if (findinarray(corePONameArray, fullCoreName) <> -1){
+		configHasSelectableIntell = true; //core offering in config has selectable intell
+	}
+	//End
+	//determine if intell has been added to the core on the quote already. This is the core that we're dealing with in config currently.
+	isIntellOnReconfiguredCore = false; 
+	
+	for entry in lineRez {
+		parentDocNum = get(entry,"_parent_doc_number");
+		if (get(intelMappingDict , reconfiguredDocNumber) == "true"){
+			isIntellOnReconfiguredCore = true;
+			break;
+		}
+	}
+	
+	reconfigCoreHasSelectableIntell = get(coreHasSelectableIntellDict, reconfiguredDocNumber); //see if reconfigured core has selectable intell
+	
+	//hide the message under these conditions
+	if (NOT hasLineItems OR NOT configHasSelectableIntell OR (find(current_core, "$$") == -1 AND reconfig == "true")){
+		return true; //hide the message if there are no line items on the quote (first trip to config), OR the core in config doesn't have selectable Intell, OR if there is only one core on the quote and that core is being reconfigured
+	}
+	
+	//Additional Core added scenarios
+	if (hasLineItems AND configHasSelectableIntell AND reconfig == "false"){
+		if (isIntellOnQuote AND businessIntell == "" AND currentAssetSAId == ""){//CSYS-89209 Added the condition that currentAssetSAId = "", implying this is a net new core added to the quote with an existing core that has intell.  This solves the issue of 2 existing cores, one w/ Intell and one w/o Intell - don't fire the rule, hide the message for this scenario
+			return false;//show the message
+		}
+		if(NOT isIntellOnQuote AND businessIntell <> "" AND currentAssetSAId <> ""){//CSYS-89209
+			return true;
+		}
+		if (NOT isIntellOnQuote AND NOT nonSelectableOnly AND businessIntell <> ""){
+			return false; //show the message		
+		}
+
+	}
+	
+	//reconfigure scenarios when 2 or more cores exist on the quote
+	if (configHasSelectableIntell AND find(current_core, "$$") <> -1 AND reconfig == "true"){
+
+		//CSYS-89209 On reconfigure, if there are 2 asset cores, one core with Intell and the second without - allow this scenario and hide the message
+		// IESCNQRCPQ-1295 adding "isConsIntOnFirstCoreNotonSecond" condition
+		if(sizeofarray(coreMappingArr) > 1 AND containskey(intellNoneDict, "1") AND NOT(containskey(intellTerminateDict, "1")) AND sizeofarray(intellMappingArr) < 2 AND isConsIntOnFirstCoreNotonSecond == false){
+			return true;//hide the message
+		}
+	
+		if (crossModelTrigger AND reconfigCoreHasSelectableIntell == "true" AND isIntellOnReconfiguredCore AND businessIntell <> ""){
+			return false; //show the message
+		}
+		if (crossModelTrigger AND reconfigCoreHasSelectableIntell == "true" AND NOT isIntellOnReconfiguredCore AND businessIntell == ""){
+			return false; //show the message
+		}
+		if (crossModelTrigger AND reconfigCoreHasSelectableIntell <> "true"){
+			return false; //show the message			
+		}
+	
+		if (NOT crossModelTrigger AND isIntellOnQuote AND reconfigCoreHasSelectableIntell == "true" AND isIntellOnReconfiguredCore AND nonReconfigTrigger AND businessIntell == ""){
+			return false; //show the message
+		}
+		if (NOT crossModelTrigger AND NOT isIntellOnQuote AND reconfigCoreHasSelectableIntell == "true" AND NOT isIntellOnReconfiguredCore AND nonReconfigTrigger AND businessIntell <> ""){
+			return false; //show the message
+		}
+		
+		//Laterally switch from core without selectable intell to one with selectable intell in config:
+		if (NOT crossModelTrigger AND reconfigCoreHasSelectableIntell <> "true" AND nonReconfigTrigger AND intellOnOtherCores AND businessIntell == ""){
+			return false;
+		}
+		if (NOT crossModelTrigger AND reconfigCoreHasSelectableIntell <> "true" AND nonReconfigTrigger AND NOT intellOnOtherCores AND businessIntell <> ""){
+			return false; //show the message
+		}
+	}	
+}
+
+
+return true; //hide the message

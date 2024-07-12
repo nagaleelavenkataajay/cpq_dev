@@ -1,0 +1,15 @@
+{
+  "name" : "Get Select Access Level Fee",
+  "variableName" : "getSelectAccessLevelFee",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Float",
+  "parameters" : [ {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "DELIMITER",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

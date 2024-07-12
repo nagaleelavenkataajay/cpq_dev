@@ -1,0 +1,40 @@
+/* commerce -> getRampXmlForServicePartnerQuote
+
+*/
+oedMonthVal = "";
+diffMonths = 1;
+
+QUOTE_RAMP_CONSTANT = "<rampPlanDetails className='undefined' rowCounterDisplayName='undefined' parentNodeName='rampPlanDetails' childNodeName='rampPlanDetail'>" + "\n" +
+"<rampPlanDetail rampPlanID ='1'>" + "\n" +
+"<from displayArray='undefined' displayName='From Months' readOnly='false'>1</from>" + "\n" +
+"<to displayArray='undefined' displayName='To Months' readOnly='true'>TO1</to>" + "\n" +
+"<transactions displayArray='undefined' displayName='Transactions / Units' readOnly='false'>TRNXS</transactions>" + "\n" +
+"</rampPlanDetail>" + "\n" +
+"<rampPlanDetail rampPlanID ='2'>" + "\n" +
+"<from displayArray='undefined' displayName='From Months' readOnly='false'>FROM2</from>" + "\n" +
+"<to displayArray='undefined' displayName='To Months' readOnly='true'>and beyond</to>" + "\n" +
+"<transactions displayArray='undefined' displayName='Transactions / Units' readOnly='false'>TRNXS</transactions>" + "\n" +
+"</rampPlanDetail>" + "\n" +
+"</rampPlanDetails>";
+
+if(orderEffectiveDate_quote <> ""){
+	orderEffectiveDateFormatted = substring(orderEffectiveDate_quote, 0, 10);
+	if( find(orderEffectiveDateFormatted,"-") <> -1 ){ 
+		splitOED = split(orderEffectiveDateFormatted, "-");
+		oedMonthVal = splitOED[1];
+	}
+	elif( find(orderEffectiveDateFormatted, "/") <> -1 ){
+		splitOED = split(orderEffectiveDateFormatted, "/");
+		oedMonthVal = splitOED[0];
+	}
+}
+
+if(isnumber(oedMonthVal)){
+	diffMonths = (12 - atoi(oedMonthVal)) + 1;
+}
+
+QUOTE_RAMP_CONSTANT = replace(QUOTE_RAMP_CONSTANT, "TO1", string(diffMonths), 1);
+QUOTE_RAMP_CONSTANT = replace(QUOTE_RAMP_CONSTANT, "FROM2", string(diffMonths + 1), 1);
+QUOTE_RAMP_CONSTANT = replace(QUOTE_RAMP_CONSTANT, "TRNXS", string(numCommittedTransaction_quote));
+
+return QUOTE_RAMP_CONSTANT;

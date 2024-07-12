@@ -1,0 +1,14 @@
+{
+  "name" : "setProposalControls",
+  "variableName" : "setProposalControls",
+  "description" : "CSYS-98002, CSYS-98644, Phil S, 04/16/2020",
+  "libraryFunctions" : [ ],
+  "returnType" : "Json",
+  "parameters" : [ {
+    "name" : "actionName",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "proposalQuantityFlag_quote", "totalSetupList_quote", "totalSetupNet_quote", "implementationPartner_quote", "setupLineExists_quote", "totalPreprodNet_quote" ],
+  "systemAttributes" : [ ]
+}

@@ -1,0 +1,38 @@
+/*
+	BML Utility Library
+	getQtyBasedProductPricingConditions
+	-----------------------------------
+	Params:
+		String[] piList
+		String[]Dict qtyBasedProductPricingDict
+	Returns:
+		StringDict result
+			rowCount => number of records returned
+	
+	Description:
+		For a given list of Part Numbers, return all Product Dependent
+		conditions within the list of Part Numbers. 
+*/
+result = dict("string");
+
+qtyBasedProductPricingConditions = bmql("select pi, transactionBasedPI, qtyBasedPI, listPricePI, pricingType from productDependentPIs where pi in $piList and listPricePI in $piList and (transactionBasedPI in $piList or qtyBasedPI in $piList)");
+
+index = 0;
+for record in qtyBasedProductPricingConditions {
+	
+	row = string[];
+	
+	append(row, get(record, "pi"));
+	append(row, get(record, "transactionBasedPI"));
+	append(row, get(record, "qtyBasedPI"));
+	append(row, get(record, "listPricePI"));
+	append( row, get( record, "pricingType" ) );
+	
+	put(qtyBasedProductPricingDict, index, row);
+	
+	index = index + 1;
+}
+
+put(result, "rowCount", string(index));
+
+return result;

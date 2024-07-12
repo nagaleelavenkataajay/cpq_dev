@@ -1,0 +1,29 @@
+{
+  "name" : "Email Notification Generator",
+  "variableName" : "emailNotificationGenerator",
+  "description" : "Generates an email body used for Approver emails.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "SubmittedBy",
+    "type" : "String"
+  }, {
+    "name" : "SubmitComment",
+    "type" : "String"
+  }, {
+    "name" : "ReasonName",
+    "type" : "String"
+  }, {
+    "name" : "ReasonDescription",
+    "type" : "String"
+  }, {
+    "name" : "Approver",
+    "type" : "String"
+  }, {
+    "name" : "TransactionURL",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "quoteNumber_quote", "preparedByName_quote", "totalDiscount_quote", "total_quote", "totalMarginDollar_quote", "totalMarginPercent_quote", "quoteType_quote", "opportunityName_quote", "totalArrNet_quote", "opportunityOwner_quote", "totalSetupNet_quote", "totalBaseFeeNet_quote", "totalIncrementalNet_quote", "totalPreprodNet_quote", "account_quote", "status_quote", "mgrApprovalMessage_quote", "mgrFlag_quote", "vpApprovalMessage_quote", "vpFlag_quote", "svpApprovalMessage_quote", "svpFlag_quote", "gmApprovalMessage_quote", "gmFlag_quote", "cfoApprovalMessage_quote", "cfoFlag_quote", "billingCycle_quote", "terms_quote", "paymentMethod_quote", "monthlyWaivePeriod_quote", "preproductionWaive_quote", "specialTerms_quote", "termNumMonths_quote", "numCommittedTransaction_quote", "greatestLineDisc_quote", "lastApproverReq_quote", "highestDiscountItemType_quote", "mgrApprovalHistory_quote", "vpApprovalHistory_quote", "svpApprovalHistory_quote", "gmApprovalHistory_quote", "cfoApprovalHistory_quote", "approval_history_submit_quote", "quoteTotalSalesARR_quote", "evpFlag_quote", "evpApprovalMessage_quote", "evpApprovalHistory_quote", "crmOpportunityId_quote", "sapFlag_quote", "sapApprovalMessage_quote", "sapApprovalHistory_quote", "assetsString_quote", "SAP_MAR_ID_quote", "orderEffectiveDate_quote", "ownerBU_quote", "miscFlag_quote", "miscApprovalHistory_quote", "miscApprovalMessage_quote", "permanentTestEnvironmentApprovalMessage_quote", "creditStatus_quote", "opportunityLink_quote" ],
+  "systemAttributes" : [ "_system_supplier_company_name" ]
+}

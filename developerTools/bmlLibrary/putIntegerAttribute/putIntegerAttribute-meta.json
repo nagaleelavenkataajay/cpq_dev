@@ -1,0 +1,24 @@
+{
+  "name" : "putIntegerAttribute",
+  "variableName" : "putIntegerAttribute",
+  "description" : "Puts the value of an integer attribute into the integersDict.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "docNum",
+    "type" : "String"
+  }, {
+    "name" : "delimiter",
+    "type" : "String"
+  }, {
+    "name" : "commerceField",
+    "type" : "String"
+  }, {
+    "name" : "value",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

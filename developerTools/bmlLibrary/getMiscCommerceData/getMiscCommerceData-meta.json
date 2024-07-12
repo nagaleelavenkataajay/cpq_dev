@@ -1,0 +1,9 @@
+{
+  "name" : "getMiscCommerceData",
+  "variableName" : "getMiscCommerceData",
+  "description" : "NOT USED. Returns a String dictionary containing the key-value pairs in the miscCommerceData table.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ ],
+  "attributes" : [ ]
+}

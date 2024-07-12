@@ -1,0 +1,15 @@
+{
+  "name" : "printError",
+  "variableName" : "printError",
+  "description" : "Prints the error message from a utilResultDict, if it exists.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "utilResultDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "tabs",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

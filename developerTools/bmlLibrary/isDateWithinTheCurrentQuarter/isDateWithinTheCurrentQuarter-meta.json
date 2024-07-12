@@ -1,0 +1,12 @@
+{
+  "name" : "Is Date Within The Current Quarter",
+  "variableName" : "isDateWithinTheCurrentQuarter",
+  "description" : "CSYS-99026, it checks the input date is within current quarter or not.",
+  "libraryFunctions" : [ "util.getUserTimeZone" ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "inputDate",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

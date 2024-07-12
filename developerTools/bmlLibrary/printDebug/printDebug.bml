@@ -1,0 +1,16 @@
+/* util -> printDebug
+
+title - String
+value - String
+tabs - Integer
+
+*/
+tabString = "";
+tabList = range(tabs);
+for t in tabList {
+	tabString = tabString + "> > ";
+}
+
+result = tabString + title + ": " + value;
+
+return result;

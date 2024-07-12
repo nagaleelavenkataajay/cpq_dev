@@ -1,0 +1,15 @@
+{
+  "name" : "getPIBasedProductPricingData",
+  "variableName" : "getPIBasedProductPricingData",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "piList",
+    "type" : "String[]"
+  }, {
+    "name" : "piBasedProductPricingDict",
+    "type" : "String[] Dictionary"
+  } ],
+  "attributes" : [ ]
+}

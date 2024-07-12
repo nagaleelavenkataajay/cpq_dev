@@ -1,0 +1,27 @@
+/* Util -> convertDictCurrency
+Converts a float attributes value to USD currency.
+
+*/
+
+
+// Lookup the Float Attribute 
+foundValue = 0.0;
+valueFound = false;
+
+lookupKey = docNum + delimiter + commerceField;
+
+if (containskey(floatsDict, lookupKey)) {
+	foundValue = get(floatsDict, lookupKey);
+	valueFound = true;
+}
+
+if ( valueFound <> true ){
+	return false;
+}
+
+foundValue = foundValue * conversionFactor;
+foundValue = round( foundValue, roundingDecimal );
+
+put( floatsDict, lookupKey, foundValue );
+
+return true;

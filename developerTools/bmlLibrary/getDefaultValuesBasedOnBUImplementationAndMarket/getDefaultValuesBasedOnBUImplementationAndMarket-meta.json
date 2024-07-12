@@ -1,0 +1,27 @@
+{
+  "name" : "Get Default Values Based on BU, Implementation and Market",
+  "variableName" : "getDefaultValuesBasedOnBUImplementationAndMarket",
+  "description" : "The Library accepts ownerBU, Owner Theater, Owner Market, Implementation and Attribute Name as inputs and gives the default value for the attribute name.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "businessUnit",
+    "type" : "String"
+  }, {
+    "name" : "ownerTheater",
+    "type" : "String"
+  }, {
+    "name" : "market",
+    "type" : "String"
+  }, {
+    "name" : "attributeName",
+    "type" : "String"
+  }, {
+    "name" : "Implementation",
+    "type" : "String"
+  }, {
+    "name" : "ownerDivision",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

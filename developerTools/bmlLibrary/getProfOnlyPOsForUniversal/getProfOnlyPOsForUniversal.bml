@@ -1,0 +1,26 @@
+/* util -> getProfOnlyPOsForUniversal
+implementationMethods - String
+*/
+PROFESSIONAL_EDITION = "Professional"; //(CSYS-99801 NP. 07/21/2020)
+usOfferProfessionalOnlyArr = String[];
+
+if(find(implementationMethods, "Universal") <> -1){
+    //When Edition is Universal: Query the 'USOfferSimp' table and gather the poIDs for those Professional ONLY products
+    //CSYS-98751, Phil S, 03/26/2020
+    //universalPORes = BMQL("SELECT pONumber, edition FROM USOfferSimp");
+    //(CSYS-99801, NP. 07/21/2020)
+    universalPORes = BMQL("SELECT pONumber, edition FROM UniversalOfferSimp WHERE edition = $PROFESSIONAL_EDITION");
+
+    for entry in universalPORes {
+        edition = get(entry, "edition");
+        poIDArr = split(get(entry, "pONumber"), "~");
+
+      //  if(edition == "Professional"){ (CSYS-99801 NP. 07/21/2020)
+            for eachPO in poIDArr {
+                //append the POs to the 'usOfferProfessionalOnlyArr', to be used later in the script
+                append(usOfferProfessionalOnlyArr, eachPO);
+            }
+       // }
+    }
+}
+return usOfferProfessionalOnlyArr;

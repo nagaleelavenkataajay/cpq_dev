@@ -1,0 +1,11 @@
+{
+  "name" : "Audit and Detect Transaction Validation",
+  "variableName" : "auditAndDetectTransactionValidation",
+  "description" : "Per CSYS-93247 (LN. 9-12-2018) New library to assist in determining the correct number of transactions for Policy Audit and Audit Elite when sold with Detect (should be 30% of the Core Trxns)",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "_part_custom_field1", "_part_custom_field20", "numCommittedTransaction_line", "_part_custom_field8", "assetAction_line", "_parent_doc_number", "originalNumCommittedTransaction_line", "poId_line" ],
+  "mainDocAttributes" : [ "quoteType_quote" ],
+  "systemAttributes" : [ ]
+}

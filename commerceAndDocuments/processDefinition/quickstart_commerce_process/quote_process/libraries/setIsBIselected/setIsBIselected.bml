@@ -1,0 +1,201 @@
+//=================== Added Work for CSYS-99529 ==================================
+
+result = "";
+
+//CSYS-99529
+ASSET_DELIMITER = "@@";
+INTERNAL_DELIMITER = "$$";
+PO1 = "525040";//ExpenseIt Pro for Concur Expense
+PO2 = "525071"; //ExpenseIt Pro for Concur Travel & Expense
+PO1AssetFound = false; //ExpenseIt Pro for Concur Expense found or not
+PO2AssetFound = false; //ExpenseIt Pro for Concur Travel & Expense found or not
+//end of CSYS-99529
+
+BIselected = false;
+CIselected = false;//IESCNQRCPQ-1178 (PG 10/10/2023)
+Budgetselected = false;
+Quickbooksselected = false;
+//CSYS-100870 (SV. 22/10/2020) Commented out the code for Extract Service
+//ExtractServselected = false;
+Analyticselected = false;
+AnalyticsRepServselected = false;
+Sageselected = false;
+//CSYS-101763 (TJG 02/10/2021)
+SageIntselected = false;
+Xeroselected = false;
+ServAssistantselected = false;
+SAHigherEduselected = false;
+ExpenseItselected = false;//CSYS-99529
+//CSYS-101245 (SV. 22/01/2021) Created one new field
+ConcurPreferredCareSelected = false; 
+//CSYS-101245 End
+dataCenterForJapanSelected = false; //IESCNQRCPQ-1652 (OK. 03-18-2024)
+
+if (quoteType_quote == "Add-On Business"){
+	assetArr = split(assetsString_quote, ASSET_DELIMITER); //split the entire assets delimited string
+	assetArrSize = range(sizeofarray(assetArr));
+	
+	//First determine if there is an existing ExpenseIt Asset on the asset string
+	for eachAsset in assetArrSize {
+	
+	    assetDetail = split(assetArr[eachAsset], INTERNAL_DELIMITER); //split each asset
+	
+	    if (assetDetail[1] == PO1) {
+	    	PO1AssetFound = true; //ExpenseIt Pro for Concur Expense found
+	    	break;
+	    }
+	    elif(assetDetail[1] == PO2) {
+	    	PO2AssetFound = true; //ExpenseIt Pro for Concur Travel & Expense found
+	    	break;
+	    }
+	}
+}
+
+
+
+
+for line in line_process{
+   	if (line._part_number==""){ //model
+		busInt = getconfigattrvalue(line._document_number, "businessIntelligenceSSM_concur");
+		consInt = getconfigattrvalue(line._document_number, "consultativeIntelligenceSSM_concur"); //IESCNQRCPQ-1178 (PG 10/10/2023)
+
+		budget = getconfigattrvalue(line._document_number, "budget_concur");
+		budgetInv = getconfigattrvalue(line._document_number, "budgetForInvoice_concur");
+		
+		dataCenterForJapan = getconfigattrvalue(line._document_number, "dataCenterForJapan_concur"); //IESCNQRCPQ-1652 (OK. 03-18-2024)
+		dataCenterForJapanInv = getconfigattrvalue(line._document_number, "dataCenterForJapanForInvoiceProcessing_concur"); //IESCNQRCPQ-1652 (OK. 03-18-2024)
+
+		quickbooks = getconfigattrvalue(line._document_number, "quickBooksIntegration_concur");
+		quickbooksInv = getconfigattrvalue(line._document_number, "quickBooksIntegrationForInvoiceProcessing_concur");
+
+		//CSYS-100870 (SV. 22/10/2020) Commented out the code for Extract Service
+		/*extractServ = getconfigattrvalue(line._document_number, "customExtract_concur");
+		extractServInv = getconfigattrvalue(line._document_number, "customExtractForInvoiceProcessing_concur"); */
+
+		analytics = getconfigattrvalue(line._document_number, "analyticsPlus_concur");
+		analyticsInv = getconfigattrvalue(line._document_number, "analyticsPlusForInvoiceProcessing_concur");
+
+		analyticsReportingServ = getconfigattrvalue(line._document_number, "analyticsPlusConsulting_concur");
+		analyticsReportingServInv = getconfigattrvalue(line._document_number, "analyticsPlusConsultingForInvoiceProcessing_concur");
+
+		sage = getconfigattrvalue(line._document_number, "sageAccountingIntegration_concur");
+		sageInv = getconfigattrvalue(line._document_number, "sageAccountingIntegrationForInvoiceProcessing_concur");
+		//CSYS-101763 (TJG 02/10/2021)
+		sageInt = getconfigattrvalue(line._document_number, "sageIntacctIntegration_concur");
+		sageIntInv = getconfigattrvalue(line._document_number, "sageIntacctIntegrationForInvoiceProcessing_concur");
+
+		xero = getconfigattrvalue(line._document_number, "xeroAccountingIntegration_concur");
+		xeroInv = getconfigattrvalue(line._document_number, "xeroAccountingIntegrationForInvoiceProcessing_concur");
+
+		servAssistant = getconfigattrvalue(line._document_number, "serviceAssistant_concur");
+		servAssistantInv = getconfigattrvalue(line._document_number, "serviceAssistantForInvoiceProcessing_concur");
+		//CSYS-100465 (SV. 17/09/2020) Added servAssistantTandE
+		servAssistantTandE = getconfigattrvalue(line._document_number, "serviceAssistantForTravelExpense_concur");
+		
+		//CSYS-101245 (SV. 22/01/2021) Start
+		concurPreferredCare = getconfigattrvalue(line._document_number, "preferredCareForExpense_concur");
+		concurPreferredCareInv = getconfigattrvalue(line._document_number, "preferredCareForInvoiceProcessing_concur");
+		concurPreferredCareTandE = getconfigattrvalue(line._document_number, "preferredCareForTravelAndExpense_concur");
+		//CSYS-101245 End
+		
+		sAHigherEduExpense = getconfigattrvalue(line._document_number, "serviceAdministrationForHigherEducationForExpense_concur");
+		sAHigherEduTravel = getconfigattrvalue(line._document_number, "serviceAdministrationForHigherEducationForTravel_concur");
+		sAHigherEduTandE = getconfigattrvalue(line._document_number, "serviceAdministrationForHigherEducationForTravelExpense_concur");
+		sAHigherEduInvoice = getconfigattrvalue(line._document_number, "serviceAdministrationForHigherEducationForInvoice_concur");
+		
+		expenseItExpense = getconfigattrvalue(line._document_number, "expenseItProForConcurExpense_concur");//CSYS-99529
+		expenseItTandE = getconfigattrvalue(line._document_number, "expenseItProForConcurTravelExpense_concur");//CSYS-99529
+
+		//CSYS-99529
+		if (expenseItExpense == "true" OR expenseItTandE == "true" or PO2AssetFound or PO1AssetFound){
+			ExpenseItselected = true;	
+		}
+
+		if (sAHigherEduExpense == "true" OR sAHigherEduTandE == "true" OR sAHigherEduInvoice == "true" ){
+			SAHigherEduselected = true;	
+		}   	
+
+		if (budget == "true" OR budgetInv == "true"){
+			Budgetselected = true;	
+		}   
+		
+		//IESCNQRCPQ-1652 (OK. 03-18-2024) Check if any Data center SKU selected
+		if (dataCenterForJapan == "true" OR dataCenterForJapanInv == "true"){
+			dataCenterForJapanSelected = true;	
+		}
+		
+		if (quickbooks == "true" OR quickbooksInv == "true"){
+			Quickbooksselected = true;	
+		}
+		
+		//CSYS-100870 (SV. 22/10/2020) Commented out the code for Extract Service
+		/*if (extractServ == "true" OR extractServInv == "true"){
+			ExtractServselected = true;	
+		}*/
+		
+		if (analytics == "true" OR analyticsInv == "true"){
+			Analyticselected = true;	
+		}
+
+		if (analyticsReportingServ == "true" OR analyticsReportingServInv == "true"){
+			AnalyticsRepServselected = true;	
+		}
+		
+		if (sage == "true" OR sageInv == "true"){
+			Sageselected = true;	
+		}
+		//CSYS-101763 (TJG 02/10/2021)
+		if (sageInt == "true" OR sageIntInv == "true"){
+			SageIntselected = true;	
+		}
+		
+		if (xero == "true" OR xeroInv == "true"){
+			Xeroselected = true;	
+		}
+		
+		//CSYS-100465 (SV. 17/09/2020) Added servAssistantTandE in the below condition
+		if (servAssistant == "true" OR servAssistantInv == "true"  OR servAssistantTandE == "true"){
+			ServAssistantselected = true;	
+		}
+		
+		//CSYS-101245 (SV. 22/01/2021) Start
+		if(concurPreferredCare == "true" OR concurPreferredCareInv == "true"  OR concurPreferredCareTandE == "true"){
+			ConcurPreferredCareSelected = true;
+		}
+		//CSYS-101245 End
+
+		if (BIselected == false){  //if BIselected is true from previous loop, keep the true value
+			if (busInt <> "" and not(isnull(busInt))){
+				BIselected = true;
+			}
+		}
+		//IESCNQRCPQ-1178 (PG 10/10/2023)
+		if (CIselected == false){  //if CIselected is true from previous loop, keep the true value
+			if (consInt <> "" and not(isnull(consInt))){
+				CIselected = true;
+			}
+		}
+  	}
+}
+
+result = result + "1~isDataCenterForJapanSelected_quote_c~"+string(dataCenterForJapanSelected)+"|"; //IESCNQRCPQ-1652 (OK. 03-18-2024)
+result = result + "1~isBIselected_quote~"+string(BIselected)+"|";
+result = result + "1~isCISelected_quote~"+string(CIselected)+"|"; //IESCNQRCPQ-1178 (PG 10/10/2023)
+result = result + "1~isBudgetselected_quote~"+string(Budgetselected)+"|";
+result = result + "1~isQuickbooksSelected_quote~"+string(Quickbooksselected)+"|";
+//CSYS-100870 (SV. 22/10/2020) Commented out the code for Extract Service
+//result = result + "1~isExtractServicesSelected_quote~"+string(ExtractServselected)+"|";
+result = result + "1~isAnalyticsSelected_quote~"+string(Analyticselected)+"|";
+result = result + "1~isAnalyticsReportingServicesSelected_quote~"+string(AnalyticsRepServselected)+"|";
+result = result + "1~isSageAccountingSelected_quote~"+string(Sageselected)+"|";
+//CSYS-101763 (TJG 02/10/2021)
+result = result + "1~isSageIntacctIntegrationSelected_quote~"+string(SageIntselected)+"|";
+result = result + "1~isXeroAccountingIntegrationSelected_quote~"+string(Xeroselected)+"|";
+result = result + "1~isServiceAssistantSelected_quote~"+string(ServAssistantselected)+"|";
+//CSYS-101245 (SV. 22/01/2021) Start
+result = result + "1~isConcurPreferredCareSelected_quote~"+string(ConcurPreferredCareSelected)+"|";
+//CSYS-101245 End
+result = result + "1~isSAHigherEduselected_quote~"+string(SAHigherEduselected)+"|";
+result = result + "1~isExpenseItSelected_quote~"+string(ExpenseItselected)+"|";//CSYS-99529
+
+return result;

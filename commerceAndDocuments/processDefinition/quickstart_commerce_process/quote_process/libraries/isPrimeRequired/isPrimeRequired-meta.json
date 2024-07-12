@@ -1,0 +1,11 @@
+{
+  "name" : "IsPrimeRequired",
+  "variableName" : "isPrimeRequired",
+  "description" : "check if this quote require a Prime text in pre-defined package field, based on the business rules.\nCSYS-97827 & CSYS-97864 & CSYS-97864 & CSYS-97827",
+  "libraryFunctions" : [ "util.customAtoi" ],
+  "returnType" : "Boolean",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "poId_line", "piItemType_line", "numCommittedTransaction_line", "_part_number" ],
+  "mainDocAttributes" : [ "quoteType_quote", "ownerBU_quote", "ownerMarket_quote", "ownerTeam_quote", "ownerDivision_quote" ],
+  "systemAttributes" : [ ]
+}

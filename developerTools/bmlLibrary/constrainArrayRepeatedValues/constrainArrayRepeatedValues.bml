@@ -1,0 +1,75 @@
+/* util.constrainArrayRepeatedValues
+
+String[] sizeArray - Size of config arr
+String[] dataArray - array of data we are constraining
+String[] availableOptionsArr - array of data available
+*/
+
+/*
+selectedValues = String[];
+resultArray = String[];
+mainArray = String[];
+*/
+// Loop through the whole array based on size
+/*
+i = 0;
+for size in sizeArray
+{	
+	retArr = string[];
+	append(retArr,"|^|");
+	previousRange = range(i);
+	for eachPreviousValue in previousRange{
+		append(selectedValues,dataArray[eachPreviousValue]);
+	}
+	
+	for option in availableOptionsArr{
+		if(findinarray(selectedValues,option)==-1)
+		{
+			append(retArr, option);
+		}
+	}
+	
+	returnString = join(retArr,"|^|");
+
+	append(resultArray, returnString);
+	
+	i=i+1;
+}
+
+for res in resultArray
+{
+	append(mainArray,res);
+}
+*/
+
+// ASSUMPTION : THE STATE WAS NOT ALLOWED INTO A SITUATION WHERE THE ARRAY CONTAINS ALREADY DUPLICATED DATA
+
+retArr = String[];
+finalArray = String[];
+DELIMITER = "|^|";
+EMPTY_STRING = "";
+valuesArr = String[];
+
+
+valuesArr = availableOptionsArr;
+append( valuesArr, EMPTY_STRING );
+
+for data in dataArray{
+	append( finalArray, data );
+	dataIndex = findinarray( valuesArr, data );
+	if ( data <> "" AND dataIndex <> -1 ){
+		tempInt = remove( valuesArr, dataIndex );
+	}
+}
+
+// Loop through the array and find out what data has already been selected
+
+
+for information in finalArray{
+	retVal = join( valuesArr, DELIMITER );
+	retVal = retVal + DELIMITER + information;
+	append( retArr, retVal );
+}
+	
+	
+return retArr;

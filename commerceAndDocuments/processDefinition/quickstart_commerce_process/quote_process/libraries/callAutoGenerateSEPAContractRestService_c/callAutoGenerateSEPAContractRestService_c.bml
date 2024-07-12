@@ -1,0 +1,29 @@
+//IESCNQRCPQ-1721 LIK 25-04-2024 Start
+result = "";
+
+	if(_system_current_step_var == "approved_process") {
+		//IESCNQRCPQ-1721- LIK-04-25-2024
+		if(ownerTheater_quote == "EMEA" AND paymentMethod_quote == "Direct Debit"){
+			//Creating header
+			headers = dict("string");
+			//fetching user credentials from Properties Data table
+			companyName = lower(_system_supplier_company_name);
+			put(headers, "Content-Type", "application/json");
+
+			//Setting endpoint URL
+			endPointURLOF="";
+			endPointURLOF= "https://"+companyName+".bigmachines.com/rest/v15/commerceDocumentsQuickstart_commerce_processQuote_process/{id}/actions/" + SEPAOrderForm;
+			//Replacing transactionID with dynamic value
+			transactionID = transactionID_quote;
+			url2 = replace(endPointURLOF, "{id}", transactionID);
+			//url3 = replace(endPointURLOF, "SEPAOF", SEPAOrderForm);
+			
+			//Invoking urldata function to trigger Generate contract action
+			LineRequest = urldata(url2, "POST", headers);
+			print LineRequest ;
+
+		}
+
+	}
+	
+return result;

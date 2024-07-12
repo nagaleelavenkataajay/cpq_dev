@@ -1,0 +1,12 @@
+{
+  "name" : "getProfOnlyPOsForUniversal",
+  "variableName" : "getProfOnlyPOsForUniversal",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String[]",
+  "parameters" : [ {
+    "name" : "implementationMethods",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

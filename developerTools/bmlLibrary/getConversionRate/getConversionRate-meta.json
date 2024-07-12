@@ -1,0 +1,12 @@
+{
+  "name" : "getConversionRate",
+  "variableName" : "getConversionRate",
+  "description" : "NOT USED. Obtains the conversion rate for a specific currencyCode from the conversionRate commerce data table.",
+  "libraryFunctions" : [ ],
+  "returnType" : "Float",
+  "parameters" : [ {
+    "name" : "currencyCode",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

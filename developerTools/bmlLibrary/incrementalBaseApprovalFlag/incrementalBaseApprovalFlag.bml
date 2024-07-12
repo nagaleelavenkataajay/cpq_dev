@@ -1,0 +1,109 @@
+// Moved to commerce library -- ATG on 03/08/16
+// Incremental Base Approval Flag Logic - added by ATG 10/25/13
+result = "";
+QUOTE_DOC_NUM = "1";
+ADD_ON = "Add-On Business";
+MODIFY_ACTION = "MODIFY";
+NONE_ACTION = "NONE";
+TERMINATE_ACTION = "TERMINATE";
+CREATE_ACTION = "CREATE";
+INCREMENTAL_FEE = "Incremental";
+BASE_FEE = "Base";
+DISCOUNT = "discount_line";
+TIER_PRICE = "tierPrice_line";
+NET_PRICE = "netPriceEach_line";
+ASSET_ACTION = "assetAction_line";
+DOCNUM_DELIM = "$*$";
+DELIMITER = "@.@";
+QUOTE_TYPE = "quoteType_quote";
+BUSINESS_UNIT = "ownerBU_quote";
+
+baseFeePrice = float[];
+incBaseFee = float[];
+baseAction = string[];
+incAction = string[];
+baseDisc = float[];
+incDisc = float[];
+tierIncFee = float[];
+cntBase = 0;
+cntInc = 0;
+cntIncTier = 0;
+incrementalGreaterThanBaseFlag = false;
+baseIncrementalApprovalBypassFlag = false;
+quoteType_quote = util.getStringAttribute(stringsDict, QUOTE_DOC_NUM, DELIMITER, QUOTE_TYPE);
+ownerBU_quote = util.getStringAttribute(stringsDict, QUOTE_DOC_NUM, DELIMITER, BUSINESS_UNIT);
+
+for key in seqNumArray { 
+	seqNumber = string(key);
+	docNum = get(seqNumAttributeMappingDict, seqNumber); //docNum = line._document_number;
+	
+	familyName = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_custom_field23"); //NEW initialization 
+	utilResultFlag = util.putStringAttribute(stringsDict, docNum, DELIMITER, "_part_custom_field23", familyName);
+	pi = get(primeStringsDict, docNum + DOCNUM_DELIM + "_part_number"); //pi = line._part_number;
+	itemType = get(primeStringsDict, docNum + DOCNUM_DELIM + "piItemType_line"); //itemType = line.piItemType_line;
+	
+	assetAction = util.getStringAttribute( stringsDict, docNum, DELIMITER, ASSET_ACTION);
+	netPriceEach = util.getFloatAttribute(floatsDict, docNum, DELIMITER, NET_PRICE);
+	tierPriceEach = util.getFloatAttribute(floatsDict, docNum, DELIMITER, TIER_PRICE);
+	disc = util.getFloatAttribute(floatsDict, docNum, DELIMITER, DISCOUNT);
+
+	if( quoteType_quote <> ADD_ON ){ 
+	
+		if(itemType == BASE_FEE AND (assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND pi <> "6446"){ 
+			append(baseFeePrice, netPriceEach);
+			append(baseDisc, disc);
+			cntBase = cntBase + 1;
+		}
+		
+		if(itemType == INCREMENTAL_FEE AND (assetAction == CREATE_ACTION OR assetAction == MODIFY_ACTION) AND pi <> "9730") {
+			append(incBaseFee, netPriceEach);
+			append(tierIncFee, tierPriceEach);
+			append(incDisc, disc);
+			cntInc = cntInc + 1;
+			cntIncTier = cntIncTier + 1;
+		}
+	
+	}elif( quoteType_quote == ADD_ON) {
+
+		if(itemType == BASE_FEE AND (assetAction <> TERMINATE_ACTION) AND pi <> "6446"){ 
+			append(baseFeePrice, netPriceEach);
+			append(baseAction, assetAction);
+			append(baseDisc, disc);
+			cntBase = cntBase + 1;
+		}
+		
+		if(itemType == INCREMENTAL_FEE AND (assetAction <> TERMINATE_ACTION) AND pi <> "9730") {
+			append(incBaseFee, netPriceEach);
+			append(incAction, assetAction);
+			append(tierIncFee, tierPriceEach);
+			append(incDisc, disc);
+			cntInc = cntInc + 1;
+			cntIncTier = cntIncTier + 1;
+		}
+	}
+}
+
+if (cntBase == cntInc AND cntIncTier == cntInc AND cntInc > 0){
+	count = 0;
+	
+	for incFee in incBaseFee{
+	
+		if( incFee < baseFeePrice[count] AND tierIncFee[count] <> 0.00 AND ownerBU_quote == "Enterprise BU" AND quoteType_quote <> ADD_ON AND (baseDisc[count] <> 0.0 OR incDisc[count] <> 0.0)){
+					incrementalGreaterThanBaseFlag = true;
+		}elif( incFee < baseFeePrice[count] AND tierIncFee[count] <> 0.00 AND ownerBU_quote == "Enterprise BU" AND (incAction[count] <> NONE_ACTION OR baseAction[count] <> NONE_ACTION) AND quoteType_quote == ADD_ON AND (baseDisc[count] <> 0.0 OR incDisc[count] <> 0.0)){
+					incrementalGreaterThanBaseFlag = true;
+		}
+		if(ownerBU_quote == "Enterprise BU" AND incrementalGreaterThanBaseFlag == false AND incDisc[count] > 0.0){
+				baseIncrementalApprovalBypassFlag = true;
+		}
+	count = count + 1;
+	}
+}
+
+utilResultString = util.formAttrValueStr(attributesDict, "incrementalBaseApprovalFlag_quote", QUOTE_DOC_NUM , string(incrementalGreaterThanBaseFlag));
+utilResultString = util.formAttrValueStr(attributesDict, "baseIncrementalApprovalBypassFlag_quote", QUOTE_DOC_NUM , string(baseIncrementalApprovalBypassFlag));
+put(triggerDict,"incrementalBaseApprovalFlag", string(incrementalGreaterThanBaseFlag));
+
+// END Incremental Base Approval Flag Logic - added by ATG 10/25/13
+
+return "";

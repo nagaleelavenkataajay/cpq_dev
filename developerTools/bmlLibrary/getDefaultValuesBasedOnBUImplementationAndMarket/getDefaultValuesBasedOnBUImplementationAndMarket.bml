@@ -1,0 +1,28 @@
+/* util -> getDefaultValuesBasedOnBUImplementationAndMarket
+businessUnit (ownerBU)- String
+ownerTheater- String
+market (ownerMarket)- String
+attributeName - String
+Implementation - String
+ownerDivion - String //CSYS-98001 SN. 01/2020 Add ownerDiviosn condition
+*/
+retStr = "";                                //Initialize Return String
+imp = "";
+results =  recordset();
+//Query the table using the filter for BU,Implementation Market and Attr Name
+
+if(Implementation == "Concurforce"){
+        results = bmql("select DefaultValue from DefaultUsgBUAndMKT where Implementation = 'Concurforce'  and BusinessUnit like $businessUnit and ownerTheater like $ownerTheater and Market like $market and AttributeName like $attributeName");
+} elif (Market == ""){
+        results = bmql("select DefaultValue from DefaultUsgBUAndMKT where (Market = '' or Market is null)  and BusinessUnit like $businessUnit and ownerTheater like $ownerTheater and AttributeName like $attributeName");
+} elif (ownerDivision == "Germany National" OR ownerDivision == "Germany Mid Market"){ //CSYS-98001 SN. 01/2020 
+        results = bmql("select DefaultValue from DefaultUsgBUAndMKT where BusinessUnit like $businessUnit and ownerTheater like $ownerTheater and Market like $market and AttributeName like $attributeName and ownerDivision like $ownerDivision");
+
+} else {//CSYS-98001 SN. 01/2020 Add ownerDiviosn condition
+        results = bmql("select DefaultValue from DefaultUsgBUAndMKT where (Implementation = '' or Implementation is null) and (ownerDivision = '' or ownerDivision is null) and BusinessUnit like $businessUnit and ownerTheater like $ownerTheater and Market like $market and AttributeName like $attributeName ");
+}
+
+for result in results {
+        retStr = get(result, "DefaultValue");        // Get the result
+}
+return retStr;

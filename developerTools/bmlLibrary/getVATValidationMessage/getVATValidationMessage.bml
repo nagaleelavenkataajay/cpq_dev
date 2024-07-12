@@ -1,0 +1,29 @@
+vatMessage = "";
+
+if(vatValidationResult == "false" AND contractAutomation == "Non-Systematized"){ //if we're dealing with an invalid VAT #
+	vatMessage = "<div style='color:red; font-weight:bold; font-size:11px; text-align:left;'>" + "VAT # is invalid. You'll still be able to submit, but you won't be able to request contract documents on the Salesforce Opportunity until the VAT # is valid." + "</div>";
+}
+if(vatValidationResult == "false" AND contractAutomation == "Systematized"){ //if we're dealing with an invalid VAT #
+	vatMessage = "<div style='color:red; font-weight:bold; font-size:11px; text-align:left;'>" + "VAT # is invalid. You won't be able to generate contract documents until you have a valid VAT #." + "</div>";
+}
+if(vatValidationResult == "error"){ //if the api service is down
+	vatMessage = "Unable to validate the VAT #. The service is temporarily down. Proceed as usual.";
+}
+//CSYS-101903, BS, 02/19/2020, display below message for UK API
+if(vatValidationResult == "tokenError"){ //if the token api service is down
+	vatMessage = "Unable to validate the VAT #. The token service is temporarily down. Proceed as usual.";
+}
+//End CSYS-101903
+
+if(find(vatValidationResult, ":true") <> -1){ //if we're dealing with a valid vat #
+	companySplit = split(vatValidationResult , "\":"); //split at double quote
+	stripQuotes = replace(companySplit[3], "\"", "");
+	
+	companySplitNext = split(stripQuotes, "},");
+	companyName = companySplitNext[0];
+	
+	vatMessage = vatMessage + "<div align='left' style='color:black; font-weight:bold; font-size:11px;'>" + "VAT # is registered to:" + "<br/>" + companyName + "</div>"; //company info
+	vatMessage = vatMessage + "<div align='left' style='color:black; font-size:11px;'>" + "Sales person is responsible to verify this is the correct company." + "<br/>" + "If you are not sure, please double check with the customer." + "</div>"; //sales rep guidance
+}
+
+return vatMessage;

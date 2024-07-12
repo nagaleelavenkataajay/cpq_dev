@@ -1,0 +1,224 @@
+{
+  "name" : "Pricing Misc Refactor",
+  "variableName" : "pricingMiscRefactor",
+  "description" : "IESCNQRCPQ-861",
+  "libraryFunctions" : [ "commerce.aRRAndApprovals", "commerce.calculateContractRenewalDate", "commerce.calculateForecastedYearlyARR", "commerce.calculateFutureDateForQuarterly", "commerce.generateServiceAccountIds", "commerce.incrementalBaseApprovalFlag", "commerce.manageNextBillDates", "commerce.sMBPrimeProductsApprovalCheck", "commerce.systematizedTerminations", "util.addMonthsToDate", "util.calculatePromotion", "util.calculateUnifiedPricing", "util.convertDictCurrency", "util.customAtoi", "util.fomatPrice", "util.formAttrValueStr", "util.getAttrValueDictForLineItemRamp", "util.getAttributesDictValue", "util.getConfigValue", "util.getDateFromString", "util.getDifferenceInMonths", "util.getFloatAttribute", "util.getIntegerAttribute", "util.getMultiplier", "util.getRampDiscounts", "util.getRampXMLStringArrayDict", "util.getSelectAccessLevelFee", "util.getStrListDict", "util.getStringAttribute", "util.getUnifiedPricingInfoForModel", "util.getUserTimeZone", "util.getXMLNodeValues", "util.putFloatAttribute", "util.putIntegerAttribute", "util.putStringAttribute", "util.reconcileCurrentDate", "util.setDateToLastDayOfMonth", "util.setXMLAttribute", "util.spliceXMLNodeValuesExtended" ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "attributesDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "assetBillingDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "QUOTE_LEVEL_RAMP_PLAN",
+    "type" : "String"
+  }, {
+    "name" : "createdDate",
+    "type" : "Date"
+  }, {
+    "name" : "triggerDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "isCoreChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "isEditionChangedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "actionName",
+    "type" : "String"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "docNumList",
+    "type" : "String[]"
+  }, {
+    "name" : "listOfCore",
+    "type" : "String[]"
+  }, {
+    "name" : "listOfIM",
+    "type" : "String[]"
+  }, {
+    "name" : "QUOTE_TOTAL_EXISTING_ARR",
+    "type" : "Float"
+  }, {
+    "name" : "strImpMethod",
+    "type" : "String"
+  }, {
+    "name" : "siteReviewEliteExistInQuote",
+    "type" : "String"
+  }, {
+    "name" : "siteReviewExistInQuote",
+    "type" : "String"
+  }, {
+    "name" : "consultingSessionExistInQuote",
+    "type" : "String"
+  }, {
+    "name" : "multiCountryExpExistInQuote",
+    "type" : "String"
+  }, {
+    "name" : "singleCountryExpExistInQuote",
+    "type" : "String"
+  }, {
+    "name" : "meetMgtInQuote",
+    "type" : "String"
+  }, {
+    "name" : "intelligenceReportInQuote",
+    "type" : "String"
+  }, {
+    "name" : "clientWebServiceInQuote",
+    "type" : "String"
+  }, {
+    "name" : "premierTravelExistInQuote",
+    "type" : "String"
+  }, {
+    "name" : "concurforceExistInQuote",
+    "type" : "String"
+  }, {
+    "name" : "outputDisplayRamp",
+    "type" : "String"
+  }, {
+    "name" : "conversionRate",
+    "type" : "Float"
+  }, {
+    "name" : "countryIsoCode",
+    "type" : "String"
+  }, {
+    "name" : "currencyCode",
+    "type" : "String"
+  }, {
+    "name" : "PRICELIST",
+    "type" : "String"
+  }, {
+    "name" : "billingCycleNumber",
+    "type" : "String"
+  }, {
+    "name" : "termNumMonths_quote",
+    "type" : "String"
+  }, {
+    "name" : "promoCodeDetails",
+    "type" : "String"
+  }, {
+    "name" : "promoCodeApplied",
+    "type" : "String"
+  }, {
+    "name" : "autoAppliedPromotions",
+    "type" : "String"
+  }, {
+    "name" : "applicablePromotions",
+    "type" : "String"
+  }, {
+    "name" : "invalidPromoMessage",
+    "type" : "String"
+  }, {
+    "name" : "totalPromoDiscounts",
+    "type" : "Float"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "QUOTE_TRANSACTIONS",
+    "type" : "Integer"
+  }, {
+    "name" : "CURRENCY_SYMBOL",
+    "type" : "String"
+  }, {
+    "name" : "listOfNumOfTransPOs",
+    "type" : "String[]"
+  }, {
+    "name" : "RAMP_FLAG_MULTIPLIER",
+    "type" : "Integer"
+  }, {
+    "name" : "errorDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "acctPartnerDiscount",
+    "type" : "Float"
+  }, {
+    "name" : "incToBaseDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "businessUnit",
+    "type" : "String"
+  }, {
+    "name" : "PROD_FAM_TIER_DECREASE_OCCURRED_DICT",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "modelToLineDocNumsDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "numDecimals",
+    "type" : "Integer"
+  }, {
+    "name" : "cipPiDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "unbundledExtendedListPriceDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "promotionsDataDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "tempPromoCodeAppliedArr",
+    "type" : "String[]"
+  }, {
+    "name" : "tempPromoCodeAppliedDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "unifiedPricingDataDict",
+    "type" : "String[] Dictionary"
+  }, {
+    "name" : "travelAndExpenseWithTriplinkProductArr",
+    "type" : "String[]"
+  }, {
+    "name" : "pendingApprover",
+    "type" : "Boolean"
+  }, {
+    "name" : "newOrderDate",
+    "type" : "String"
+  }, {
+    "name" : "sTPMParentId",
+    "type" : "String"
+  }, {
+    "name" : "sortPartArray",
+    "type" : "Integer[]"
+  }, {
+    "name" : "preDefinedPackageArr",
+    "type" : "String[]"
+  }, {
+    "name" : "waivePeriodArray",
+    "type" : "Integer[]"
+  }, {
+    "name" : "convertedArrNet",
+    "type" : "Float"
+  }, {
+    "name" : "totalArrList",
+    "type" : "Float"
+  }, {
+    "name" : "T4CPromoString",
+    "type" : "String"
+  }, {
+    "name" : "packageDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "T4CPoIdDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "T4CPromoDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "sort_PB_PartsDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "OED",
+    "type" : "String"
+  } ],
+  "subDocAttributes" : [ "_document_number", "_parent_doc_number", "_part_number", "assetString_line", "piItemType_line", "nextBillingDate_line", "poCategory_line", "lineDescription_line", "lineRampFromMonths_line", "isPartOfPackage_line", "_sequence_number", "_part_custom_field8", "_part_custom_field1", "overrideRampPrice_line", "_config_attr_info", "listPriceNonUnified_line", "rollUp_line", "extendedNetPrice_line", "netPriceEach_line", "poId_line", "discount_line", "numCommittedTransaction_line", "prevNumCommittedTransaction_line", "previousDiscountBeforeRevise_line", "rampFlag_line", "extNetPriceNonUnified_line", "extNetPriceNonUnifiedUSD_line", "extendedList_line", "extListPriceUSD_line", "extNetPriceUSD_line", "t4C_line", "isT4C_line", "assetAction_line", "specialWorkflowFlag_line", "prevDiscount_line", "usageQualificationGroup_line", "bMICalculatedDiscount_line_c", "promotionCode_line", "t4CMonths_line" ],
+  "mainDocAttributes" : [ "quoteRampFromMonths_quote", "billingCycle_quote", "quoteType_quote", "accountPreProductionStatic_quote", "quoteTotalSalesARR_quote", "partnerBillingQuote_quote", "submittedDate_quote", "approvalDate_quote", "expirationDate_quote", "selectedPromotions_quote", "firstIterationExecuted_quote", "numberOfTransMultipleBy13Or12MQY_quote", "externalPromotion_quote", "numCommittedTransaction_quote", "systematizedContract_quote", "bsaType_quote", "contractType_quote", "referralDateText_quote", "customPricingFlag_quote", "orderEffectiveDate_quote", "contractEffectiveDate_quote", "monthlyWaivePeriod_quote", "implementationPartner_quote", "quoteCurrency_quote", "listOfImplementationMethods_quote", "ownerBU_quote", "ownerMarket_quote", "setupOnlyFlag_quote", "appliedPromotion_quote", "ownerDivision_quote", "listOfCoreOffering_quote", "ownerTeam_quote", "totalArrNet_quote", "ownerTheater_quote", "sAPSellsConcur_quote", "contractingEntity_quote", "promoBundleExtServComp_quote", "creditStatus_quote", "referringPartner_quote", "partnerSegment_quote", "referralStatus_quote", "SAPSellsConcurFromAccount_quote", "referringPartnerCategory_quote", "terminationForConvenienceMonths_quote", "productsForTerminationForConvenience_quote", "termNotice_quote", "termNoticeAcc_quote", "orderEffectiveDateHDS_quote", "includeAllProductsOnContract_quote", "contractSource_quote", "accountContractSource_quote", "detectByAppzenTerminate_quote", "previousTerminationForConvenienceMonths_quote", "isAccountPreProdTerminate_quote", "customerType_quote", "customPriceTriggered_quote", "legalUpdatedTerminationDate_quote", "standardToProfessionalMigrationFlag", "terminationDate_quote", "sequence_quote_history", "referralType_quote", "partnerAgreementType_quote", "partnerProtectedAccount_quote", "cFOApprovalComplete_quote", "accountLevelT4C_quote", "t4CFullTerminationPenalty_quote", "assetImport_quote", "usageQualificationIndicator_quote", "opportunityRecordType_quote_c" ],
+  "systemAttributes" : [ "_system_current_step_var" ]
+}

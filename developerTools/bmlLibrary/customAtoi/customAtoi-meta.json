@@ -1,0 +1,15 @@
+{
+  "name" : "customAtoi",
+  "variableName" : "customAtoi",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Integer",
+  "parameters" : [ {
+    "name" : "inputValue",
+    "type" : "String"
+  }, {
+    "name" : "defaultValue",
+    "type" : "Integer"
+  } ],
+  "attributes" : [ ]
+}

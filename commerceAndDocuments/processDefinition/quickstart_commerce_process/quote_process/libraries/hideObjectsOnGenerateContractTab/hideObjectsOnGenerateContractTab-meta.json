@@ -1,0 +1,14 @@
+{
+  "name" : "Hide Objects on Generate Contract Tab",
+  "variableName" : "hideObjectsOnGenerateContractTab",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "Boolean",
+  "parameters" : [ {
+    "name" : "ObjectDict",
+    "type" : "Anytype Dictionary"
+  } ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "_quote_process_serviceAddress_country", "currentUserGroup_quote", "contractSource_quote", "contractAutomation_quote", "ownerMarket_quote", "bPOPartnerAccountMirror_quote", "purchasedFromPartnerCategorySFDC_quote", "showQuotationButtons_quote", "purchasedFromPartnerSFDC_quote", "contractConversionToSAPGTC_quote", "quoteType_quote", "partnerBillingQuote_quote", "showAllContractButtons_quote", "paymentMethod_quote", "ownerTheater_quote" ],
+  "systemAttributes" : [ "_system_user_type", "_system_user_login" ]
+}

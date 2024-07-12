@@ -1,0 +1,27 @@
+{
+  "name" : "calculateTierPricing",
+  "variableName" : "calculateTierPricing",
+  "description" : "For a given list of PIs and their associated Qtys/NumTransactions as well as their associated Implementation Methods, populate the floatsDict with the values of each line item's tierPrice and extTierPrice.",
+  "libraryFunctions" : [ "util.getStringAttribute" ],
+  "returnType" : "String Dictionary",
+  "parameters" : [ {
+    "name" : "piQtyAndImplementationMethodToPriceDict",
+    "type" : "Float Dictionary"
+  }, {
+    "name" : "piDelimiter",
+    "type" : "String"
+  }, {
+    "name" : "currentDocNum",
+    "type" : "String"
+  }, {
+    "name" : "stringsDict",
+    "type" : "String Dictionary"
+  }, {
+    "name" : "integersDict",
+    "type" : "Integer Dictionary"
+  }, {
+    "name" : "floatsDict",
+    "type" : "Float Dictionary"
+  } ],
+  "attributes" : [ ]
+}

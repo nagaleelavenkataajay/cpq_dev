@@ -1,0 +1,100 @@
+/*
+  formatDate
+  param:
+    inputDate   - String 
+    type        - String:   short / long 
+  return  
+    String 
+*/
+
+result = inputDate;
+
+monthSpanishLongName = String[] {"enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"};//CSYS-92933 (LN. 10-16-2018) New long month format for the Spanish Order Form
+monthFrenchLongName = String[] { "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre" };//CSYS-91980 (LN. 7-24-2018) New long month format for the French Order Form
+monthGermanLongName = String[] { "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember" };//CSYS-95993 (LN. 8-16-2019) New long month format for the German Order Form
+monthLongName = String[] { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
+monthShortName = String[] { "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+monthNum = String[] {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+monthJapaneseLongName = String[] {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}; //CSYS-107251 (PG 11/14/2022)
+
+monthSpanishLongNameDict = dict("string");//CSYS-92933
+monthFrenchLongNameDict = dict("string");//CSYS-91980
+monthGermanLongNameDict = dict("string");//CSYS-95993
+monthJapaneseLongNameDict = dict("string");//CSYS-107251 (PG 11/14/2022)
+monthLongNameDict = dict("string");
+monthShortNameDict = dict("string");
+
+index = 0;
+
+for item in monthNum {
+  put( monthSpanishLongNameDict, monthNum[index], monthSpanishLongName[index]);//CSYS-92933
+  put( monthFrenchLongNameDict, monthNum[index], monthFrenchLongName[index]);//CSYS-91980
+  put( monthGermanLongNameDict, monthNum[index], monthGermanLongName[index]);//CSYS-95993
+  put( monthJapaneseLongNameDict, monthNum[index], monthJapaneseLongName[index]); //CSYS-107251 (PG 11/14/2022)
+  put( monthLongNameDict, monthNum[index], monthLongName[index]);
+  put( monthShortNameDict, monthNum[index], monthShortName[index]);
+  
+  index = index + 1;
+} 
+
+year = substring(inputDate, 0, 4);
+month = substring(inputDate, 5, 7);
+day = substring(inputDate, 8, 10);
+
+if ( type == "short" ) {
+  monthName = "";
+  if ( containskey(monthShortNameDict, month) ) {
+    monthName = get(monthShortNameDict, month);
+  }   
+  
+  result = day + "-" + monthName + "-" + year;
+} 
+elif ( type == "long" ) {
+  monthName = "";
+  if ( containskey(monthLongNameDict, month) ) {
+    monthName = get(monthLongNameDict, month);
+  }
+
+  result = monthName + " " + day + ", " + year;
+}
+elif ( type == "frenchLong") {//CSYS-91980
+  monthName = "";
+  if( containskey(monthFrenchLongNameDict, month) ){
+    monthName = get(monthFrenchLongNameDict, month);
+  }
+
+  result = day + " " + monthName + " " + year;
+}
+elif ( type == "spanishLong") {//CSYS-92933
+  monthName = "";
+  if( containskey(monthSpanishLongNameDict, month) ){
+    monthName = get(monthSpanishLongNameDict, month);
+  }
+
+  result = day + " " + monthName + " " + year;
+}
+elif ( type == "germanLong") {//CSYS-95993
+  monthName = "";
+  if( containskey(monthGermanLongNameDict, month) ){
+    monthName = get(monthGermanLongNameDict, month);
+  }
+
+  //CSYS-97803, PhilS, 12/26/2019
+  //result = day + " " + monthName + " " + year;
+  //result = day + ". " + monthName + ", " + year;
+  result = day + ". " + monthName + " " + year;  //CSYS-98306, PhilS, 01/24/2020
+
+}
+
+//CSYS-107251 (PG 11/14/2022)
+elif ( type == "japaneseLong") {
+  monthName = "";
+  if( containskey(monthJapaneseLongNameDict, month) ){
+    monthName = get(monthJapaneseLongNameDict, month);
+  }
+  
+    result = year + "/ " + monthName + "/ " + day;
+	
+}
+
+return result;

@@ -1,0 +1,56 @@
+/*
+	BML Utility Function
+	getPartFields
+	--------------------
+	Params:
+		String[] partList
+		StringDictionary customFieldDict
+		StringDictionary partFieldsDict
+		String partDelim
+	Returns:
+		StringDictionary resultDict
+*/
+debug = false;
+
+PART_DESC = "description";
+
+//Custom Field List: Edit this if you need to add any additional part custom fields to the query
+CUSTOM_FIELD_LIST = string[] {"custom_field1", "custom_field2", "custom_field3", "custom_field4", "custom_field8", "custom_field9", "custom_field10", "custom_field11", "custom_field12", "custom_field13", "custom_field14", "custom_field15", "custom_field18", "custom_field19", "custom_field20", "custom_field21", "custom_field22", "custom_field26"};
+
+resultDict = dict("string");
+count = 0;
+error = "";
+
+
+
+//BMQL Query: Edit this if you need to add any additional part custom fields to this query
+partRecords = bmql("select part_number, description, custom_field1, custom_field2, custom_field3, custom_field4, custom_field8, custom_field9, custom_field10, custom_field11, custom_field12, custom_field13, custom_field14, custom_field15, custom_field18, custom_field19, custom_field20, custom_field21, custom_field22, custom_field26 from _parts where part_number in $partList");
+
+for partRecord in partRecords {
+	partNum = get(partRecord, "part_number");
+	
+
+							   
+  
+	
+	for field in CUSTOM_FIELD_LIST {
+		customFieldKey = partNum + partDelim + get(customFieldDict, field);
+		customFieldValue = get(partRecord, field);
+
+   
+		put(partFieldsDict, customFieldKey, customFieldValue);
+
+	}
+	descKey = partNum + partDelim + PART_DESC;
+	descVal = get(partRecord, "description");
+	put(partFieldsDict, descKey, descVal);
+	
+
+	
+	count = count + 1;
+}
+
+put(resultDict, "count", string(count));
+put(resultDict, "error", error);
+
+return resultDict;

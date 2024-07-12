@@ -1,0 +1,50 @@
+//Util to get difference, in months, between 2 dates
+//Take 2 date strings (firstDate and secondDate)as parameters
+//applies to date strings in yyyy-MM-dd or MM/dd/yyyy format
+
+firstYearVal = "";
+firstMonthVal = "";
+splitFirstDate = string[];
+
+secondYearVal = "";
+secondMonthVal = "";
+splitSecondDate = string[];
+
+diffMonths = 0;
+
+if(firstDate <> ""){
+	firstDateformatted = substring(firstDate, 0, 10);
+	if( find(firstDateformatted,"-") <> -1 ){ 
+		splitFirstDate = split(firstDateformatted, "-");
+		firstYearVal = splitFirstDate[0];
+		firstMonthVal = splitFirstDate[1];
+	}
+	elif( find(firstDateformatted, "/") <> -1 ){
+		splitFirstDate = split(firstDateformatted, "/");
+		firstYearVal = splitFirstDate[2];
+		firstMonthVal = splitFirstDate[0];
+	}
+}
+
+if(secondDate <> ""){
+	secondDateFormatted = substring(secondDate, 0, 10);
+	if( find(secondDateFormatted,"-") <> -1 ){ 
+		splitSecondDate = split(secondDateFormatted, "-");
+		secondYearVal = splitSecondDate[0];
+		secondMonthVal = splitSecondDate[1];
+	}
+	elif( find(secondDateFormatted, "/") <> -1 ){
+		splitSecondDate = split(secondDateFormatted, "/");
+		secondYearVal = splitSecondDate[2];
+		secondMonthVal = splitSecondDate[0];
+	}
+}
+	
+
+	
+if(isnumber(firstYearVal) AND isnumber(firstMonthVal) AND isnumber(secondYearVal) AND isnumber(secondMonthVal)){
+	
+	diffMonths =  ((atoi(secondYearVal) - atoi(firstYearVal))*12) + (atoi(secondMonthVal) - atoi(firstMonthVal));
+}
+
+return diffMonths;

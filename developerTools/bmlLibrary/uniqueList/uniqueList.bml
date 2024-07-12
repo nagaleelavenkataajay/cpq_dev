@@ -1,0 +1,15 @@
+/*
+  uniqueList - To add a value into a list. The list is unique. If the input list contains the input value, it won't add to the list.
+    param: 
+      inputList - String[];
+      inputValue - String
+    return 
+      string[]
+*/
+
+result = inputList;
+
+if ( trim(inputValue) <> "" and findinarray(inputList, inputValue) == -1 ) {
+  append(result, inputValue);
+} 
+return result;

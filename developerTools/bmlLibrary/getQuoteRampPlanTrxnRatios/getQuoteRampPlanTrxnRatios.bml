@@ -1,0 +1,35 @@
+/* util -> getQuoteRampPlanTrxnRatios
+trxnArray - string[]
+*/
+transactionValues = integer[];
+quoteRampPlanTrxnRatios = float[];
+maxValue = -1;
+
+
+for transactionString in trxnArray {
+    if (isnumber(transactionString)) {
+        transactionValue = integer(atof(transactionString));    //Immediately casting something like 100.23 with atoi() will throw an error. Casting a float will truncate the decimal.
+
+        if (transactionValue > maxValue) {
+            maxValue = transactionValue;
+        }
+        append(transactionValues, transactionValue);    //This will be an integer array, e.g. [100, 200, 300, 400, 500]
+    }
+}
+
+index = 1;
+for transactionVal in transactionValues {
+
+    ratio = index / sizeofarray(transactionValues) * 1.0;   //If maxValue is not greater than zero, just default this to be proportional to the ramp level
+    if (maxValue > 0 AND quoteTrxns > 0) {
+        ratio = transactionVal / (quoteTrxns * 1.0);
+    }
+    else{
+        ratio = 1.0;
+    }
+
+    append(quoteRampPlanTrxnRatios, ratio);
+    index = index + 1;
+}
+
+return quoteRampPlanTrxnRatios;

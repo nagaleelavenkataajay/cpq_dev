@@ -1,0 +1,12 @@
+{
+  "name" : "getBillingCycleNumber",
+  "variableName" : "getBillingCycleNumber",
+  "description" : "",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "billingCycle",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

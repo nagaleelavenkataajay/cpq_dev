@@ -1,0 +1,31 @@
+/* util -> getInitialRampTransactionsForAO
+assetsInfo - String
+*/
+//Logic borrowed from addOnPopulation script to grab the first core base transactions from the asset string
+quoteRampTrxn = string[];
+corePis = string[];
+ASSET_DELIMITER = "@@";
+INTERNAL_DELIMITER = "$$";
+BASE_FEE = "Base";
+
+corePIset = bmql("SELECT PI FROM PiToCoreOfferingMap");
+for entry in corePIset {
+	tablePi = get(entry, "PI");
+	append(corePis, tablePi);
+}
+
+//capture correct transactions to assign to quote ramp transactions:
+firstCoreBaseAssetTrans = 0;
+comment = split(assetsInfo, ASSET_DELIMITER);
+count = 0;
+for eachindex in comment {
+	assetArray = split(comment[count],INTERNAL_DELIMITER);
+	if(NOT isnull(assetArray[7]) AND assetArray[4] == BASE_FEE AND findinarray(corePis, assetArray[0]) <> -1){
+		firstCoreBaseAssetTrans = util.customAtof(assetArray[7], 0.0);
+		orgQuoteTransactions = string(integer(firstCoreBaseAssetTrans));
+		quoteRampTrxn = string[]{orgQuoteTransactions};
+		break;
+	}
+	count = count + 1;
+}
+return quoteRampTrxn;

@@ -1,0 +1,10 @@
+/* The return format is ~PO1~PO2~... */
+retStr = "~";
+//CSYS-106954 SV. 01-09-2022 Commented out the reference to UnitBasedRecServsPIs. Instead using trnsValidation datatable
+//IESCNQRCPQ-770. LBN. 10-08-2023, Uncommenting UnitBasedRecServsPI line and commenting trnsValidation for updating description for PSE from Transaction to Unit Based
+results = bmql("select POID from UnitBasedRecServsPIs");
+//results = bmql("SELECT PO FROM trnsValidation");
+for result in results {
+	retStr = retStr + get(result, "POID") + "~";
+}
+return retStr;

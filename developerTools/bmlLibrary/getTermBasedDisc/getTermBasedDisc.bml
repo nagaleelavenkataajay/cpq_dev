@@ -1,0 +1,17 @@
+// Parameters:
+// commerceTerm - Term value from Commerce
+// defaultVal - Default value if there is no term discount based on Commerce term in the data table
+resTerm = 0.0;
+tableRes = false;
+termDiscResSet = bmql("SELECT termBasedDisc FROM termBasedDiscount WHERE term=$commerceTerm");
+for termDiscRes in termDiscResSet {
+  term = get(termDiscRes, "termBasedDisc");
+  if(NOT(isnull(term)) AND isnumber(term)) {
+    resTerm = atof(term);
+  }
+  tableRes = true;
+}
+if(NOT(tableRes)) { // If there is no table entry, use default value 
+  resTerm = defaultVal;
+}
+return resTerm;

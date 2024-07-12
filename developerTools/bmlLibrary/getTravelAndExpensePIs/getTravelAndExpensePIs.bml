@@ -1,0 +1,10 @@
+/* util -> getTravelAndExpensePIs
+*/
+travelAndExpenseWithTriplinkProductArr = String[];
+travelAndExpenseWithTriplinkRes = BMQL("SELECT pi FROM tAndEWithTriplink");
+
+for entry in travelAndExpenseWithTriplinkRes {
+    pi = get(entry, "pi");
+    append(travelAndExpenseWithTriplinkProductArr, pi);
+}
+return travelAndExpenseWithTriplinkProductArr;

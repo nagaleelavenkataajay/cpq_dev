@@ -1,0 +1,12 @@
+{
+  "name" : "getDateFromString",
+  "variableName" : "getDateFromString",
+  "description" : "",
+  "libraryFunctions" : [ "util.getUserTimeZone" ],
+  "returnType" : "Date",
+  "parameters" : [ {
+    "name" : "argumentDateString",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

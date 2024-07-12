@@ -1,0 +1,11 @@
+{
+  "name" : "getGoverningCountry",
+  "variableName" : "getGoverningCountry",
+  "description" : "Per CSYS-97803, moving following codes to a commerce library for existing quotes.\nMoving following codes from attribute \"governingCountryLawException\" and put it into this commerce library.\nSo it not only run at attribute default function, it will also run at Set Output Values comm. library.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ ],
+  "mainDocAttributes" : [ "ownerBU_quote", "_quote_process_serviceAddress_country", "contractingEntity_quote" ],
+  "systemAttributes" : [ ]
+}

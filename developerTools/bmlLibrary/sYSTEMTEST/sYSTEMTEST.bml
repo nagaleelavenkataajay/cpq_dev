@@ -1,0 +1,112 @@
+// THIS SCRIPT IS TO TEST VARIOUS PARTS OF THE SYSTEM
+sStartTime = getcurrenttimeinmillis();
+sResults = "No Errors or Warnings"; //overall message provided at end of script
+iCount = 1; //counter set to 0
+sTestingLabel = ""; //what is being tested
+sTestingType = ""; //what type of testing is being performed
+bSectionError = false; //error flag set and flipped for each section to realize issues
+bOverallError = false; //error flag set and displayed for the overall testing
+sSpacer = "\n////////// ////////// ////////// ////////// ////////// ////////// ////////// \n";
+print "---   Testing Started";
+
+/// //////////////////////////////////////
+/// Testing PromoCodeDetails table - START
+print sSpacer;
+sTestingLabel = "PromoCodeDetails"; //set testing current testing label
+sTestingType = "data table"; //set testing current testing type
+print "---   Testing  '" + sTestingLabel + "'  " + sTestingType;
+records = BMQL("SELECT startDate,endDate FROM $sTestingLabel ");
+iCount = 1; //counter reset to 0
+bSectionError = false; //resetting section error flag;
+for rec in records // loop through selected records
+{
+	//Testing the date format for the columns startDate and endDate to make sure they follow YYYY-MM-DD format
+	sStartDate = get(rec,"startDate");
+	sEndDate = get(rec,"endDate");
+	if(// check for startDate errors
+		isnumber(substring(sStartDate,0,4)) == false
+		OR len(substring(sStartDate,0,4)) <> 4
+		OR substring(sStartDate,4,5) <> "-"
+		OR isnumber(substring(sStartDate,5,7)) == false
+		OR len(substring(sStartDate,5,7)) <> 2
+		OR substring(sStartDate,7,8) <> "-"
+		OR isnumber(substring(sStartDate,8,10)) == false
+		OR len(substring(sStartDate,8,10)) <> 2
+	)
+	{// error found in startDate
+		print "       Row " + string(iCount) + " and column 'startDate' does not follow the 'YYYY-MM-DD' date format:" + get(rec,"startDate");
+		bSectionError = true;
+	}
+	if(// check for endDate errors
+		isnumber(substring(sEndDate ,0,4)) == false
+		OR len(substring(sEndDate ,0,4)) <> 4
+		OR substring(sEndDate ,4,5) <> "-"
+		OR isnumber(substring(sEndDate ,5,7)) == false
+		OR len(substring(sEndDate ,5,7)) <> 2
+		OR substring(sEndDate ,7,8) <> "-"
+		OR isnumber(substring(sEndDate ,8,10)) == false
+		OR len(substring(sEndDate ,8,10)) <> 2
+	)
+	{// error found in endDate
+		print "       Row " + string(iCount) + " and column 'endDate' does not follow the 'YYYY-MM-DD' date format:" + get(rec,"endDate");
+		bSectionError = true;
+	}
+	iCount = iCount + 1; // increase counter by 1
+	//if(iCount > 20000)
+	//{
+		//break;
+	//}
+}
+if(bSectionError)
+{// section error found
+	print "!!!   Errors in  '" + sTestingLabel + "'  " + sTestingType;
+	bOverallError = true;
+}
+else
+{// no section error found
+	print ":-)  no errors in  '" + sTestingLabel + "'  " + sTestingType;
+}
+bSectionError = false; //reset the section error flag
+/// Testing PromoCodeDetails table - END
+/// ////////////////////////////////////
+print sSpacer;
+/// ////////////////////////////////////
+/// Testing SITE HOST NAME - START
+sSiteName = split("TestConcur,Test2concur,Concur",",");// site names
+print sSpacer;
+for sEachSite in sSiteName 
+{
+	if(sEachSite == _company_name)
+	{
+		print _company_name + " Site matches   " + sEachSite;
+		break;
+	}
+	elif(upper(sEachSite) == upper(_company_name))
+	{
+		print _company_name + " Site matches   UPPER CASE VERSION of " + sEachSite;
+		print "Site Host Name should be " + sEachSite;
+		bOverallError = true;
+		break;
+	}
+	elif(lower(sEachSite) == lower(_company_name))
+	{
+		print "!!! " + _company_name + " Site matches   LOWER CASE VERSION of " + sEachSite;
+		print "!!! Site Host Name should be " + sEachSite;
+		bOverallError = true;
+		break;
+	}
+}
+/// Testing SITE HOST NAME - END
+/// ////////////////////////////////////
+print sSpacer;
+if(bOverallError)
+{// overall error found
+	print "!!!   Errors found...review the console";
+}
+else
+{// no orverall error found
+	print ":-)  no errors found in current tests";
+}
+print sSpacer;
+print "Elapsed Time = " + string((getcurrenttimeinmillis() - sStartTime)/1000) + " seconds";
+return sResults;

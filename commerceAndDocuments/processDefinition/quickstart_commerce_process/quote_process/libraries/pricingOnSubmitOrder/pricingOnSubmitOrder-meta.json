@@ -1,0 +1,11 @@
+{
+  "name" : "Pricing on Submit Order",
+  "variableName" : "pricingOnSubmitOrder",
+  "description" : "Checks the asset string for updated data and updates the quote if necessary. Also prevents Extended Net Price from being altered on 'Submit Order'.",
+  "libraryFunctions" : [ "util.addMonthsToDate", "util.getUserTimeZone", "util.makeReturnString", "util.setDateToFirstDayOfMonth" ],
+  "returnType" : "String",
+  "parameters" : [ ],
+  "subDocAttributes" : [ "netPriceEach_line", "extendedNetPrice_line", "numCommittedTransaction_line", "_document_number", "rampFlag_line", "piItemType_line", "origNetPriceEa_line", "unitOrFixed_line", "_line_item_comment", "nextBillingDate_line", "assetString_line", "_part_number", "arrNet_line", "poCategory_line", "assetAction_line", "_parent_doc_number" ],
+  "mainDocAttributes" : [ "assetsString_quote", "quoteType_quote" ],
+  "systemAttributes" : [ ]
+}

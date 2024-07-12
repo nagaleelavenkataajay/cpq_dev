@@ -1,0 +1,12 @@
+{
+  "name" : "printDebugHeader",
+  "variableName" : "printDebugHeader",
+  "description" : "Prints a header for a debug statement.",
+  "libraryFunctions" : [ ],
+  "returnType" : "String",
+  "parameters" : [ {
+    "name" : "title",
+    "type" : "String"
+  } ],
+  "attributes" : [ ]
+}

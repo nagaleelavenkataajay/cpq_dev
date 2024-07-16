@@ -22,11 +22,8 @@ BUNDLE_FLAG_TRUE = "Y";
 BUNDLE_FLAG_FALSE = "N";
 
 //Containers for line item attributes
-//piList = string[];
-//docNumList = string[];
-piListArr = string[];
-docNumListArr = string[];
-
+piList = string[];
+docNumList = string[];
 piDict = dict("string");
 seqNumDict = dict("integer");
 descriptionDict = dict("string");
